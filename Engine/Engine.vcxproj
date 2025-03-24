@@ -141,7 +141,10 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="se_camera.cpp" />
     <ClCompile Include="se_cubemap.cpp" />
+    <ClCompile Include="se_cubemap_diffuse.cpp" />
+    <ClCompile Include="se_cubemap_specular.cpp" />
     <ClCompile Include="se_device.cpp" />
+    <ClCompile Include="se_hdr_to_cubemap.cpp" />
     <ClCompile Include="se_material.cpp" />
     <ClCompile Include="se_mesh.cpp" />
     <ClCompile Include="se_offscreen_renderer.cpp" />
@@ -160,8 +163,11 @@
     <ClInclude Include="keyboard_movement_controller.hpp" />
     <ClInclude Include="se_camera.hpp" />
     <ClInclude Include="se_cubemap.hpp" />
+    <ClInclude Include="se_cubemap_diffuse.h" />
+    <ClInclude Include="se_cubemap_specular.h" />
     <ClInclude Include="se_device.hpp" />
     <ClInclude Include="se_gameobject.hpp" />
+    <ClInclude Include="se_hdr_to_cubemap.h" />
     <ClInclude Include="se_material.hpp" />
     <ClInclude Include="se_mesh.hpp" />
     <ClInclude Include="se_offscreen_renderer.hpp" />

@@ -36,6 +36,7 @@ namespace se
 	private:
 		void createOffscreenImageDepth();
 		void createOffscreenImageColor();
+		
 		void createRenderPass();
 		void createFramebuffer();
 		void createStagingBuffer();
