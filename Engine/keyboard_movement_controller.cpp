@@ -49,8 +49,13 @@ namespace se
       gameObject.transform.rotation += lookSpeed * dt * rotate;
     }
 
-    // limit pitch values between about +/- 85ish degrees
-    gameObject.transform.rotation.x = glm::clamp(gameObject.transform.rotation.x, -1.5f, 1.5f);
+    // limit pitch values between about +/- 90 degrees
+    gameObject.transform.rotation.x = glm::clamp(
+        gameObject.transform.rotation.x,
+        -glm::half_pi<float>(),
+        glm::half_pi<float>()
+    );
+
     gameObject.transform.rotation.y = glm::mod(gameObject.transform.rotation.y, glm::two_pi<float>());
 
     float yaw = gameObject.transform.rotation.y;

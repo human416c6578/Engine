@@ -419,9 +419,10 @@ namespace se
                     break;
                 }
             }
-
+            
             if (!layerFound)
             {
+                throw std::runtime_error("failed to find layer " + std::string(layerName));
                 return false;
             }
         }

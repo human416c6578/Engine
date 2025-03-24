@@ -3,6 +3,7 @@
 #include "se_device.hpp"
 #include "se_swap_chain.hpp"
 #include "se_window.hpp"
+#include "se_offscreen_renderer.hpp"
 
 #include <cassert>
 #include <memory>
@@ -35,10 +36,21 @@ namespace se
       return currentFrameIndex;
     }
 
+    uint32_t getOffscreenWidth() { return width; }
+    uint32_t getOffscreenHeight() { return width; }
+
+    SEOffscreenRenderer& getOffscreenRenderer() { return offscreenRenderer; }
+
     VkCommandBuffer beginFrame();
     void endFrame();
     void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
     void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
+
+    VkCommandBuffer beginOffscreenFrame();
+    void endOffscreenFrame();
+
+    void beginOffscreenRenderPass(VkCommandBuffer commandBuffer);
+    void endOffscreenRenderPass(VkCommandBuffer commandBuffer);
 
   private:
     void createCommandBuffers();
@@ -50,8 +62,14 @@ namespace se
     std::unique_ptr<SESwapChain> seSwapChain;
     std::vector<VkCommandBuffer> commandBuffers;
 
+    uint32_t width{ 2048 };
+    uint32_t height{ 2048 };
+
+    SEOffscreenRenderer offscreenRenderer{seDevice, width, height };
+
     uint32_t currentImageIndex;
     int currentFrameIndex{0};
-    bool isFrameStarted{false};
+    bool isFrameStarted{ false };
+    bool isOffscreenFrameStarted{ false };
   };
 }

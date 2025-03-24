@@ -1,0 +1,12 @@
+https://learnopengl.com/PBR/IBL/Specular-IBL
+https://computergraphics.stackexchange.com/questions/12826/exporting-the-final-image-from-vulkan
+https://github.com/SaschaWillems/Vulkan/blob/master/examples/renderheadless/renderheadless.cpp
+https://www.youtube.com/watch?v=u5qNqIGRFHY
+refactor:
+move save image to offscreen renderer
+modify offscreen renderer width/height on the fly
+create only one pipeline for pbr ( descriptor layout )
+create only one pipeline for cubemap offscreen rendering
+remove depth image from offscreen rendering ?
+take the output from offscreen rendering to create a sampler cube for Diffuse IBL and Specular IBL
+implement Diffuse IBL and Specular IBL

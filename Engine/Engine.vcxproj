@@ -104,14 +104,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>D:\VulkanSDK\1.3.290.0\Include;C:\Users\Alex\Documents\Visual Studio 2022\Projects\Engine\Engine\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\VulkanSDK\1.3.290.0\Include;D:\Workspace\programing\cpp\Engine\Engine\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>vulkan-1.lib;glfw3.lib;glfw3_mt.lib;glfw3dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.290.0\Lib;C:\Users\Alex\Documents\Visual Studio 2022\Projects\Engine\Engine\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.290.0\Lib;D:\Workspace\programing\cpp\Engine\Engine\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
       <Command>call "$(SolutionDir)compile_shaders.bat"
@@ -144,6 +144,7 @@
     <ClCompile Include="se_device.cpp" />
     <ClCompile Include="se_material.cpp" />
     <ClCompile Include="se_mesh.cpp" />
+    <ClCompile Include="se_offscreen_renderer.cpp" />
     <ClCompile Include="se_pipeline.cpp" />
     <ClCompile Include="se_renderer.cpp" />
     <ClCompile Include="se_submesh.cpp" />
@@ -163,6 +164,7 @@
     <ClInclude Include="se_gameobject.hpp" />
     <ClInclude Include="se_material.hpp" />
     <ClInclude Include="se_mesh.hpp" />
+    <ClInclude Include="se_offscreen_renderer.hpp" />
     <ClInclude Include="se_pipeline.hpp" />
     <ClInclude Include="se_renderer.hpp" />
     <ClInclude Include="se_submesh.hpp" />

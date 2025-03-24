@@ -2,10 +2,12 @@
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
+#include "se_camera.hpp"
+#include "se_gameobject.hpp"
 
 namespace se
 {
-	SECubemap::SECubemap(SEDevice& device, VkRenderPass renderPass, const std::string& vertFilepath, const std::string& fragFilepath, const std::string& path) : seDevice{device}, renderPass{renderPass}
+	SECubemap::SECubemap(SEDevice& device, SERenderer& renderer, const std::string& vertFilepath, const std::string& fragFilepath, const std::string& path) : seDevice{device}, seRenderer{renderer}
 	{
 		mapTexture = std::make_unique<se::SETexture>(seDevice, path);
 		se::SESubMesh::Builder builder = createCubeModel({ 0, 0, 0 });
@@ -14,7 +16,9 @@ namespace se
 		createDescriptorSetLayout();
 		createDescriptorSets();
 		createPipelineLayout();
-		createPipeline(renderPass, vertFilepath, fragFilepath);
+		createPipeline(renderer.getOffscreenRenderer().getRenderPass(), vertFilepath, fragFilepath);
+
+		convert();
 
 	}
 
@@ -146,15 +150,145 @@ namespace se
 		cubeMesh->draw(commandBuffer);
 	}
 
-	void SECubemap::saveImageToFile(const std::string& filename, VkDevice device, VkDeviceMemory bufferMemory, uint32_t width, uint32_t height) {
+	void SECubemap::convert()
+	{
+		se::SECamera camera{};
+		auto viewerObject = se::SEGameObject::createGameObject();
+		se::SEOffscreenRenderer offscreenRenderer = seRenderer.getOffscreenRenderer();
+
+		std::vector<glm::vec3> directions = {
+			{1.0f, 0.0f, 0.0f},   // Right (+X)
+			{-1.0f, 0.0f, 0.0f},  // Left (-X)
+			{0.0f, -1.0f, 0.0f},   // Up (+Y)
+			{0.0f, 1.0f, 0.0f},  // Down (-Y)
+			{0.0f, 0.0f, 1.0f},   // Front (+Z)
+			{0.0f, 0.0f, -1.0f}   // Back (-Z)
+		};
+
+		std::vector<glm::vec3> upVectors = {
+			{0.0f, 1.0f, 0.0f},  // Right (+X)
+			{0.0f, 1.0f, 0.0f},  // Left (-X)
+			{0.0f, 0.0f, -1.0f},   // Up (+Y)
+			{0.0f, 0.0f, 1.0f},  // Down (-Y)
+			{0.0f, 1.0f, 0.0f},  // Front (+Z)
+			{0.0f, 1.0f, 0.0f}   // Back (-Z)
+		};
+
+		float aspect = 1.0f; // Square images for cubemap faces
+		camera.setPerspectiveProjection(glm::radians(90.f), aspect, 0.01f, 1000.f);
+
+		for (int i = 0; i < 6; i++)
+		{
+			camera.setViewDirection(viewerObject.transform.translation, directions[i], upVectors[i]);
+
+			UniformBufferObject ubo{};
+			ubo.proj = camera.getProjection();
+			ubo.view = camera.getView();
+			ubo.cameraPos = viewerObject.transform.translation;
+
+			seDevice.updateUniformBuffers(ubo);
+
+			if (auto commandBuffer = seRenderer.beginOffscreenFrame())
+			{
+				seRenderer.beginOffscreenRenderPass(commandBuffer);
+				render(commandBuffer);
+				seRenderer.endOffscreenRenderPass(commandBuffer);
+				seRenderer.endOffscreenFrame();
+
+				// Save the rendered image
+				saveImageToFile("cubemap_face_" + std::to_string(i) + ".jpg", offscreenRenderer.getColorImage(), offscreenRenderer.getStagingBuffer(), offscreenRenderer.getStagingBufferMemory(), seRenderer.getOffscreenWidth(), seRenderer.getOffscreenHeight());
+			}
+		}
+	}
+
+
+	void SECubemap::saveImageToFile(const std::string& filename, VkImage colorImage, VkBuffer buffer, VkDeviceMemory bufferMemory, uint32_t width, uint32_t height){
+		VkDevice device = seDevice.device();
+		VkQueue graphicsQueue = seDevice.graphicsQueue();
+
+		VkDeviceSize imageSize = width * height * 4;
+
+		// 1. Copy image from GPU to staging buffer
+		VkCommandBuffer commandBuffer = seDevice.beginSingleTimeCommands();
+
+		VkImageMemoryBarrier barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image = colorImage;
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = 1;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
+		barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+		vkCmdPipelineBarrier(
+			commandBuffer,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier
+		);
+
+		VkBufferImageCopy region{};
+		region.bufferOffset = 0;
+		region.bufferRowLength = 0;
+		region.bufferImageHeight = 0;
+		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.imageSubresource.mipLevel = 0;
+		region.imageSubresource.baseArrayLayer = 0;
+		region.imageSubresource.layerCount = 1;
+		region.imageOffset = { 0, 0, 0 };
+		region.imageExtent = { width, height, 1 };
+
+		vkCmdCopyImageToBuffer(
+			commandBuffer,
+			colorImage,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			buffer,
+			1,
+			&region
+		);
+
+		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		vkCmdPipelineBarrier(
+			commandBuffer,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier
+		);
+
+		seDevice.endSingleTimeCommands(commandBuffer);
+
+		// 2. Map the staging buffer memory to CPU-accessible memory
 		void* data;
-		vkMapMemory(device, bufferMemory, 0, VK_WHOLE_SIZE, 0, &data);
+		vkMapMemory(device, bufferMemory, 0, imageSize, 0, &data);
 
-		// Save the image using stb_image_write or custom function
-		stbi_write_png(filename.c_str(), width, height, 4, data, width * 4); // Assuming RGBA8 format
-
+		std::vector<uint8_t> imageData(imageSize);
+		memcpy(imageData.data(), data, imageSize);
 
 		vkUnmapMemory(device, bufferMemory);
+
+		// 3. Save the image to a file using stb_image_write
+		stbi_flip_vertically_on_write(1);  // Flip image vertically for correct orientation
+		if (!stbi_write_png(filename.c_str(), width, height, 4, imageData.data(), width * 4)) {
+			throw std::runtime_error("Failed to save image!");
+		}
+
+		std::cout << "Image saved to " << filename << std::endl;
 	}
 
 	se::SESubMesh::Builder SECubemap::createCubeModel(glm::vec3 offset)

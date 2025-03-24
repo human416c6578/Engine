@@ -1,6 +1,7 @@
 #pragma once
 
 #include "se_device.hpp"
+#include "se_renderer.hpp"
 #include "se_pipeline.hpp"
 #include "se_submesh.hpp"
 
@@ -14,7 +15,7 @@ namespace se
 	{
 	public:
 
-		SECubemap(SEDevice& device, VkRenderPass renderPass,
+		SECubemap(SEDevice& device, SERenderer& renderPass,
 			const std::string& vertFilepath, const std::string& fragFilepath, const std::string& textureFilepath);
 
 		~SECubemap()
@@ -52,13 +53,14 @@ namespace se
 
 		void draw(VkCommandBuffer commandBuffer);
 
-		void saveImageToFile(const std::string& filename, VkDevice device, VkDeviceMemory bufferMemory, uint32_t width, uint32_t height);
+		void convert();
+		void saveImageToFile(const std::string& filename, VkImage image, VkBuffer buffer, VkDeviceMemory bufferMemory, uint32_t width, uint32_t height);
 
 		se::SESubMesh::Builder createCubeModel(glm::vec3 offset);
 
 
 		SEDevice& seDevice;
-		VkRenderPass& renderPass;
+		SERenderer& seRenderer;
 		VkDescriptorSet descriptorSet;
 		VkDescriptorSetLayout descriptorSetLayout;
 		std::unique_ptr<SEPipeline> sePipeline;

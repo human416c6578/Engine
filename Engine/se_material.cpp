@@ -13,7 +13,6 @@
 
 namespace se
 {
-
 	SEMaterial::SEMaterial(
 		SEDevice &device,
 		VkRenderPass renderPass,

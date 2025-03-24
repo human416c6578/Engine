@@ -13,11 +13,11 @@ void App::mainLoop()
 
     static auto lastTime = std::chrono::high_resolution_clock::now();
     static int fps = 0;
+    loadCubemap();
     loadGameObjects();
 
     glfwSetInputMode(seWindow.getGLFWwindow(), GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
-
-    loadCubemap();
+    
     while (!seWindow.shouldClose())
     {
         glfwPollEvents();
@@ -54,7 +54,6 @@ void App::mainLoop()
         {
             seRenderer.beginSwapChainRenderPass(commandBuffer);
 
-            seCubemap->render(commandBuffer);
             simpleRenderSystem.renderGameObjects(commandBuffer, gameObjects, camera, viewerObject);
 
             seRenderer.endSwapChainRenderPass(commandBuffer);
@@ -131,7 +130,7 @@ static se::SESubMesh::Builder createCubeModel(glm::vec3 offset)
 
 void App::loadCubemap()
 {
-    seCubemap = std::make_unique<se::SECubemap>(seDevice, seRenderer.getSwapChainRenderPass(), "shaders/cubemapVert.spv", "shaders/cubemapFrag.spv", "hdr/snowy_forest_4k.hdr");
+    seCubemap = std::make_unique<se::SECubemap>(seDevice, seRenderer, "shaders/cubemapVert.spv", "shaders/cubemapFrag.spv", "hdr/snowy_forest_4k.hdr");
 }
 
 std::vector<glm::vec3> lightPositions = {
@@ -159,6 +158,8 @@ void App::loadGameObjects()
     se::SESubMesh::Builder builder = createCubeModel({0, 0, 0});
     std::shared_ptr<se::SEMesh> floorMesh = std::make_unique<se::SEMesh>(seDevice, builder, material);
 
+    
+    
     std::shared_ptr<se::SEMesh> sponzaMesh = std::make_unique<se::SEMesh>(seDevice, "models/sponza/sponza.obj", seRenderer.getSwapChainRenderPass());
    
     auto scene = se::SEGameObject::createGameObject();
@@ -168,6 +169,7 @@ void App::loadGameObjects()
     scene.transform.rotation = { .0f, .0f, .0f };
     scene.color = { 1.f, 1.f, 1.f };
     gameObjects.push_back(std::move(scene));
+    
 
     auto floor = se::SEGameObject::createGameObject();
     floor.mesh = floorMesh;
