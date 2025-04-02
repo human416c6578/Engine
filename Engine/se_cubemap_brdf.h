@@ -7,21 +7,21 @@
 
 namespace se
 {
-	class SECubemapSpecular
+	class SECubemapBRDF
 	{
 	public:
-		SECubemapSpecular(SEDevice& device, SERenderer& renderer, VkImageView cubemapView, VkSampler cubemapSampler);
+		SECubemapBRDF(SEDevice& device, SERenderer& renderer);
 
-		~SECubemapSpecular()
+		~SECubemapBRDF()
 		{
 		}
 
-		VkSampler getSampler() { return irradianceSampler; }
-		VkImage getImage() { return irradianceImage; }
-		VkImageView getImageView() { return irradianceImageView; }
-		VkDeviceMemory getImageMemory() { return irradianceImageMemory; }
+		VkSampler getSampler() { return BRDFSampler; }
+		VkImage getImage() { return BRDFImage; }
+		VkImageView getImageView() { return BRDFImageView; }
+		VkDeviceMemory getImageMemory() { return BRDFImageMemory; }
 
-		void convert();
+		void generate();
 
 
 	private:
@@ -31,7 +31,7 @@ namespace se
 		void createDescriptorSets();
 		void createDescriptorSetLayout();
 
-		void createCubemapImage();
+		void createBRDFImage();
 
 		void bind(VkCommandBuffer commandBuffer)
 		{
@@ -62,17 +62,12 @@ namespace se
 		std::unique_ptr<SEPipeline> sePipeline;
 		VkPipelineLayout pipelineLayout;
 
-		VkImage irradianceImage;
-		VkImageView irradianceImageView;
-		VkDeviceMemory irradianceImageMemory;
-		VkSampler irradianceSampler;
-
-		VkImageView cubeMapImageView;
-		VkSampler cubeMapSampler;
+		VkImage BRDFImage;
+		VkImageView BRDFImageView;
+		VkDeviceMemory BRDFImageMemory;
+		VkSampler BRDFSampler;
 
 		std::unique_ptr<se::SESubMesh> cubeMesh;
-
-		unsigned int maxMipLevels = 5;
 	};
 }
 

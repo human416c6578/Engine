@@ -16,6 +16,12 @@ namespace se
 		{
 		}
 
+		VkSampler getSampler() { return cubeMapSampler; }
+		VkImageView getImageView() { return cubeMapImageView; }
+
+		void convert();
+		
+
 	private:
 		void createPipelineLayout();
 		void createPipeline(VkRenderPass renderPass, const std::string vertPath, const std::string fragPath);
@@ -41,7 +47,8 @@ namespace se
 		}
 		void draw(VkCommandBuffer commandBuffer);
 
-		void convert();
+		void createSampler();
+		void cleanup();
 
 		se::SESubMesh::Builder createCubeModel(glm::vec3 offset);
 
@@ -59,7 +66,7 @@ namespace se
 
 		VkSampler cubeMapSampler;
 
-		std::unique_ptr<se::SESubMesh> cubeMesh;
+		std::shared_ptr<se::SESubMesh> cubeMesh;
 		std::shared_ptr<se::SETexture> mapTexture;
 	};
 }

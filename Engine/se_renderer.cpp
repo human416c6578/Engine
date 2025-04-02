@@ -10,6 +10,7 @@ namespace se
     SERenderer::SERenderer(SEWindow& window, SEDevice& device)
         : seWindow{ window }, seDevice{ device }
     {
+        offscreenRenderer = std::make_unique<SEOffscreenRenderer>(seDevice);
         recreateSwapChain();
         createCommandBuffers();
     }
@@ -171,7 +172,7 @@ namespace se
         assert(!isOffscreenFrameStarted && "Can't call beginOffscreenFrame while already in progress");
 
         // Get the current offscreen command buffer
-        auto commandBuffer = offscreenRenderer.getCommandBuffer();
+        auto commandBuffer = offscreenRenderer->getCommandBuffer();
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -186,7 +187,7 @@ namespace se
     
     void SERenderer::endOffscreenFrame() {
         assert(isOffscreenFrameStarted && "Can't call endOffscreenFrame while frame is not in progress");
-        auto commandBuffer = offscreenRenderer.getCommandBuffer();
+        auto commandBuffer = offscreenRenderer->getCommandBuffer();
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to record offscreen command buffer!");
@@ -214,10 +215,10 @@ namespace se
         // Begin the offscreen render pass (this is similar to beginSwapChainRenderPass)
         VkRenderPassBeginInfo renderPassBeginInfo{};
         renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        renderPassBeginInfo.renderPass = offscreenRenderer.getRenderPass();
-        renderPassBeginInfo.framebuffer = offscreenRenderer.getFramebuffer();
+        renderPassBeginInfo.renderPass = offscreenRenderer->getRenderPass();
+        renderPassBeginInfo.framebuffer = offscreenRenderer->getFramebuffer();
         renderPassBeginInfo.renderArea.offset = { 0, 0 };
-        renderPassBeginInfo.renderArea.extent = { offscreenRenderer.getWidth(), offscreenRenderer.getHeight() };
+        renderPassBeginInfo.renderArea.extent = { offscreenRenderer->getWidth(), offscreenRenderer->getHeight() };
 
         std::array<VkClearValue, 2> clearValues{};
         clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f }; // Clear color for offscreen
@@ -231,13 +232,13 @@ namespace se
         VkViewport viewport{};
         viewport.x = 0.0f;
         viewport.y = 0.0f;
-        viewport.width = static_cast<float>(offscreenRenderer.getWidth());
-        viewport.height = static_cast<float>(offscreenRenderer.getHeight());
+        viewport.width = static_cast<float>(offscreenRenderer->getWidth());
+        viewport.height = static_cast<float>(offscreenRenderer->getHeight());
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-        VkRect2D scissor{ {0, 0}, {offscreenRenderer.getWidth(), offscreenRenderer.getHeight()} };
+        VkRect2D scissor{ {0, 0}, {offscreenRenderer->getWidth(), offscreenRenderer->getHeight()} };
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
     }
 
@@ -245,7 +246,7 @@ namespace se
     {
         assert(isOffscreenFrameStarted && "Can't call endSwapChainRenderPass if frame is not in progress");
         assert(
-            commandBuffer == offscreenRenderer.getCommandBuffer() &&
+            commandBuffer == offscreenRenderer->getCommandBuffer() &&
             "Can't end render pass on command buffer from a different frame");
         vkCmdEndRenderPass(commandBuffer);
     }

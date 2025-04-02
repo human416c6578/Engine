@@ -6,8 +6,8 @@ namespace se
 	class SEOffscreenRenderer
 	{
 	public:
-		SEOffscreenRenderer(SEDevice& device, uint32_t w, uint32_t h)
-			: seDevice(device), width(w), height(h) {
+		SEOffscreenRenderer(SEDevice& device)
+			: seDevice(device) {
 			createOffscreenImageDepth();
 			createOffscreenImageColor();
 			createRenderPass();
@@ -18,6 +18,12 @@ namespace se
 		}
 
 		~SEOffscreenRenderer();
+
+		SEOffscreenRenderer(const SEOffscreenRenderer&) = delete;
+		SEOffscreenRenderer& operator=(const SEOffscreenRenderer&) = delete;
+
+		void resize(uint32_t newWidth, uint32_t newHeight);
+		void setImageFormat(VkFormat format);
 
 		VkCommandBuffer getCommandBuffer() { return commandBuffers[0]; }
 
@@ -40,14 +46,16 @@ namespace se
 		void createRenderPass();
 		void createFramebuffer();
 		void createStagingBuffer();
-
+		
 		void createCommandBuffers();
 		void freeCommandBuffers();
 
 
 		SEDevice& seDevice;
-		uint32_t width;
-		uint32_t height;
+		uint32_t width{ 512 };
+		uint32_t height{ 512 };
+		VkFormat colorFormat{ VK_FORMAT_R8G8B8A8_SRGB };
+
 
 		std::vector<VkCommandBuffer> commandBuffers;
 
@@ -64,6 +72,7 @@ namespace se
 		VkBuffer stagingBuffer;
 		VkDeviceMemory stagingBufferMemory;
 	
+
 
 	};
 }

@@ -14,8 +14,8 @@ namespace se
 
     public:
 
-        SEMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass);
-        SEMesh(SEDevice &device, const std::string &path, std::shared_ptr<SEMaterial> material, VkRenderPass renderPass);
+        SEMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout);
+        SEMesh(SEDevice &device, const std::string &path, std::shared_ptr<SEMaterial> material, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout);
         SEMesh(SEDevice &device, const SESubMesh::Builder builder);
         SEMesh(SEDevice &device, const SESubMesh::Builder builder, std::shared_ptr<SEMaterial> material);
         ~SEMesh();
@@ -23,9 +23,7 @@ namespace se
         
 
         bool hasMaterial() { return seMaterial != nullptr; }
-        void bindMaterial(VkCommandBuffer commandBuffer) { seMaterial->bind(commandBuffer); }
-
-        VkPipelineLayout getPipelineLayout() { return seMaterial->getPipelineLayout(); }
+        void bindMaterial(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) { seMaterial->bind(commandBuffer, pipelineLayout); }
 
         SEMesh(const SEMesh &) = delete;
         SEMesh &operator=(const SEMesh &) = delete;
@@ -33,7 +31,7 @@ namespace se
         //void bind(VkCommandBuffer commandBuffer);
         void draw(VkCommandBuffer commandBuffer, SimplePushConstantData push, VkPipelineLayout pipelineLayout);
 
-        std::vector<std::unique_ptr<SESubMesh>> loadMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass);
+        std::vector<std::unique_ptr<SESubMesh>> loadMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout);
 
     private:
         SEDevice &seDevice;

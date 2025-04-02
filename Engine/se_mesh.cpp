@@ -5,14 +5,14 @@
 
 namespace se
 {
-    SEMesh::SEMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass) : seDevice{device}
+    SEMesh::SEMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout) : seDevice{device}
     {
-        seSubmeshes = loadMesh(device, path, renderPass);
+        seSubmeshes = loadMesh(device, path, renderPass, descriptorSetLayout);
     }
 
-    SEMesh::SEMesh(SEDevice &device, const std::string &path, std::shared_ptr<SEMaterial> material, VkRenderPass renderPass) : seDevice{device}, seMaterial{material}
+    SEMesh::SEMesh(SEDevice &device, const std::string &path, std::shared_ptr<SEMaterial> material, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout) : seDevice{device}, seMaterial{material}
     {
-        seSubmeshes = loadMesh(device, path, renderPass);
+        seSubmeshes = loadMesh(device, path, renderPass, descriptorSetLayout);
     }
 
     SEMesh::SEMesh(SEDevice &device, const SESubMesh::Builder builder) : seDevice{device}
@@ -44,7 +44,7 @@ namespace se
         return "";
     }
 
-    std::vector<std::unique_ptr<SESubMesh>> SEMesh::loadMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass)
+    std::vector<std::unique_ptr<SESubMesh>> SEMesh::loadMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout)
     {
         std::vector<std::unique_ptr<SESubMesh>> submeshes;
         tinyobj::attrib_t attrib;
@@ -177,8 +177,8 @@ namespace se
 
                 // Initialize the SEMaterial with texture paths and material properties
                 material = std::make_shared<se::SEMaterial>(
-                    seDevice, renderPass,
-                    "shaders/matvert.spv", "shaders/matfrag.spv",
+                    seDevice,
+                    descriptorSetLayout,
                     VK_SAMPLE_COUNT_1_BIT,
                     obj_material.specular[0], roughness, 1.0f, // Default metallic, roughness, AO
                     std::move(diffTexture),                 // Diffuse texture
@@ -194,7 +194,7 @@ namespace se
                 if(hasMaterial())
                     material = nullptr;
                 else
-                    material = std::make_shared<se::SEMaterial>(seDevice, renderPass, "shaders/matvert.spv", "shaders/matfrag.spv", VK_SAMPLE_COUNT_1_BIT, 1.0, 0.01, 1.0);
+                    material = std::make_shared<se::SEMaterial>(seDevice, descriptorSetLayout, VK_SAMPLE_COUNT_1_BIT, 1.0, 0.01, 1.0);
             }
 
             auto submesh = std::make_unique<SESubMesh>(device, builder, material);
@@ -210,13 +210,11 @@ namespace se
         {
             if (hasMaterial())
             {
-                bindMaterial(commandBuffer);
-                pipelineLayout = getPipelineLayout();
+                bindMaterial(commandBuffer, pipelineLayout);
             }
             if (mesh->hasMaterial())
             {
-                mesh->bindMaterial(commandBuffer);
-                pipelineLayout = mesh->getPipelineLayout();
+                mesh->bindMaterial(commandBuffer, pipelineLayout);
             }
 
             mesh->bind(commandBuffer);

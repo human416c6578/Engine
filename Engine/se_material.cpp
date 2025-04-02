@@ -15,9 +15,7 @@ namespace se
 {
 	SEMaterial::SEMaterial(
 		SEDevice &device,
-		VkRenderPass renderPass,
-		const std::string &vertFilepath,
-		const std::string &fragFilepath,
+		VkDescriptorSetLayout descSetLayout,
 		const VkSampleCountFlagBits msaaSamples,
 		float metallic,
 		float roughness,
@@ -27,7 +25,7 @@ namespace se
 		std::optional<std::shared_ptr<SETexture>> metallicTexture,
 		std::optional<std::shared_ptr<SETexture>> roughnessTexture,
 		std::optional<std::shared_ptr<SETexture>> aoTexture)
-		: seDevice{device}, renderPass{renderPass}, diffuseTexture{diffuseTexture},
+		: seDevice{device}, descriptorSetLayout{descSetLayout}, diffuseTexture{diffuseTexture},
 		  normalTexture{normalTexture}, metallicTexture{metallicTexture},
 		  roughnessTexture{roughnessTexture}, aoTexture{aoTexture}
 	{
@@ -44,10 +42,7 @@ namespace se
 		dummyTexture = std::make_unique<se::SETexture>(seDevice, "textures/dummy.jpg");
 		createUniformBuffer();
 
-		createDescriptorSetLayout();
 		createDescriptorSets();
-		createPipelineLayout();
-		createPipeline(renderPass, vertFilepath, fragFilepath);
 	}
 
 	void SEMaterial::createUniformBuffer()
@@ -79,118 +74,6 @@ namespace se
 		// memoryRange.offset = 0;
 		// memoryRange.size = VK_WHOLE_SIZE;
 		// vkFlushMappedMemoryRanges(seDevice.device(), 1, &memoryRange);
-	}
-
-	void SEMaterial::createPipelineLayout()
-	{
-		VkPushConstantRange pushConstantRange{};
-		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-		pushConstantRange.offset = 0;
-		pushConstantRange.size = sizeof(SimplePushConstantData);
-
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-		if (vkCreatePipelineLayout(seDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) !=
-			VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create pipeline layout!");
-		}
-	}
-
-	void SEMaterial::createPipeline(VkRenderPass renderPass, const std::string vertPath, const std::string fragPath)
-	{
-		assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
-
-		PipelineConfigInfo pipelineConfig{};
-		SEPipeline::defaultPipelineConfigInfo(pipelineConfig);
-		pipelineConfig.renderPass = renderPass;
-		pipelineConfig.pipelineLayout = pipelineLayout;
-		sePipeline = std::make_unique<SEPipeline>(
-			seDevice,
-			vertPath,
-			fragPath,
-			pipelineConfig,
-			VK_SAMPLE_COUNT_1_BIT);
-	}
-
-	void SEMaterial::createDescriptorSetLayout()
-	{
-		std::vector<VkDescriptorSetLayoutBinding> bindings;
-
-		// UBO layout binding (always present)
-		VkDescriptorSetLayoutBinding uboLayoutBinding{};
-		uboLayoutBinding.binding = 0;
-		uboLayoutBinding.descriptorCount = 1;
-		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uboLayoutBinding.pImmutableSamplers = nullptr;
-		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings.push_back(uboLayoutBinding);
-
-		// Material properties layout binding (always present)
-		VkDescriptorSetLayoutBinding matLayoutBinding{};
-		matLayoutBinding.binding = 1;
-		matLayoutBinding.descriptorCount = 1;
-		matLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		matLayoutBinding.pImmutableSamplers = nullptr;
-		matLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings.push_back(matLayoutBinding);
-
-		// Diffuse (Albedo) texture binding (always present)
-		VkDescriptorSetLayoutBinding albedoLayoutBinding{};
-		albedoLayoutBinding.binding = 2;
-		albedoLayoutBinding.descriptorCount = 1;
-		albedoLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		albedoLayoutBinding.pImmutableSamplers = nullptr;
-		albedoLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings.push_back(albedoLayoutBinding);
-
-		VkDescriptorSetLayoutBinding normalLayoutBinding{};
-		normalLayoutBinding.binding = 3;
-		normalLayoutBinding.descriptorCount = 1;
-		normalLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		normalLayoutBinding.pImmutableSamplers = nullptr;
-		normalLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings.push_back(normalLayoutBinding);
-
-		VkDescriptorSetLayoutBinding metallicLayoutBinding{};
-		metallicLayoutBinding.binding = 4;
-		metallicLayoutBinding.descriptorCount = 1;
-		metallicLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		metallicLayoutBinding.pImmutableSamplers = nullptr;
-		metallicLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings.push_back(metallicLayoutBinding);
-
-		VkDescriptorSetLayoutBinding roughnessLayoutBinding{};
-		roughnessLayoutBinding.binding = 5;
-		roughnessLayoutBinding.descriptorCount = 1;
-		roughnessLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		roughnessLayoutBinding.pImmutableSamplers = nullptr;
-		roughnessLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings.push_back(roughnessLayoutBinding);
-
-		VkDescriptorSetLayoutBinding aoLayoutBinding{};
-		aoLayoutBinding.binding = 6;
-		aoLayoutBinding.descriptorCount = 1;
-		aoLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		aoLayoutBinding.pImmutableSamplers = nullptr;
-		aoLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		bindings.push_back(aoLayoutBinding);
-
-		// Descriptor set layout create info
-		VkDescriptorSetLayoutCreateInfo layoutInfo{};
-		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-		layoutInfo.pBindings = bindings.data();
-
-		// Create the descriptor set layout
-		if (vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create descriptor set layout!");
-		}
 	}
 
 	void SEMaterial::createDescriptorSets()

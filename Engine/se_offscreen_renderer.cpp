@@ -24,6 +24,69 @@ namespace se
         freeCommandBuffers();
     }
 
+    void SEOffscreenRenderer::resize(uint32_t newWidth, uint32_t newHeight)
+    {
+        // Avoid unnecessary work
+        if (width == newWidth && height == newHeight) return;
+
+        width = newWidth;
+        height = newHeight;
+
+        vkDestroyFramebuffer(seDevice.device(), framebuffer, nullptr);
+        vkDestroyRenderPass(seDevice.device(), renderPass, nullptr);
+
+        vkDestroyImageView(seDevice.device(), colorImageView, nullptr);
+        vkDestroyImage(seDevice.device(), colorImage, nullptr);
+        vkFreeMemory(seDevice.device(), colorImageMemory, nullptr);
+
+        vkDestroyImageView(seDevice.device(), depthImageView, nullptr);
+        vkDestroyImage(seDevice.device(), depthImage, nullptr);
+        vkFreeMemory(seDevice.device(), depthImageMemory, nullptr);
+
+        vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
+        vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
+
+        freeCommandBuffers();
+
+        createRenderPass();
+        createOffscreenImageDepth();
+        createOffscreenImageColor();
+        createFramebuffer();
+        createCommandBuffers();
+        createStagingBuffer();
+    }
+
+    void SEOffscreenRenderer::setImageFormat(VkFormat format)
+    {
+        // Avoid unnecessary work
+        if (colorFormat == format) return;
+
+        colorFormat = format;
+
+        vkDestroyFramebuffer(seDevice.device(), framebuffer, nullptr);
+        vkDestroyRenderPass(seDevice.device(), renderPass, nullptr);
+
+        vkDestroyImageView(seDevice.device(), colorImageView, nullptr);
+        vkDestroyImage(seDevice.device(), colorImage, nullptr);
+        vkFreeMemory(seDevice.device(), colorImageMemory, nullptr);
+
+        vkDestroyImageView(seDevice.device(), depthImageView, nullptr);
+        vkDestroyImage(seDevice.device(), depthImage, nullptr);
+        vkFreeMemory(seDevice.device(), depthImageMemory, nullptr);
+
+        vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
+        vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
+
+        freeCommandBuffers();
+
+        createRenderPass();
+        createOffscreenImageDepth();
+        createOffscreenImageColor();
+        createFramebuffer();
+        createCommandBuffers();
+        createStagingBuffer();
+    }
+
     void SEOffscreenRenderer::createOffscreenImageDepth() {
         VkFormat depthFormat = seDevice.findDepthFormat();
 
@@ -67,8 +130,6 @@ namespace se
     }
 
     void SEOffscreenRenderer::createOffscreenImageColor() {
-        VkFormat colorFormat = VK_FORMAT_R8G8B8A8_SRGB;
-
         // Create image
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -91,7 +152,7 @@ namespace se
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             colorImage,
             colorImageMemory);
-
+        
         // Create image view
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -126,7 +187,7 @@ namespace se
         depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         VkAttachmentDescription colorAttachment = {};
-        colorAttachment.format = VK_FORMAT_R8G8B8A8_SRGB;
+        colorAttachment.format = colorFormat;
         
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
         colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;

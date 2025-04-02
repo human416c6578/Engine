@@ -14,5 +14,8 @@ layout(location = 0) out vec3 localPos;
 
 void main() {
     localPos = inPosition;
-    gl_Position = ubo.proj * ubo.view * vec4(inPosition, 1.0);
+    mat4 rotView = mat4(mat3(ubo.view));
+    vec4 clipPos = ubo.proj * rotView * vec4(localPos, 1.0);
+
+	gl_Position = clipPos.xyww;
 }

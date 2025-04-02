@@ -14,11 +14,8 @@ namespace se
 		createDescriptorSetLayout();
 		createDescriptorSets();
 		createPipelineLayout();
-		createPipeline(renderer.getOffscreenRenderer().getRenderPass(), "shaders/cubemapVert.spv", "shaders/cubemapFrag.spv");
+		createPipeline(renderer.getOffscreenRenderer()->getRenderPass(), "shaders/cubemapVert.spv", "shaders/cubemapConvert.spv");
 		createCubemapImage();
-
-		convert();
-
 	}
 
 	void SEHdrToCubemap::createPipelineLayout()
@@ -119,7 +116,7 @@ namespace se
 		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		bindings.push_back(uboLayoutBinding);
 
-		// Diffuse (Albedo) texture binding (always present)
+		// HDR Texture
 		VkDescriptorSetLayoutBinding cubemapLayoutBinding{};
 		cubemapLayoutBinding.binding = 1;
 		cubemapLayoutBinding.descriptorCount = 1;
@@ -147,8 +144,8 @@ namespace se
 		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = VK_IMAGE_TYPE_2D;
 		imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
-		imageInfo.extent.width = seRenderer.getOffscreenWidth();
-		imageInfo.extent.height = seRenderer.getOffscreenHeight();
+		imageInfo.extent.width = seRenderer.getOffscreenRenderer()->getWidth();
+		imageInfo.extent.height = seRenderer.getOffscreenRenderer()->getHeight();
 		imageInfo.extent.depth = 1;
 		imageInfo.mipLevels = 1; 
 		imageInfo.arrayLayers = 6;  // 6 faces for cubemap
@@ -176,7 +173,6 @@ namespace se
 		}
 	}
 
-
 	void SEHdrToCubemap::draw(VkCommandBuffer commandBuffer)
 	{
 		bind(commandBuffer);
@@ -188,22 +184,22 @@ namespace se
 	{
 		se::SECamera camera{};
 		auto viewerObject = se::SEGameObject::createGameObject();
-		se::SEOffscreenRenderer offscreenRenderer = seRenderer.getOffscreenRenderer();
+		se::SEOffscreenRenderer* offscreenRenderer = seRenderer.getOffscreenRenderer();
 
 		std::vector<glm::vec3> directions = {
 			{1.0f, 0.0f, 0.0f},   // Right (+X)
 			{-1.0f, 0.0f, 0.0f},  // Left (-X)
-			{0.0f, -1.0f, 0.0f},   // Up (+Y)
-			{0.0f, 1.0f, 0.0f},  // Down (-Y)
-			{0.0f, 0.0f, 1.0f},   // Front (+Z)
-			{0.0f, 0.0f, -1.0f}   // Back (-Z)
+			{0.0f, 1.0f, 0.0f},   // Up (+Y)
+			{0.0f, -1.0f, 0.0f},  // Down (-Y)
+			{0.0f, 0.0f, -1.0f},   // Front (+Z)
+			{0.0f, 0.0f, 1.0f}   // Back (-Z)
 		};
 
 		std::vector<glm::vec3> upVectors = {
 			{0.0f, 1.0f, 0.0f},  // Right (+X)
 			{0.0f, 1.0f, 0.0f},  // Left (-X)
-			{0.0f, 0.0f, -1.0f},   // Up (+Y)
-			{0.0f, 0.0f, 1.0f},  // Down (-Y)
+			{0.0f, 0.0f, 1.0f},   // Up (+Y)
+			{0.0f, 0.0f, -1.0f},  // Down (-Y)
 			{0.0f, 1.0f, 0.0f},  // Front (+Z)
 			{0.0f, 1.0f, 0.0f}   // Back (-Z)
 		};
@@ -221,7 +217,6 @@ namespace se
 			ubo.cameraPos = viewerObject.transform.translation;
 
 			seDevice.updateUniformBuffers(ubo);
-
 			if (auto commandBuffer = seRenderer.beginOffscreenFrame())
 			{
 				seRenderer.beginOffscreenRenderPass(commandBuffer);
@@ -240,7 +235,7 @@ namespace se
 				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 				barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-				barrier.image = offscreenRenderer.getColorImage();
+				barrier.image = offscreenRenderer->getColorImage();
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				barrier.subresourceRange.baseMipLevel = 0;
 				barrier.subresourceRange.levelCount = 1;
@@ -295,22 +290,34 @@ namespace se
 				region.dstSubresource.baseArrayLayer = i;
 				region.dstSubresource.layerCount = 1;
 				region.dstOffset = { 0, 0, 0 };
-				region.extent = { seRenderer.getOffscreenWidth(), seRenderer.getOffscreenHeight(), 1};
+				region.extent = { offscreenRenderer->getWidth(), offscreenRenderer->getHeight(), 1};
 
 
 				vkCmdCopyImage(
 					cmdBuffer,
-					offscreenRenderer.getColorImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					offscreenRenderer->getColorImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					cubeMapImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					1, &region
 				);
 
 				
-				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				// Transition the cubemap face to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+				VkImageMemoryBarrier cubemapBarrier{};
+				cubemapBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+				cubemapBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				cubemapBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				cubemapBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				cubemapBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+				cubemapBarrier.image = cubeMapImage;
+				cubemapBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				cubemapBarrier.subresourceRange.baseMipLevel = 0;
+				cubemapBarrier.subresourceRange.levelCount = 1;
+				cubemapBarrier.subresourceRange.baseArrayLayer = i;  // IMPORTANT: Use correct array layer
+				cubemapBarrier.subresourceRange.layerCount = 1;
+				cubemapBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				cubemapBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
+				
 				vkCmdPipelineBarrier(
 					cmdBuffer,
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -318,13 +325,47 @@ namespace se
 					0,
 					0, nullptr,
 					0, nullptr,
-					1, &barrier
+					1, &cubemapBarrier
 				);
 				
 
 				seDevice.endSingleTimeCommands(cmdBuffer);
 			}
 		}
+
+		createSampler();
+	}
+
+	void SEHdrToCubemap::createSampler()
+	{
+		VkSamplerCreateInfo samplerInfo{};
+		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter = VK_FILTER_LINEAR;
+		samplerInfo.minFilter = VK_FILTER_LINEAR;
+		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+		samplerInfo.anisotropyEnable = VK_TRUE;
+		//samplerInfo.maxAnisotropy = seDevice.properties.limits.maxSamplerAnisotropy;
+		samplerInfo.maxAnisotropy = 4.0;
+		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		samplerInfo.unnormalizedCoordinates = VK_FALSE;
+		samplerInfo.compareEnable = VK_FALSE;
+		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerInfo.minLod = 0.0f;
+		samplerInfo.maxLod = static_cast<float>(1.0);
+		samplerInfo.mipLodBias = 0.0f;
+
+		if (vkCreateSampler(seDevice.device(), &samplerInfo, nullptr, &cubeMapSampler) != VK_SUCCESS)
+		{
+			throw std::runtime_error("failed to create texture sampler!");
+		}
+	}
+
+	void SEHdrToCubemap::cleanup()
+	{
+
 	}
 
 

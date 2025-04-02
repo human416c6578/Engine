@@ -1,20 +1,22 @@
-#include "app.hpp"
+﻿#include "app.hpp"
 #include "keyboard_movement_controller.hpp"
 
 void App::mainLoop()
 {
-    se::SimpleRenderSystem simpleRenderSystem{seDevice, seRenderer.getSwapChainRenderPass()};
+    
     se::SECamera camera{};
     auto viewerObject = se::SEGameObject::createGameObject();
     se::KeyboardMovementController cameraController{};
     static std::string str("");
-
+    
     static auto currentTime = std::chrono::high_resolution_clock::now();
 
     static auto lastTime = std::chrono::high_resolution_clock::now();
     static int fps = 0;
-    loadCubemap();
-    loadGameObjects();
+
+    se::PBR PBR{ seDevice, seRenderer.getSwapChainRenderPass(), seCubemap };
+
+    loadGameObjects(PBR.getMaterialDescriptorSetLayout());
 
     glfwSetInputMode(seWindow.getGLFWwindow(), GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
     
@@ -54,7 +56,8 @@ void App::mainLoop()
         {
             seRenderer.beginSwapChainRenderPass(commandBuffer);
 
-            simpleRenderSystem.renderGameObjects(commandBuffer, gameObjects, camera, viewerObject);
+            PBR.renderGameObjects(commandBuffer, gameObjects, camera, viewerObject);
+            PBR.renderCubeMap(commandBuffer);
 
             seRenderer.endSwapChainRenderPass(commandBuffer);
             seRenderer.endFrame();
@@ -128,10 +131,68 @@ static se::SESubMesh::Builder createCubeModel(glm::vec3 offset)
     return modelBuilder;
 }
 
-void App::loadCubemap()
+static se::SESubMesh::Builder createSphereModel(float radius, int sectorCount, int stackCount, glm::vec3 offset)
 {
-    seCubemap = std::make_unique<se::SECubemap>(seDevice, seRenderer, "hdr/snowy_forest_4k.hdr");
+    se::SESubMesh::Builder modelBuilder{};
+
+    // Variables for spherical coordinates
+    float sectorStep = 2 * glm::pi<float>() / sectorCount;  // Angle between each sector
+    float stackStep = glm::pi<float>() / stackCount;        // Angle between each stack
+
+    // Generate vertices
+    for (int i = 0; i <= stackCount; ++i)
+    {
+        float stackAngle = glm::pi<float>() / 2 - i * stackStep; // Angle from the top (-π/2) to the bottom (π/2)
+        float xy = radius * cos(stackAngle);                     // Radius at this stack level
+        float z = radius * sin(stackAngle);                      // Z position at this stack level
+
+        for (int j = 0; j <= sectorCount; ++j)
+        {
+            float sectorAngle = j * sectorStep; // Angle around the Y-axis (0 to 2π)
+
+            // Calculate vertex position in Cartesian coordinates
+            glm::vec3 position = glm::vec3(
+                xy * cos(sectorAngle), // X position
+                xy * sin(sectorAngle), // Y position
+                z                      // Z position
+            );
+
+            // Add the vertex with position and normal (normalized)
+            modelBuilder.vertices.push_back({
+                position + offset,  // Apply the offset to each vertex
+                glm::normalize(position), // The normal is just the normalized position vector
+                glm::vec2((float)j / sectorCount, (float)i / stackCount)  // Texture coordinates
+                });
+        }
+    }
+
+    // Generate indices
+    for (int i = 0; i < stackCount; ++i)
+    {
+        int k1 = i * (sectorCount + 1);     // First vertex of the current stack
+        int k2 = k1 + sectorCount + 1;      // First vertex of the next stack
+
+        for (int j = 0; j < sectorCount; ++j)
+        {
+            if (i != 0) // Skip the first stack (the top of the sphere)
+            {
+                modelBuilder.indices.push_back(k1 + j);
+                modelBuilder.indices.push_back(k2 + j);
+                modelBuilder.indices.push_back(k1 + j + 1);
+            }
+
+            if (i != (stackCount - 1)) // Skip the last stack (the bottom of the sphere)
+            {
+                modelBuilder.indices.push_back(k1 + j + 1);
+                modelBuilder.indices.push_back(k2 + j);
+                modelBuilder.indices.push_back(k2 + j + 1);
+            }
+        }
+    }
+
+    return modelBuilder;
 }
+
 
 std::vector<glm::vec3> lightPositions = {
     glm::vec3(0.5f, -1.0f, 0.0f),
@@ -143,38 +204,95 @@ std::vector<glm::vec3> lightColors = {
     glm::vec3(0.0f, 0.5f, 0.0f),
     glm::vec3(0.0f, 0.0f, 0.5f)};
 
-void App::loadGameObjects()
+void App::loadGameObjects(VkDescriptorSetLayout descriptorSetLayout)
 {
+    
+    std::shared_ptr<se::SEMaterial> material2 = std::make_unique<se::SEMaterial>(seDevice, descriptorSetLayout, VK_SAMPLE_COUNT_16_BIT, 0.9, 0.9, 0.3);
+
+    
+    
+    
+    std::shared_ptr<se::SEMesh> sponzaMesh = std::make_unique<se::SEMesh>(seDevice, "models/sponza/sponza.obj", seRenderer.getSwapChainRenderPass(), descriptorSetLayout);
+   
+    auto scene = se::SEGameObject::createGameObject();
+    scene.mesh = sponzaMesh;
+    scene.transform.translation = { 1.0f, 7.5f, .0f };
+    scene.transform.scale = { .01f, -.01f, .01f };
+    scene.transform.rotation = { .0f, .0f, .0f };
+    scene.color = { 1.f, 1.f, 1.f };
+    gameObjects.push_back(std::move(scene));
+    
+    
+    int nrRows = 5;
+    int nrColumns = 5;
+    float spacing = 2.5f; // Distance between spheres
+
+    for (int row = 0; row < nrRows; ++row)
+    {
+        for (int col = 0; col < nrColumns; ++col)
+        {
+            // Dynamically create a new material for each sphere with varying metallic and roughness
+            std::shared_ptr<se::SEMaterial> material = std::make_shared<se::SEMaterial>(
+                seDevice, descriptorSetLayout, VK_SAMPLE_COUNT_1_BIT,
+                (float)row / (float)nrRows, // Set metallic based on row
+                glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f) // Set roughness based on column, clamped to avoid 0.0 roughness
+            );
+
+            // Create a new sphere mesh using the createSphereModel function
+            float radius = 1.0f;  // You can adjust the radius as needed
+            int sectorCount = 36; // Number of sectors (longitude divisions)
+            int stackCount = 18;  // Number of stacks (latitude divisions)
+
+            // Create the sphere model dynamically
+            auto sphereModel = createSphereModel(radius, sectorCount, stackCount, glm::vec3(0.0f, 0.0f, 0.0f));
+            
+            // Create the mesh for the sphere
+            std::shared_ptr<se::SEMesh> sphereMesh = std::make_shared<se::SEMesh>(
+                seDevice, sphereModel, material);
+
+            // Create a new game object for this sphere
+            auto sphere = se::SEGameObject::createGameObject();
+            sphere.mesh = sphereMesh;
+
+            // Set the transformation for the sphere (position, scale, rotation)
+            sphere.transform.translation = glm::vec3(
+                (float)(col - (nrColumns / 2)) * spacing,
+                (float)(row - (nrRows / 2)) * spacing,
+                -2.0f
+            );
+            sphere.transform.scale = glm::vec3(0.5f, 0.5f, 0.5f); // Small scale for each sphere
+            sphere.transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f); // No rotation
+
+            // Set the color to white or any desired color for this sphere
+            sphere.color = glm::vec3(0.2f, 1.0f, 1.0f);
+
+            // Add this sphere to the gameObjects collection
+            gameObjects.push_back(std::move(sphere));
+        }
+    }
+
+    
+    /*
+    
+    se::SESubMesh::Builder builder = createCubeModel({0, 0, 0});
+    std::shared_ptr<se::SEMesh> floorMesh = std::make_unique<se::SEMesh>(seDevice, builder, material);
+
     std::shared_ptr<se::SETexture> diffuse = std::make_unique<se::SETexture>(seDevice, "textures/patched-brickwork_albedo.png");
     std::shared_ptr<se::SETexture> normal = std::make_unique<se::SETexture>(seDevice, "textures/patched-brickwork_normal-dx.png");
     std::shared_ptr<se::SETexture> metallic = std::make_unique<se::SETexture>(seDevice, "textures/patched-brickwork_metallic.png");
     std::shared_ptr<se::SETexture> roughness = std::make_unique<se::SETexture>(seDevice, "textures/patched-brickwork_roughness.png");
     std::shared_ptr<se::SETexture> ao = std::make_unique<se::SETexture>(seDevice, "textures/patched-brickwork_ao.png");
-
-    std::shared_ptr<se::SEMaterial> material = std::make_unique<se::SEMaterial>(seDevice, seRenderer.getSwapChainRenderPass(), "shaders/matvert.spv", "shaders/matfrag.spv", VK_SAMPLE_COUNT_1_BIT, 0.1, 0.7, 1.0, diffuse, normal, metallic, roughness, ao);
-
-    std::shared_ptr<se::SEMaterial> material2 = std::make_unique<se::SEMaterial>(seDevice, seRenderer.getSwapChainRenderPass(), "shaders/matvert.spv", "shaders/matfrag.spv", VK_SAMPLE_COUNT_1_BIT, 1.0, 0.01, 1.0);
-
-    se::SESubMesh::Builder builder = createCubeModel({0, 0, 0});
-    std::shared_ptr<se::SEMesh> floorMesh = std::make_unique<se::SEMesh>(seDevice, builder, material);
-    /*
-    std::shared_ptr<se::SEMesh> sponzaMesh = std::make_unique<se::SEMesh>(seDevice, "models/sponza/sponza.obj", seRenderer.getSwapChainRenderPass());
-   
     
-    auto scene = se::SEGameObject::createGameObject();
-    scene.mesh = sponzaMesh;
-    scene.transform.translation = { 1.0f, 2.5f, .0f };
-    scene.transform.scale = { .01f, -.01f, .01f };
-    scene.transform.rotation = { .0f, .0f, .0f };
-    scene.color = { 1.f, 1.f, 1.f };
-    gameObjects.push_back(std::move(scene));
-    */
+    std::shared_ptr<se::SEMaterial> material = std::make_unique<se::SEMaterial>(seDevice, descriptorSetLayout, VK_SAMPLE_COUNT_1_BIT, 0.1, 0.7, 1.0, diffuse, normal, metallic, roughness, ao);
+    
 
     auto floor = se::SEGameObject::createGameObject();
     floor.mesh = floorMesh;
-    floor.transform.translation = {1.0f, 2.5f, .0f};
-    floor.transform.scale = {2.5f, 0.5f, 2.5f};
+    floor.transform.translation = {1.0f, 5.0f, .0f};
+    floor.transform.scale = {12.5f, 1.5f, 12.5f};
     floor.transform.rotation = {.0f, .0f, .0f};
-    floor.color = {.2f, .2f, .2f};
+    floor.color = {1.f, 1.f, 1.f};
     gameObjects.push_back(std::move(floor));
+
+    */
 }

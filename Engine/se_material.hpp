@@ -34,8 +34,8 @@ namespace se
 			alignas(4) int padding; // 4 bytes padding
 		};
 
-		SEMaterial(SEDevice &device, VkRenderPass renderPass,
-				   const std::string &vertFilepath, const std::string &fragFilepath,
+		SEMaterial(SEDevice &device,
+				   VkDescriptorSetLayout descriptorSetLayout,
 				   const VkSampleCountFlagBits msaaSamples,
 				   float metallic = 0.5,
 				   float roughness = 0.5,
@@ -50,20 +50,16 @@ namespace se
 		{
 		}
 
-		VkPipelineLayout getPipelineLayout() { return pipelineLayout; };
-
 		SEMaterial(const SEMaterial &) = delete;
 		SEMaterial &operator=(const SEMaterial &) = delete;
 
-		void bind(VkCommandBuffer commandBuffer)
+		void bind(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout)
 		{
-			sePipeline->bind(commandBuffer);
-
 			vkCmdBindDescriptorSets(
 				commandBuffer,
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
 				pipelineLayout,
-				0,
+				1,  // Set 1 (Material Textures)
 				1,
 				&descriptorSet,
 				0,
@@ -72,17 +68,11 @@ namespace se
 
 	private:
 		void createUniformBuffer();
-		void createPipelineLayout();
-		void createPipeline(VkRenderPass renderPass, const std::string vertPath, const std::string fragPath);
 		void createDescriptorSets();
-		void createDescriptorSetLayout();
 
 		SEDevice &seDevice;
-		VkRenderPass &renderPass;
 		VkDescriptorSet descriptorSet;
 		VkDescriptorSetLayout descriptorSetLayout;
-		std::unique_ptr<SEPipeline> sePipeline;
-		VkPipelineLayout pipelineLayout;
 
 		MaterialFlags flags{};
 

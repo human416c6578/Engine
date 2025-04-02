@@ -36,10 +36,9 @@ namespace se
       return currentFrameIndex;
     }
 
-    uint32_t getOffscreenWidth() { return width; }
-    uint32_t getOffscreenHeight() { return width; }
+    
 
-    SEOffscreenRenderer& getOffscreenRenderer() { return offscreenRenderer; }
+    SEOffscreenRenderer* getOffscreenRenderer() { return offscreenRenderer.get(); }
 
     VkCommandBuffer beginFrame();
     void endFrame();
@@ -62,10 +61,9 @@ namespace se
     std::unique_ptr<SESwapChain> seSwapChain;
     std::vector<VkCommandBuffer> commandBuffers;
 
-    uint32_t width{ 2048 };
-    uint32_t height{ 2048 };
+    
 
-    SEOffscreenRenderer offscreenRenderer{seDevice, width, height };
+    std::unique_ptr<SEOffscreenRenderer> offscreenRenderer;
 
     uint32_t currentImageIndex;
     int currentFrameIndex{0};

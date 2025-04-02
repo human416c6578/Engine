@@ -3,7 +3,7 @@
 #include "se_renderer.hpp"
 #include "se_gameobject.hpp"
 #include "se_camera.hpp"
-#include "simple_render_system.hpp"
+#include "se_pbr.hpp"
 
 #include <exception>
 #include <cstdlib>
@@ -34,10 +34,9 @@ private:
     se::SEWindow seWindow{WIDTH, HEIGHT, "Vulkan"};
     se::SEDevice seDevice{seWindow};
     se::SERenderer seRenderer{seWindow, seDevice};
-    std::unique_ptr<se::SECubemap> seCubemap;
+    se::SECubemap seCubemap{ seDevice, seRenderer, "hdr/snowy_forest_4k.hdr" };
 
-    void loadCubemap();
-    void loadGameObjects();
+    void loadGameObjects(VkDescriptorSetLayout descriptorSetLayout);
     void updateGameObjects(float dt);
     void mainLoop();
     std::vector<se::SEGameObject> gameObjects;

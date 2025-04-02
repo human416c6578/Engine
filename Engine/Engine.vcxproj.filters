@@ -75,6 +75,12 @@
     <ClCompile Include="se_cubemap_specular.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="se_cubemap_brdf.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="se_pbr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\stb_image.h">
@@ -143,6 +149,12 @@
     <ClInclude Include="se_cubemap_specular.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="se_cubemap_brdf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="se_pbr.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\defaultFrag.frag">
@@ -160,10 +172,34 @@
     <None Include="hdr\snowy_forest_4k.hdr">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="shaders\cubemapFrag.frag">
+    <None Include="shaders\backgroundFrag.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\cubemapConvert.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\irradianceDiffuse.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\backgroundVert.vert">
       <Filter>Source Files\shaders</Filter>
     </None>
     <None Include="shaders\cubemapVert.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\irradianceSpecular.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\BRDFFrag.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\BRDFVert.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\pbrFrag.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\pbrVert.vert">
       <Filter>Source Files\shaders</Filter>
     </None>
   </ItemGroup>

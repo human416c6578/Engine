@@ -24,9 +24,7 @@ namespace se
         ~SESubMesh();
 
         bool hasMaterial() const { return seMaterial != nullptr; }
-        void bindMaterial(VkCommandBuffer commandBuffer) const { seMaterial->bind(commandBuffer); }
-
-        VkPipelineLayout getPipelineLayout() { return seMaterial.get()->getPipelineLayout(); }
+        void bindMaterial(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const { seMaterial->bind(commandBuffer, pipelineLayout); }
 
         SESubMesh(const SESubMesh &) = delete;
         SESubMesh &operator=(const SESubMesh &) = delete;
