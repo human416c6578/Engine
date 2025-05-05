@@ -240,7 +240,7 @@ namespace se
         BRDFImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         BRDFImageInfo.imageView = seCubemap.getBRDFImageView();
         BRDFImageInfo.sampler = seCubemap.getBRDFSampler();
-
+        
         // BRDF texture write
         descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[2].dstSet = descriptorSet;

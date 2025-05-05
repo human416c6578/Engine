@@ -44,6 +44,8 @@ namespace se
 
 		VkSampler getBRDFSampler() { return seBRDF->getSampler(); }
 		VkImageView getBRDFImageView() { return seBRDF->getImageView(); }
+		//VkSampler getBRDFSampler() { return brdfLutTexture->getTextureSampler(); }
+		//VkImageView getBRDFImageView() { return brdfLutTexture->getTextureImageView(); }
 
 	private:
 		void createPipelineLayout();
@@ -84,6 +86,7 @@ namespace se
 		std::unique_ptr<SECubemapBRDF> seBRDF;
 
 		std::shared_ptr<se::SESubMesh> cubeMesh;
+		std::shared_ptr<se::SETexture> brdfLutTexture;
 	};
 
 }

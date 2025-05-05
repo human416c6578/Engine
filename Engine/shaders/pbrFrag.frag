@@ -120,7 +120,7 @@ void main()
 {	
     vec3 albedo = pushConstants.color;
     if(flags.hasDiffuseMap != 0)
-        albedo = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2));
+        albedo = texture(albedoMap, TexCoords).rgb;
     
     vec3 N = Normal;
     if(flags.hasNormalMap != 0)
@@ -140,6 +140,7 @@ void main()
 
     vec3 V = normalize(ubo.camPos - WorldPos);
     vec3 R = reflect(-V, N);
+    R.x = -R.x;
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow)    
@@ -156,7 +157,8 @@ void main()
         vec3 L = normalize(lightPositions[i] - WorldPos);
         vec3 H = normalize(V + L);
         float distance = length(lightPositions[i] - WorldPos);
-        float attenuation = 1.0 / (distance * distance * distance);
+        //float attenuation = 1.0 / (distance * distance);
+        float attenuation = 1.0 / log(distance + 1.0);
         vec3 radiance = lightColors[i] * attenuation;
 
         // Cook-Torrance BRDF
@@ -202,16 +204,19 @@ void main()
     const float MAX_REFLECTION_LOD = 4.0;
     vec3 prefilteredColor = textureLod(irradianceSpecularMap, R,  roughness * MAX_REFLECTION_LOD).rgb;   
     vec2 envBRDF  = texture(BRDFMap, vec2(max(dot(N, V), 0.0), roughness)).rg;
+    float specularFade = 1.0 - roughness * roughness;
     vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
 
     vec3 ambient = (kD * diffuse + specular) * ao; 
     
     vec3 color = ambient + Lo;
+    
+    // HDR tone mapping
+    color = color / (color + vec3(1.0));
 
-    // HDR tonemapping
-    //color = color / (color + vec3(1.0));
-    // gamma correct
-    //color = pow(color, vec3(1.0/2.2)); 
+    // Gamma correction (assuming gamma = 2.2)
+    //color = pow(color, vec3(1.0 / 2.2)); 
 
     outColor = vec4(color, 1.0);
+
 }

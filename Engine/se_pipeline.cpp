@@ -44,6 +44,7 @@ namespace se
         configInfo.rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
         configInfo.rasterizationInfo.lineWidth = 1.0f;
         configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
+        //configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
         configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
         configInfo.rasterizationInfo.depthBiasEnable = VK_FALSE;
         configInfo.rasterizationInfo.depthBiasConstantFactor = 0.0f; // Optional
@@ -89,7 +90,7 @@ namespace se
         configInfo.depthStencilInfo.stencilTestEnable = VK_FALSE;
         configInfo.depthStencilInfo.front = {}; // Optional
         configInfo.depthStencilInfo.back = {};  // Optional
-
+        
         configInfo.dynamicStateEnables = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
         configInfo.dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
         configInfo.dynamicStateInfo.pDynamicStates = configInfo.dynamicStateEnables.data();
@@ -101,7 +102,7 @@ namespace se
     static std::vector<char> readFile(const std::string &filepath)
     {
         std::ifstream file(filepath, std::ios::ate | std::ios::binary);
-
+        
         if (!file.is_open())
         {
             throw std::runtime_error("failed to open file!");

@@ -57,6 +57,7 @@ namespace se
 
         bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str(),
                                     base_dir.c_str());
+ 
         if (!warn.empty())
         {
             std::cout << "WARN: " << warn << std::endl;

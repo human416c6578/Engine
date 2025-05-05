@@ -27,6 +27,7 @@ namespace se
 		seDiffuse->convert();
 		seSpecular->convert();
 		seBRDF->generate();
+		//brdfLutTexture = std::make_unique<SETexture>(seDevice, "textures/brdf_lut.png");
 
 		createDescriptorSetLayout();
 		createDescriptorSets();

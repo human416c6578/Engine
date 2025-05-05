@@ -31,7 +31,7 @@ namespace se
 			alignas(4) float ao;			// 4 bytes (aligned to 4 bytes)
 
 			// Padding to make the structure size a multiple of 16 bytes (4 padding bytes)
-			alignas(4) int padding; // 4 bytes padding
+			//alignas(4) int padding; // 4 bytes padding
 		};
 
 		SEMaterial(SEDevice &device,

@@ -89,7 +89,7 @@ namespace se
 
     void SEOffscreenRenderer::createOffscreenImageDepth() {
         VkFormat depthFormat = seDevice.findDepthFormat();
-
+        
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType = VK_IMAGE_TYPE_2D;

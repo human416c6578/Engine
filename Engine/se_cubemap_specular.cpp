@@ -194,19 +194,19 @@ namespace se
 		se::SEOffscreenRenderer* offscreenRenderer = seRenderer.getOffscreenRenderer();
 
 		std::vector<glm::vec3> directions = {
-			{1.0f, 0.0f, 0.0f},   // Right (+X)
-			{-1.0f, 0.0f, 0.0f},  // Left (-X)
+			{-1.0f, 0.0f, 0.0f},   // Right (+X)
+			{1.0f, 0.0f, 0.0f},  // Left (-X)
 			{0.0f, 1.0f, 0.0f},   // Up (+Y)
 			{0.0f, -1.0f, 0.0f},  // Down (-Y)
-			{0.0f, 0.0f, -1.0f},   // Front (+Z)
-			{0.0f, 0.0f, 1.0f}   // Back (-Z)
+			{0.0f, 0.0f, 1.0f},   // Front (+Z)
+			{0.0f, 0.0f, -1.0f}   // Back (-Z)
 		};
 
 		std::vector<glm::vec3> upVectors = {
 			{0.0f, 1.0f, 0.0f},  // Right (+X)
 			{0.0f, 1.0f, 0.0f},  // Left (-X)
-			{0.0f, 0.0f, 1.0f},   // Up (+Y)
-			{0.0f, 0.0f, -1.0f},  // Down (-Y)
+			{0.0f, 0.0f, -1.0f},   // Up (+Y)
+			{0.0f, 0.0f, 1.0f},  // Down (-Y)
 			{0.0f, 1.0f, 0.0f},  // Front (+Z)
 			{0.0f, 1.0f, 0.0f}   // Back (-Z)
 		};
@@ -396,10 +396,10 @@ namespace se
 		// Define the vertices for the cube. Each face has 4 vertices.
 		modelBuilder.vertices = {
 			// left face
-			{{-.5f, -.5f, -.5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
-			{{-.5f, .5f, .5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
-			{{-.5f, -.5f, .5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
-			{{-.5f, .5f, -.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
+			{{-.5f, -.5f, -.5f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+			{{-.5f, .5f, .5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
+			{{-.5f, -.5f, .5f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+			{{-.5f, .5f, -.5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
 
 			// right face
 			{{.5f, -.5f, -.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
@@ -426,10 +426,10 @@ namespace se
 			{{.5f, -.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
 
 			// tail face
-			{{-.5f, -.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-			{{.5f, .5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
-			{{-.5f, .5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
-			{{.5f, -.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+			{{-.5f, -.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
+			{{.5f, .5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
+			{{-.5f, .5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
+			{{.5f, -.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
 		};
 
 		// Apply offset to positions

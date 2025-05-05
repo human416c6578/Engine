@@ -19,12 +19,12 @@ public:
     App()
     {
     }
-
+    
     ~App() {}
 
     App(const App &) = delete;
     App &operator=(const App &) = delete;
-
+    
     void run()
     {
         mainLoop();
@@ -34,7 +34,7 @@ private:
     se::SEWindow seWindow{WIDTH, HEIGHT, "Vulkan"};
     se::SEDevice seDevice{seWindow};
     se::SERenderer seRenderer{seWindow, seDevice};
-    se::SECubemap seCubemap{ seDevice, seRenderer, "hdr/snowy_forest_4k.hdr" };
+    se::SECubemap seCubemap{ seDevice, seRenderer, "hdr/rostock_laage_airport_2k.hdr" };
 
     void loadGameObjects(VkDescriptorSetLayout descriptorSetLayout);
     void updateGameObjects(float dt);

@@ -29,11 +29,11 @@ void App::mainLoop()
             str.append(std::to_string(fps) + " FPS " + "( " + std::to_string(1.f / fps * 1000) + " ms )");
             seWindow.setTitle(str);
             str.clear();
-
+            
             fps = 0;
             lastTime = std::chrono::high_resolution_clock::now();
         }
-
+        
         auto newTime = std::chrono::high_resolution_clock::now();
         float frameTime =
             std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
@@ -43,7 +43,7 @@ void App::mainLoop()
         camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
 
         float aspect = seRenderer.getAspectRatio();
-        camera.setPerspectiveProjection(glm::radians(90.f), aspect, 0.01f, 1000.f);
+        camera.setPerspectiveProjection(glm::radians(90.f), aspect, 0.1f, 100.f);
 
         UniformBufferObject ubo{};
         ubo.proj = camera.getProjection();
@@ -76,10 +76,10 @@ static se::SESubMesh::Builder createCubeModel(glm::vec3 offset)
     // Define the vertices for the cube. Each face has 4 vertices.
     modelBuilder.vertices = {
         // left face
-        {{-.5f, -.5f, -.5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
-        {{-.5f, .5f, .5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
-        {{-.5f, -.5f, .5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
-        {{-.5f, .5f, -.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
+        {{-.5f, -.5f, -.5f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{-.5f, .5f, .5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
+        {{-.5f, -.5f, .5f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+        {{-.5f, .5f, -.5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
 
         // right face
         {{.5f, -.5f, -.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
@@ -88,16 +88,16 @@ static se::SESubMesh::Builder createCubeModel(glm::vec3 offset)
         {{.5f, .5f, -.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
 
         // top face
-        {{-.5f, -.5f, -.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{.5f, -.5f, .5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
-        {{-.5f, -.5f, .5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
-        {{.5f, -.5f, -.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{-.5f, -.5f, -.5f}, {0.0f, -1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{.5f, -.5f, .5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},
+        {{-.5f, -.5f, .5f}, {0.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},
+        {{.5f, -.5f, -.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f}},
 
         // bottom face
-        {{-.5f, .5f, -.5f}, {0.0f, -1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{.5f, .5f, .5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},
-        {{-.5f, .5f, .5f}, {0.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},
-        {{.5f, .5f, -.5f}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{-.5f, .5f, -.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{.5f, .5f, .5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
+        {{-.5f, .5f, .5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
+        {{.5f, .5f, -.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
 
         // nose face
         {{-.5f, -.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
@@ -106,10 +106,10 @@ static se::SESubMesh::Builder createCubeModel(glm::vec3 offset)
         {{.5f, -.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
 
         // tail face
-        {{-.5f, -.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{.5f, .5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
-        {{-.5f, .5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
-        {{.5f, -.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{-.5f, -.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
+        {{.5f, .5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
+        {{-.5f, .5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
+        {{.5f, -.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
     };
 
     // Apply offset to positions
@@ -206,12 +206,7 @@ std::vector<glm::vec3> lightColors = {
 
 void App::loadGameObjects(VkDescriptorSetLayout descriptorSetLayout)
 {
-    
-    std::shared_ptr<se::SEMaterial> material2 = std::make_unique<se::SEMaterial>(seDevice, descriptorSetLayout, VK_SAMPLE_COUNT_16_BIT, 0.9, 0.9, 0.3);
-
-    
-    
-    
+    /*
     std::shared_ptr<se::SEMesh> sponzaMesh = std::make_unique<se::SEMesh>(seDevice, "models/sponza/sponza.obj", seRenderer.getSwapChainRenderPass(), descriptorSetLayout);
    
     auto scene = se::SEGameObject::createGameObject();
@@ -221,12 +216,13 @@ void App::loadGameObjects(VkDescriptorSetLayout descriptorSetLayout)
     scene.transform.rotation = { .0f, .0f, .0f };
     scene.color = { 1.f, 1.f, 1.f };
     gameObjects.push_back(std::move(scene));
-    
+    */
     
     int nrRows = 5;
     int nrColumns = 5;
     float spacing = 2.5f; // Distance between spheres
-
+    
+    
     for (int row = 0; row < nrRows; ++row)
     {
         for (int col = 0; col < nrColumns; ++col)
@@ -237,7 +233,7 @@ void App::loadGameObjects(VkDescriptorSetLayout descriptorSetLayout)
                 (float)row / (float)nrRows, // Set metallic based on row
                 glm::clamp((float)col / (float)nrColumns, 0.05f, 1.0f) // Set roughness based on column, clamped to avoid 0.0 roughness
             );
-
+            
             // Create a new sphere mesh using the createSphereModel function
             float radius = 1.0f;  // You can adjust the radius as needed
             int sectorCount = 36; // Number of sectors (longitude divisions)
@@ -245,7 +241,7 @@ void App::loadGameObjects(VkDescriptorSetLayout descriptorSetLayout)
 
             // Create the sphere model dynamically
             auto sphereModel = createSphereModel(radius, sectorCount, stackCount, glm::vec3(0.0f, 0.0f, 0.0f));
-            
+            //auto sphereModel = createCubeModel(glm::vec3(0.0f, 0.0f, 0.0f));
             // Create the mesh for the sphere
             std::shared_ptr<se::SEMesh> sphereMesh = std::make_shared<se::SEMesh>(
                 seDevice, sphereModel, material);
@@ -264,35 +260,29 @@ void App::loadGameObjects(VkDescriptorSetLayout descriptorSetLayout)
             sphere.transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f); // No rotation
 
             // Set the color to white or any desired color for this sphere
-            sphere.color = glm::vec3(0.2f, 1.0f, 1.0f);
-
+            sphere.color = glm::vec3(1.0f, 1.0f, 1.0f);
+            
             // Add this sphere to the gameObjects collection
             gameObjects.push_back(std::move(sphere));
         }
     }
-
-    
-    /*
     
     se::SESubMesh::Builder builder = createCubeModel({0, 0, 0});
+   
+    
+    std::shared_ptr<se::SETexture> diffuse = std::make_unique<se::SETexture>(seDevice, "textures/Dark/texture_01.png");
+   
+    std::shared_ptr<se::SEMaterial> material = std::make_unique<se::SEMaterial>(seDevice, descriptorSetLayout, VK_SAMPLE_COUNT_1_BIT, 0.00, 0.95, 1.0, diffuse);
+    
     std::shared_ptr<se::SEMesh> floorMesh = std::make_unique<se::SEMesh>(seDevice, builder, material);
-
-    std::shared_ptr<se::SETexture> diffuse = std::make_unique<se::SETexture>(seDevice, "textures/patched-brickwork_albedo.png");
-    std::shared_ptr<se::SETexture> normal = std::make_unique<se::SETexture>(seDevice, "textures/patched-brickwork_normal-dx.png");
-    std::shared_ptr<se::SETexture> metallic = std::make_unique<se::SETexture>(seDevice, "textures/patched-brickwork_metallic.png");
-    std::shared_ptr<se::SETexture> roughness = std::make_unique<se::SETexture>(seDevice, "textures/patched-brickwork_roughness.png");
-    std::shared_ptr<se::SETexture> ao = std::make_unique<se::SETexture>(seDevice, "textures/patched-brickwork_ao.png");
-    
-    std::shared_ptr<se::SEMaterial> material = std::make_unique<se::SEMaterial>(seDevice, descriptorSetLayout, VK_SAMPLE_COUNT_1_BIT, 0.1, 0.7, 1.0, diffuse, normal, metallic, roughness, ao);
-    
 
     auto floor = se::SEGameObject::createGameObject();
     floor.mesh = floorMesh;
-    floor.transform.translation = {1.0f, 5.0f, .0f};
-    floor.transform.scale = {12.5f, 1.5f, 12.5f};
+    floor.transform.translation = {.0f, 6.0f, .0f};
+    floor.transform.scale = {10.0f, 0.5f, 10.0f};
     floor.transform.rotation = {.0f, .0f, .0f};
-    floor.color = {1.f, 1.f, 1.f};
+    floor.color = {0.f, 0.f, 0.f};
     gameObjects.push_back(std::move(floor));
 
-    */
+    
 }

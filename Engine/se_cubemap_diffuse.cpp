@@ -131,7 +131,7 @@ namespace se
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
-
+		
 		// Create the descriptor set layout
 		if (vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
 		{
@@ -188,19 +188,19 @@ namespace se
 		se::SEOffscreenRenderer* offscreenRenderer = seRenderer.getOffscreenRenderer();
 
 		std::vector<glm::vec3> directions = {
-			{1.0f, 0.0f, 0.0f},   // Right (+X)
-			{-1.0f, 0.0f, 0.0f},  // Left (-X)
+			{-1.0f, 0.0f, 0.0f},   // Right (+X)
+			{1.0f, 0.0f, 0.0f},  // Left (-X)
 			{0.0f, 1.0f, 0.0f},   // Up (+Y)
 			{0.0f, -1.0f, 0.0f},  // Down (-Y)
-			{0.0f, 0.0f, -1.0f},   // Front (+Z)
-			{0.0f, 0.0f, 1.0f}   // Back (-Z)
+			{0.0f, 0.0f, 1.0f},   // Front (+Z)
+			{0.0f, 0.0f, -1.0f}   // Back (-Z)
 		};
 
 		std::vector<glm::vec3> upVectors = {
 			{0.0f, 1.0f, 0.0f},  // Right (+X)
 			{0.0f, 1.0f, 0.0f},  // Left (-X)
-			{0.0f, 0.0f, 1.0f},   // Up (+Y)
-			{0.0f, 0.0f, -1.0f},  // Down (-Y)
+			{0.0f, 0.0f, -1.0f},   // Up (+Y)
+			{0.0f, 0.0f, 1.0f},  // Down (-Y)
 			{0.0f, 1.0f, 0.0f},  // Front (+Z)
 			{0.0f, 1.0f, 0.0f}   // Back (-Z)
 		};
@@ -376,10 +376,10 @@ namespace se
 		// Define the vertices for the cube. Each face has 4 vertices.
 		modelBuilder.vertices = {
 			// left face
-			{{-.5f, -.5f, -.5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
-			{{-.5f, .5f, .5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
-			{{-.5f, -.5f, .5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
-			{{-.5f, .5f, -.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
+			{{-.5f, -.5f, -.5f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+			{{-.5f, .5f, .5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
+			{{-.5f, -.5f, .5f}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
+			{{-.5f, .5f, -.5f}, {-1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
 
 			// right face
 			{{.5f, -.5f, -.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
@@ -406,10 +406,10 @@ namespace se
 			{{.5f, -.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
 
 			// tail face
-			{{-.5f, -.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-			{{.5f, .5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
-			{{-.5f, .5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
-			{{.5f, -.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+			{{-.5f, -.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
+			{{.5f, .5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
+			{{-.5f, .5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
+			{{.5f, -.5f, -0.5f}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
 		};
 
 		// Apply offset to positions

@@ -11,7 +11,7 @@ namespace se
 	{
 	public:
 		SEHdrToCubemap(SEDevice& device, SERenderer& renderPass, const std::string& textureFilepath);
-
+		
 		~SEHdrToCubemap()
 		{
 		}

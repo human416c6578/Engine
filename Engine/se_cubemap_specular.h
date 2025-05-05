@@ -72,7 +72,7 @@ namespace se
 
 		std::unique_ptr<se::SESubMesh> cubeMesh;
 
-		unsigned int maxMipLevels = 5;
+		unsigned int maxMipLevels = 8;
 	};
 }
 
