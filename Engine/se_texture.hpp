@@ -1,16 +1,19 @@
 #pragma once
 
+#include <stb_image.h>
+
 #include "se_device.hpp"
+#include "se_resource.hpp"
 
 // std
 #include <math.h>
 
 namespace se
 {
-	class SETexture
+	class SETexture : public Resource
 	{
 	public:
-		SETexture(SEDevice &device, const std::string &path);
+		SETexture(SEDevice& device, const std::string guid, const std::string name, stbi_uc* pixels, int width, int height);
 		~SETexture();
 
 		VkSampler getTextureSampler() { return textureSampler; }
@@ -26,7 +29,7 @@ namespace se
 		VkImageView textureImageView;
 		VkSampler textureSampler;
 
-		void createTextureImage();
+		void createTextureImage(stbi_uc* pixels, int width, int height);
 		void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 		VkSampleCountFlagBits getMaxUsableSampleCount();
 		void createTextureImageView();

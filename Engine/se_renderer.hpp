@@ -36,8 +36,7 @@ namespace se
       return currentFrameIndex;
     }
 
-    
-
+   
     SEOffscreenRenderer* getOffscreenRenderer() { return offscreenRenderer.get(); }
 
     VkCommandBuffer beginFrame();
@@ -60,8 +59,6 @@ namespace se
     SEDevice &seDevice;
     std::unique_ptr<SESwapChain> seSwapChain;
     std::vector<VkCommandBuffer> commandBuffers;
-
-    
 
     std::unique_ptr<SEOffscreenRenderer> offscreenRenderer;
 

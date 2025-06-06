@@ -210,12 +210,12 @@ namespace se
 
 		for (int i = 0; i < 6; i++)
 		{
-			camera.setViewDirection(viewerObject.transform.translation, directions[i], upVectors[i]);
+			camera.setViewDirection(viewerObject.getTransform().translation, directions[i], upVectors[i]);
 
 			UniformBufferObject ubo{};
 			ubo.proj = camera.getProjection();
 			ubo.view = camera.getView();
-			ubo.cameraPos = viewerObject.transform.translation;
+			ubo.cameraPos = viewerObject.getTransform().translation;
 
 			seDevice.updateUniformBuffers(ubo);
 			if (auto commandBuffer = seRenderer.beginOffscreenFrame())

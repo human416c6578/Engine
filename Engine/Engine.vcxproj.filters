@@ -16,70 +16,133 @@
     <Filter Include="Source Files\shaders">
       <UniqueIdentifier>{e7357c01-ec66-4bcb-b7cd-7d449388c960}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Core">
+      <UniqueIdentifier>{2fe32e12-e115-4a28-abe2-3f1938662634}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Renderer">
+      <UniqueIdentifier>{22cb9a69-3a40-44d9-a829-078a96912019}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Cubemap">
+      <UniqueIdentifier>{3d9d8925-9ef2-469f-aade-f94a3267acb2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Resources">
+      <UniqueIdentifier>{ac848c41-ddfb-439d-a889-0b1f9ccbaf96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\imgui">
+      <UniqueIdentifier>{b2f38000-de3f-410c-a9d5-7ce409ef6772}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\imgui">
+      <UniqueIdentifier>{f9b2a2ac-f948-4751-82a0-07d98020e30e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="keyboard_movement_controller.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="se_camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_device.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_material.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_mesh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_pipeline.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="se_offscreen_renderer.cpp">
+      <Filter>Source Files\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="se_renderer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_submesh.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_swap_chain.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_texture.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_window.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="simple_render_system.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Renderer</Filter>
     </ClCompile>
     <ClCompile Include="se_cubemap.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_offscreen_renderer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_hdr_to_cubemap.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_cubemap_diffuse.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="se_cubemap_specular.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Cubemap</Filter>
     </ClCompile>
     <ClCompile Include="se_cubemap_brdf.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Cubemap</Filter>
+    </ClCompile>
+    <ClCompile Include="se_cubemap_diffuse.cpp">
+      <Filter>Source Files\Cubemap</Filter>
+    </ClCompile>
+    <ClCompile Include="se_cubemap_specular.cpp">
+      <Filter>Source Files\Cubemap</Filter>
+    </ClCompile>
+    <ClCompile Include="se_hdr_to_cubemap.cpp">
+      <Filter>Source Files\Cubemap</Filter>
+    </ClCompile>
+    <ClCompile Include="se_camera.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_device.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_pbr_material.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_mesh.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_submesh.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_texture.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_window.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_swap_chain.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_pipeline.cpp">
+      <Filter>Source Files\Resources</Filter>
     </ClCompile>
     <ClCompile Include="se_pbr.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="keyboard_movement_controller.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_resource_manager.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_material_system.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_material_base.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_mesh_system.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_texture_system.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_resource.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_widgets.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_demo.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_draw.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_impl_glfw.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_impl_vulkan.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_tables.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_manager.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="se_gameobject.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="include\imgui_filedialog\ImGuiFileDialog.cpp">
+      <Filter>Source Files\imgui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -104,7 +167,7 @@
     <ClInclude Include="se_gameobject.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="se_material.hpp">
+    <ClInclude Include="se_pbr_material.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="se_mesh.hpp">
@@ -154,6 +217,27 @@
     </ClInclude>
     <ClInclude Include="se_pbr.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="se_material_system.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="se_material_base.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="se_resource_manager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="se_texture_system.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="se_mesh_system.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="se_resource.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_manager.hpp">
+      <Filter>Header Files\imgui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

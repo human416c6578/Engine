@@ -191,34 +191,34 @@ namespace se
 
     void PBR::createDescriptorSets()
     {
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = seDevice.getDescriptorPool();
-		allocInfo.descriptorSetCount = 1;
-		allocInfo.pSetLayouts = &globalDescriptorSetLayout;
+        VkDescriptorSetAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = seDevice.getDescriptorPool();
+        allocInfo.descriptorSetCount = 1;
+        allocInfo.pSetLayouts = &globalDescriptorSetLayout;
 
-		if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSet) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to allocate descriptor sets!");
-		}
+        if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSet) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to allocate descriptor sets!");
+        }
 
-		// Descriptor writes array
-		std::vector<VkWriteDescriptorSet> descriptorWrites(3);
+        // Descriptor writes array
+        std::vector<VkWriteDescriptorSet> descriptorWrites(3);
 
-		// Diffuse texture descriptor
-		VkDescriptorImageInfo diffuseImageInfo{};
-		diffuseImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		diffuseImageInfo.imageView = seCubemap.getDiffuseImageView();
+        // Diffuse texture descriptor
+        VkDescriptorImageInfo diffuseImageInfo{};
+        diffuseImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        diffuseImageInfo.imageView = seCubemap.getDiffuseImageView();
         diffuseImageInfo.sampler = seCubemap.getDiffuseSampler();
 
-		// Diffuse texture write
-		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = descriptorSet;
-		descriptorWrites[0].dstBinding = 0;
-		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pImageInfo = &diffuseImageInfo;
+        // Diffuse texture write
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = descriptorSet;
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pImageInfo = &diffuseImageInfo;
 
         // Specular texture descriptor
         VkDescriptorImageInfo specularImageInfo{};
@@ -240,7 +240,7 @@ namespace se
         BRDFImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         BRDFImageInfo.imageView = seCubemap.getBRDFImageView();
         BRDFImageInfo.sampler = seCubemap.getBRDFSampler();
-        
+
         // BRDF texture write
         descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[2].dstSet = descriptorSet;
@@ -250,8 +250,8 @@ namespace se
         descriptorWrites[2].descriptorCount = 1;
         descriptorWrites[2].pImageInfo = &BRDFImageInfo;
 
-		// Update only the descriptors that are written (ignoring empty ones)
-		vkUpdateDescriptorSets(seDevice.device(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+        // Update only the descriptors that are written (ignoring empty ones)
+        vkUpdateDescriptorSets(seDevice.device(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
 
     void PBR::renderGameObjects(
@@ -260,19 +260,24 @@ namespace se
         const SECamera& camera,
         se::SEGameObject& viewerObject)
     {
-
         for (auto& obj : gameObjects)
         {
+            auto mesh = obj.getMesh();
+            if (!mesh) continue;
+
             se::SimplePushConstantData push{};
-            push.color = obj.color;
-            push.transform = obj.transform.mat4();
+            push.color = obj.getColor();
+            push.transform = obj.getTransformMat4();
 
-            bind(commandBuffer); // PBR pipeline
+            bind(commandBuffer); // Bind PBR pipeline
 
-            obj.mesh->draw(commandBuffer, push, pipelineLayout);
+            auto material = obj.getMaterial();
+
+            mesh->draw(commandBuffer, material, push);
 
         }
     }
+
 
     void PBR::renderCubeMap(VkCommandBuffer commandBuffer)
     {

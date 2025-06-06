@@ -79,6 +79,7 @@ namespace se
         VkDevice device() { return device_; }
         VkPhysicalDevice physicaldevice() { return physicalDevice; }
         VkSurfaceKHR surface() { return surface_; }
+        VkInstance getInstance() { return instance; }
         VkQueue graphicsQueue() { return graphicsQueue_; }
         VkQueue presentQueue() { return presentQueue_; }
 

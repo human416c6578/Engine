@@ -2,7 +2,7 @@
 
 #include "se_device.hpp"
 #include "se_vertex.hpp"
-#include "se_material.hpp"
+#include "se_pbr_material.hpp"
 
 // std
 #include <vector>
@@ -24,7 +24,28 @@ namespace se
         ~SESubMesh();
 
         bool hasMaterial() const { return seMaterial != nullptr; }
-        void bindMaterial(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) const { seMaterial->bind(commandBuffer, pipelineLayout); }
+        void bindMaterial(VkCommandBuffer commandBuffer) const { seMaterial->bind(commandBuffer); }
+
+        void setMaterial(std::shared_ptr<SEMaterial> material) { this->seMaterial = material; }
+
+		size_t getVerticesCount() const
+		{
+			return vertexCount;
+		}
+
+        size_t getIndicesCount() const
+        {
+            return indexCount;
+        }
+
+        VkPipelineLayout getPipelineLayout() const
+		{
+			if (hasMaterial())
+			{
+				return seMaterial->getPipelineLayout();
+			}
+			return nullptr;
+		}
 
         SESubMesh(const SESubMesh &) = delete;
         SESubMesh &operator=(const SESubMesh &) = delete;

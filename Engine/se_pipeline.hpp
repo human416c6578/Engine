@@ -47,8 +47,10 @@ namespace se
         SEPipeline &operator=(const SEPipeline &) = delete;
 
         void bind(VkCommandBuffer commandBuffer);
+		VkPipeline getPipeline() const { return graphicsPipeline; }
 
         static void defaultPipelineConfigInfo(PipelineConfigInfo &configInfo);
+
 
     private:
         static std::vector<char> readFile(const std::string &filepath);

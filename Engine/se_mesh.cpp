@@ -5,26 +5,15 @@
 
 namespace se
 {
-    SEMesh::SEMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout) : seDevice{device}
-    {
-        seSubmeshes = loadMesh(device, path, renderPass, descriptorSetLayout);
-    }
-
-    SEMesh::SEMesh(SEDevice &device, const std::string &path, std::shared_ptr<SEMaterial> material, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout) : seDevice{device}, seMaterial{material}
-    {
-        seSubmeshes = loadMesh(device, path, renderPass, descriptorSetLayout);
-    }
-
-    SEMesh::SEMesh(SEDevice &device, const SESubMesh::Builder builder) : seDevice{device}
+    SEMesh::SEMesh(SEDevice& device, const SESubMesh::Builder builder, const std::string& guid, const std::string& name) : seDevice{ device }, Resource(guid, name)
     {
         auto submesh = std::make_unique<SESubMesh>(device, builder);
         seSubmeshes.push_back(std::move(submesh));
     }
 
-    SEMesh::SEMesh(SEDevice &device, const SESubMesh::Builder builder, std::shared_ptr<SEMaterial> material) : seDevice{device}, seMaterial{material}
+    SEMesh::SEMesh(SEDevice& device, std::vector<std::unique_ptr<SESubMesh>> submeshes, const std::string& guid, const std::string& name) : seDevice{ device }, Resource(guid, name)
     {
-        auto submesh = std::make_unique<SESubMesh>(device, builder);
-        seSubmeshes.push_back(std::move(submesh));
+        this->seSubmeshes = std::move(submeshes);
     }
 
     SEMesh::~SEMesh()
@@ -32,18 +21,25 @@ namespace se
     }
 
     // Helper function to replace all backslashes with forward slashes
-    static void replaceBackslashes(std::string &str)
+    static void replaceBackslashes(std::string& str)
     {
         std::replace(str.begin(), str.end(), '\\', '/');
     }
 
-    static std::string GetBaseDir(const std::string &filepath)
+    static std::string GetBaseDir(const std::string& filepath)
     {
         if (filepath.find_last_of("/\\") != std::string::npos)
             return filepath.substr(0, filepath.find_last_of("/\\"));
         return "";
     }
 
+    std::vector<std::unique_ptr<SESubMesh>> SEMesh::loadMesh(SEDevice& device, const std::string& path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout)
+    {
+        std::vector<std::unique_ptr<SESubMesh>> submeshes;
+        return submeshes;
+    }
+
+    /*
     std::vector<std::unique_ptr<SESubMesh>> SEMesh::loadMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout)
     {
         std::vector<std::unique_ptr<SESubMesh>> submeshes;
@@ -57,7 +53,7 @@ namespace se
 
         bool ret = tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.c_str(),
                                     base_dir.c_str());
- 
+
         if (!warn.empty())
         {
             std::cout << "WARN: " << warn << std::endl;
@@ -176,8 +172,9 @@ namespace se
                 // Convert shininess (Ns) to roughness
                 float roughness = 1.0f - (obj_material.shininess / 1000.0f); // Inverse of shininess
 
+                material = nullptr;
                 // Initialize the SEMaterial with texture paths and material properties
-                material = std::make_shared<se::SEMaterial>(
+                /*material = std::make_shared<se::SEMaterial>(
                     seDevice,
                     descriptorSetLayout,
                     VK_SAMPLE_COUNT_1_BIT,
@@ -187,38 +184,55 @@ namespace se
                     std::move(metallicTexture),             // Metallic texture (using specular as fallback)
                     std::nullopt,                           // Roughness texture (use scalar value instead)
                     std::move(ambientTexture)               // Ambient Occlusion texture
-                );
-            }
+                );*/
+                /*
+                }
 
-            else
-            {
-                if(hasMaterial())
-                    material = nullptr;
                 else
-                    material = std::make_shared<se::SEMaterial>(seDevice, descriptorSetLayout, VK_SAMPLE_COUNT_1_BIT, 1.0, 0.01, 1.0);
+                {
+                    if(hasMaterial())
+                        material = nullptr;
+                    //else
+                    //    material = std::make_shared<se::SEMaterial>(seDevice, descriptorSetLayout, VK_SAMPLE_COUNT_1_BIT, 1.0, 0.01, 1.0);
+                }
+
+                auto submesh = std::make_unique<SESubMesh>(device, builder, material);
+                submeshes.push_back(std::move(submesh));
             }
 
-            auto submesh = std::make_unique<SESubMesh>(device, builder, material);
-            submeshes.push_back(std::move(submesh));
+            return submeshes;
         }
+        */
 
-        return submeshes;
-    }
 
-    void SEMesh::draw(VkCommandBuffer commandBuffer, SimplePushConstantData push, VkPipelineLayout pipelineLayout)
+    void SEMesh::draw(
+        VkCommandBuffer commandBuffer,
+        std::shared_ptr<SEMaterial> goMaterial,
+        SimplePushConstantData push
+        )
     {
-        for (auto &mesh : seSubmeshes)
+        for (auto& submesh : seSubmeshes)
         {
-            if (hasMaterial())
+            VkPipelineLayout pipelineLayout = nullptr;
+
+            if (goMaterial)
             {
-                bindMaterial(commandBuffer, pipelineLayout);
+                goMaterial->bind(commandBuffer);
+                pipelineLayout = goMaterial->getPipelineLayout();
             }
-            if (mesh->hasMaterial())
+            else if (submesh->hasMaterial())
             {
-                mesh->bindMaterial(commandBuffer, pipelineLayout);
+                submesh->bindMaterial(commandBuffer);
+                pipelineLayout = submesh->getPipelineLayout();
             }
 
-            mesh->bind(commandBuffer);
+            if (pipelineLayout == nullptr)
+            {
+                // Skip submesh if no valid pipeline layout
+                continue;
+            }
+
+            submesh->bind(commandBuffer);
 
             vkCmdPushConstants(
                 commandBuffer,
@@ -228,7 +242,9 @@ namespace se
                 sizeof(SimplePushConstantData),
                 &push);
 
-            mesh->draw(commandBuffer);
+            submesh->draw(commandBuffer);
         }
     }
+
+
 }

@@ -110,7 +110,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;glfw3_mt.lib;glfw3dll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>vulkan-1.lib;glfw3.lib;glfw3_mt.lib;glfw3dll.lib;assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>C:\VulkanSDK\1.3.290.0\Lib;D:\Workspace\programing\cpp\Engine\Engine\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PreBuildEvent>
@@ -137,8 +137,20 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp" />
+    <ClCompile Include="imgui_manager.cpp" />
+    <ClCompile Include="include\imgui\imgui.cpp" />
+    <ClCompile Include="include\imgui\imgui_demo.cpp" />
+    <ClCompile Include="include\imgui\imgui_draw.cpp" />
+    <ClCompile Include="include\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="include\imgui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="include\imgui\imgui_tables.cpp" />
+    <ClCompile Include="include\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="include\imgui_filedialog\ImGuiFileDialog.cpp" />
     <ClCompile Include="keyboard_movement_controller.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="se_gameobject.cpp" />
+    <ClCompile Include="se_material_base.cpp" />
+    <ClCompile Include="se_material_system.cpp" />
     <ClCompile Include="se_camera.cpp" />
     <ClCompile Include="se_cubemap.cpp" />
     <ClCompile Include="se_cubemap_brdf.cpp" />
@@ -146,23 +158,29 @@
     <ClCompile Include="se_cubemap_specular.cpp" />
     <ClCompile Include="se_device.cpp" />
     <ClCompile Include="se_hdr_to_cubemap.cpp" />
-    <ClCompile Include="se_material.cpp" />
+    <ClCompile Include="se_mesh_system.cpp" />
+    <ClCompile Include="se_pbr_material.cpp" />
     <ClCompile Include="se_mesh.cpp" />
     <ClCompile Include="se_offscreen_renderer.cpp" />
     <ClCompile Include="se_pbr.cpp" />
     <ClCompile Include="se_pipeline.cpp" />
     <ClCompile Include="se_renderer.cpp" />
+    <ClCompile Include="se_resource.cpp" />
+    <ClCompile Include="se_resource_manager.cpp" />
     <ClCompile Include="se_submesh.cpp" />
     <ClCompile Include="se_swap_chain.cpp" />
     <ClCompile Include="se_texture.cpp" />
+    <ClCompile Include="se_texture_system.cpp" />
     <ClCompile Include="se_window.cpp" />
-    <ClCompile Include="simple_render_system.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.hpp" />
+    <ClInclude Include="imgui_manager.hpp" />
     <ClInclude Include="include\stb_image.h" />
     <ClInclude Include="include\tiny_obj_loader.h" />
     <ClInclude Include="keyboard_movement_controller.hpp" />
+    <ClInclude Include="se_material_base.hpp" />
+    <ClInclude Include="se_material_system.hpp" />
     <ClInclude Include="se_camera.hpp" />
     <ClInclude Include="se_cubemap.hpp" />
     <ClInclude Include="se_cubemap_brdf.h" />
@@ -171,15 +189,19 @@
     <ClInclude Include="se_device.hpp" />
     <ClInclude Include="se_gameobject.hpp" />
     <ClInclude Include="se_hdr_to_cubemap.h" />
-    <ClInclude Include="se_material.hpp" />
+    <ClInclude Include="se_mesh_system.hpp" />
+    <ClInclude Include="se_pbr_material.hpp" />
     <ClInclude Include="se_mesh.hpp" />
     <ClInclude Include="se_offscreen_renderer.hpp" />
     <ClInclude Include="se_pbr.hpp" />
     <ClInclude Include="se_pipeline.hpp" />
     <ClInclude Include="se_renderer.hpp" />
+    <ClInclude Include="se_resource.hpp" />
+    <ClInclude Include="se_resource_manager.hpp" />
     <ClInclude Include="se_submesh.hpp" />
     <ClInclude Include="se_swap_chain.hpp" />
     <ClInclude Include="se_texture.hpp" />
+    <ClInclude Include="se_texture_system.hpp" />
     <ClInclude Include="se_vertex.hpp" />
     <ClInclude Include="se_window.hpp" />
     <ClInclude Include="simple_render_system.hpp" />

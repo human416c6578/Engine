@@ -2,11 +2,20 @@
 #include "se_camera.hpp"
 #include "se_gameobject.hpp"
 
+#include <stb_image.h>
+
 namespace se
 {
 	SEHdrToCubemap::SEHdrToCubemap(SEDevice& device, SERenderer& renderer, const std::string& textureFilepath): seDevice{ device }, seRenderer{ renderer }
 	{
-		mapTexture = std::make_unique<se::SETexture>(seDevice, textureFilepath);
+		int width, height, texChannels;
+		stbi_uc* pixels = stbi_load(textureFilepath.c_str(), &width, &height, &texChannels, STBI_rgb_alpha);
+
+		if (!pixels)
+		{
+			throw std::runtime_error("Failed to load texture image: " + textureFilepath);
+		}
+		mapTexture = std::make_shared<se::SETexture>(seDevice, "GUID_CUBEMAP", "CUBEMAP", pixels, width, height);
 
 		se::SESubMesh::Builder builder = createCubeModel({ 0, 0, 0 });
 		cubeMesh = std::make_unique<se::SESubMesh>(seDevice, builder);
@@ -209,12 +218,12 @@ namespace se
 
 		for (int i = 0; i < 6; i++)
 		{
-			camera.setViewDirection(viewerObject.transform.translation, directions[i], upVectors[i]);
+			camera.setViewDirection(viewerObject.getTransform().translation, directions[i], upVectors[i]);
 
 			UniformBufferObject ubo{};
 			ubo.proj = camera.getProjection();
 			ubo.view = camera.getView();
-			ubo.cameraPos = viewerObject.transform.translation;
+			ubo.cameraPos = viewerObject.getTransform().translation;
 
 			seDevice.updateUniformBuffers(ubo);
 			if (auto commandBuffer = seRenderer.beginOffscreenFrame())

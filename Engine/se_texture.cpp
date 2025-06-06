@@ -1,13 +1,12 @@
 #include "se_texture.hpp"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 
 namespace se
 {
-    SETexture::SETexture(SEDevice &device, const std::string &path) : seDevice{device}, path{path}
+    SETexture::SETexture(SEDevice& device, const std::string guid, const std::string name, stbi_uc* pixels, int width, int height)
+		: seDevice{ device }, Resource(guid, name)
     {
-        createTextureImage();
+        createTextureImage(pixels, width, height);
         createTextureImageView();
         createTextureSampler();
     }
@@ -21,18 +20,10 @@ namespace se
         vkFreeMemory(seDevice.device(), textureImageMemory, nullptr);
     }
 
-    void SETexture::createTextureImage()
+    void SETexture::createTextureImage(stbi_uc* pixels, int width, int height)
     {
-        int texWidth, texHeight, texChannels;
-        stbi_uc *pixels = stbi_load(path.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-        VkDeviceSize imageSize = texWidth * texHeight * 4;
-        mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
-
-        if (!pixels)
-        {
-            throw std::runtime_error("Failed to load texture image: " + path);
-        }
-
+        VkDeviceSize imageSize = width * height * 4;
+        mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
         VkBuffer stagingBuffer;
         VkDeviceMemory stagingBufferMemory;
         seDevice.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
@@ -44,16 +35,16 @@ namespace se
 
         stbi_image_free(pixels);
 
-        createImage(texWidth, texHeight, mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
+        createImage(width, height, mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
 
         transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-        copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
+        copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
         // transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
 
         vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
         vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
 
-        generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_SRGB, texWidth, texHeight, mipLevels);
+        generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
     }
 
     void SETexture::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels)

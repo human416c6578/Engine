@@ -167,12 +167,12 @@ namespace se
 		float aspect = 1.0f; // Square images for cubemap faces
 		camera.setPerspectiveProjection(glm::radians(90.f), aspect, 0.01f, 1000.f);
 
-		camera.setViewDirection(viewerObject.transform.translation, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }); // Front
+		camera.setViewDirection(viewerObject.getTransform().translation, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}); // Front
 
 		UniformBufferObject ubo{};
 		ubo.proj = camera.getProjection();
 		ubo.view = camera.getView();
-		ubo.cameraPos = viewerObject.transform.translation;
+		ubo.cameraPos = viewerObject.getTransform().translation;
 
 		seDevice.updateUniformBuffers(ubo);
 		if (auto commandBuffer = seRenderer.beginOffscreenFrame())

@@ -56,24 +56,66 @@ namespace se
 
     static SEGameObject createGameObject()
     {
-      static id_t currentId = 0;
-      return SEGameObject{currentId++};
+      return SEGameObject{currentId++, std::string("GameObject_") + std::to_string(currentId)};
     }
 
-    SEGameObject(const SEGameObject &) = delete;
-    SEGameObject &operator=(const SEGameObject &) = delete;
-    SEGameObject(SEGameObject &&) = default;
-    SEGameObject &operator=(SEGameObject &&) = default;
+    
+    static SEGameObject createGameObject(const std::string& name)
+    {
+		if (name.empty())
+			return SEGameObject{ currentId++, std::string("GameObject_") + std::to_string(currentId) };
+        return SEGameObject{ currentId++, name };
+    }
+    
+
+    //SEGameObject(const SEGameObject &) = delete;
+    //SEGameObject &operator=(const SEGameObject &) = delete;
+    //SEGameObject(SEGameObject &&) = default;
+    //SEGameObject &operator=(SEGameObject &&) = default;
 
     id_t getId() { return id; }
+	const std::string& getName() const { return name; }
+	void setName(const std::string& newName) { name = newName; }
 
-    std::shared_ptr<SEMesh> mesh{};
-    glm::vec3 color{};
-    TransformComponent transform{};
+	std::shared_ptr<SEMesh> getMesh() const { return mesh; }
+    void setMesh(std::shared_ptr<SEMesh> newMesh)
+    {
+        mesh = newMesh;
+    }
 
+    std::shared_ptr<SEMaterial> getMaterial() const { return material; }
+    void setMaterial(std::shared_ptr<SEMaterial> newMaterial)
+    {
+        material = newMaterial;
+    }
+
+	const glm::vec3& getColor() const { return color; }
+	void setColor(const glm::vec3& newColor) 
+    {
+		color = newColor;
+	}
+
+    const glm::mat4& getTransformMat4() { return transform.mat4(); }
+
+	const TransformComponent& getTransform() const { return transform; }
+
+	void setTransform(const TransformComponent& newTransform) 
+    {
+		transform = newTransform;
+	}
+
+    
   private:
-    SEGameObject(id_t objId) : id{objId} {}
+      static id_t currentId;
+
+      SEGameObject(id_t objId, std::string objName) : id{ objId }, name { objName } {}
 
     id_t id;
+    std::string name;
+
+    std::shared_ptr<SEMesh> mesh{};
+    std::shared_ptr<SEMaterial> material{};
+    glm::vec3 color{};
+    TransformComponent transform{};
   };
 }

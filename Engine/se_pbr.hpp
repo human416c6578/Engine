@@ -23,6 +23,8 @@ namespace se
         PBR& operator=(const PBR&) = delete;
 
         VkDescriptorSetLayout getMaterialDescriptorSetLayout() { return materialDescriptorSetLayout; }
+		VkPipelineLayout getPipelineLayout() { return pipelineLayout; }
+        VkPipeline getPipeline() { return sePipeline->getPipeline(); }
 
         void renderGameObjects(
             VkCommandBuffer commandBuffer,

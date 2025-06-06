@@ -9,33 +9,77 @@
 
 namespace se
 {
-    class SEMesh
+    class SEMesh : public Resource
     {
 
     public:
 
-        SEMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout);
-        SEMesh(SEDevice &device, const std::string &path, std::shared_ptr<SEMaterial> material, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout);
-        SEMesh(SEDevice &device, const SESubMesh::Builder builder);
-        SEMesh(SEDevice &device, const SESubMesh::Builder builder, std::shared_ptr<SEMaterial> material);
+        SEMesh(SEDevice& device, const SESubMesh::Builder builder, const std::string& guid, const std::string& name);
+        SEMesh(SEDevice& device, std::vector<std::unique_ptr<SESubMesh>> submeshes, const std::string& guid, const std::string& name);
         ~SEMesh();
 
-        
+		/*
+		std::shared_ptr<SEMaterial> getMaterial() const
+		{
+			return seMaterial;
+		}
 
+		void setMaterial(std::shared_ptr<SEMaterial> material)
+		{
+			seMaterial = material;
+			for (auto& submesh : seSubmeshes)
+			{
+				submesh->setMaterial(seMaterial);
+			}
+		}
+       
         bool hasMaterial() { return seMaterial != nullptr; }
-        void bindMaterial(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) { seMaterial->bind(commandBuffer, pipelineLayout); }
+        void bindMaterial(VkCommandBuffer commandBuffer) { seMaterial->bind(commandBuffer); }
+		*/
+
+		size_t getSubMeshCount() const
+		{
+			return seSubmeshes.size();
+		}
+
+        size_t getVerticesCount() const
+        {
+			size_t count = 0;
+			for (const auto& submesh : seSubmeshes)
+			{
+				count += submesh->getVerticesCount();
+			}
+			return count;
+        }
+
+		size_t getIndicesCount() const
+		{
+			size_t count = 0;
+			for (const auto& submesh : seSubmeshes)
+			{
+				count += submesh->getIndicesCount();
+			}
+			return count;
+		}
+
 
         SEMesh(const SEMesh &) = delete;
         SEMesh &operator=(const SEMesh &) = delete;
 
         //void bind(VkCommandBuffer commandBuffer);
-        void draw(VkCommandBuffer commandBuffer, SimplePushConstantData push, VkPipelineLayout pipelineLayout);
+		void draw(VkCommandBuffer commandBuffer, std::shared_ptr<SEMaterial> goMaterial, SimplePushConstantData push);
 
         std::vector<std::unique_ptr<SESubMesh>> loadMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout);
 
+		
+
+		
+
+		
+
     private:
         SEDevice &seDevice;
-        std::shared_ptr<SEMaterial> seMaterial = nullptr;
+        //std::shared_ptr<SEMaterial> seMaterial = nullptr;
         std::vector<std::unique_ptr<SESubMesh>> seSubmeshes;
     };
 

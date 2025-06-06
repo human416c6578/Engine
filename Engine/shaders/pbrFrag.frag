@@ -205,7 +205,7 @@ void main()
     vec3 prefilteredColor = textureLod(irradianceSpecularMap, R,  roughness * MAX_REFLECTION_LOD).rgb;   
     vec2 envBRDF  = texture(BRDFMap, vec2(max(dot(N, V), 0.0), roughness)).rg;
     float specularFade = 1.0 - roughness * roughness;
-    vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y);
+    vec3 specular = prefilteredColor * (F * envBRDF.x + envBRDF.y) * specularFade;
 
     vec3 ambient = (kD * diffuse + specular) * ao; 
     
