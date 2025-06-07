@@ -37,6 +37,19 @@ namespace se
         createCommandPool();
         createDescriptorPool();
         createUniformBuffers();
+
+        VkDescriptorSetLayoutBinding binding{};
+        binding.binding = 0;
+        binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        binding.descriptorCount = 1;
+        binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        VkDescriptorSetLayoutCreateInfo layoutInfo{};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        layoutInfo.bindingCount = 1;
+        layoutInfo.pBindings = &binding;
+
+        vkCreateDescriptorSetLayout(device_, &layoutInfo, nullptr, &imGuiDescriptorSetLayout);
     }
 
     SEDevice::~SEDevice()

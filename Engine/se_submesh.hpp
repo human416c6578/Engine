@@ -24,7 +24,9 @@ namespace se
         ~SESubMesh();
 
         bool hasMaterial() const { return seMaterial != nullptr; }
-        void bindMaterial(VkCommandBuffer commandBuffer) const { seMaterial->bind(commandBuffer); }
+        void bindMaterial(VkCommandBuffer commandBuffer, int frameIndex) const { seMaterial->bind(commandBuffer, frameIndex); }
+
+        void updateMaterial(int frameIndex) { seMaterial->update(frameIndex); }
 
         void setMaterial(std::shared_ptr<SEMaterial> material) { this->seMaterial = material; }
 

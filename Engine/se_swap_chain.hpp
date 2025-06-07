@@ -27,6 +27,7 @@ namespace se
     SESwapChain(const SESwapChain &) = delete;
     SESwapChain &operator=(const SESwapChain &) = delete;
 
+	int getCurrentFrame() const { return currentFrame; }
     VkFramebuffer getFrameBuffer(int index) { return swapChainFramebuffers[index]; }
     VkRenderPass getRenderPass() { return renderPass; }
     VkImageView getImageView(int index) { return swapChainImageViews[index]; }

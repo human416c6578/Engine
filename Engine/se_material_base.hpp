@@ -16,14 +16,14 @@ namespace se {
         virtual ~SEMaterialBase() = default;
 
         // Bind the material's descriptor set(s) for rendering
-        virtual void bind(VkCommandBuffer commandBuffer) = 0;
+        virtual void bind(VkCommandBuffer commandBuffer, int frameIndex) = 0;
 
         virtual VkPipelineLayout getPipelineLayout() const = 0;
 
         virtual VkPipeline getPipeline() const = 0;
 
         // Get the descriptor set (for renderer use)
-        virtual VkDescriptorSet getDescriptorSet() const = 0;
+        virtual VkDescriptorSet getDescriptorSet(int frameIndex) const = 0;
 
         // Get the descriptor set layout (for renderer or system use)
         virtual VkDescriptorSetLayout getDescriptorSetLayout() const = 0;

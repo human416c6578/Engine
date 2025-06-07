@@ -258,7 +258,8 @@ namespace se
         VkCommandBuffer commandBuffer,
         std::vector<SEGameObject>& gameObjects,
         const SECamera& camera,
-        se::SEGameObject& viewerObject)
+        se::SEGameObject& viewerObject,
+        int frameIndex) 
     {
         for (auto& obj : gameObjects)
         {
@@ -269,15 +270,13 @@ namespace se
             push.color = obj.getColor();
             push.transform = obj.getTransformMat4();
 
-            bind(commandBuffer); // Bind PBR pipeline
+            bind(commandBuffer);
 
             auto material = obj.getMaterial();
-
-            mesh->draw(commandBuffer, material, push);
-
+                
+            mesh->draw(commandBuffer, material, push, frameIndex);
         }
     }
-
 
     void PBR::renderCubeMap(VkCommandBuffer commandBuffer)
     {

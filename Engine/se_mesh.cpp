@@ -208,7 +208,8 @@ namespace se
     void SEMesh::draw(
         VkCommandBuffer commandBuffer,
         std::shared_ptr<SEMaterial> goMaterial,
-        SimplePushConstantData push
+        SimplePushConstantData push,
+		int  frameIndex
         )
     {
         for (auto& submesh : seSubmeshes)
@@ -217,12 +218,14 @@ namespace se
 
             if (goMaterial)
             {
-                goMaterial->bind(commandBuffer);
+				goMaterial->update(frameIndex);
+                goMaterial->bind(commandBuffer, frameIndex);
                 pipelineLayout = goMaterial->getPipelineLayout();
             }
             else if (submesh->hasMaterial())
             {
-                submesh->bindMaterial(commandBuffer);
+                submesh->updateMaterial(frameIndex);
+                submesh->bindMaterial(commandBuffer, frameIndex);
                 pipelineLayout = submesh->getPipelineLayout();
             }
 

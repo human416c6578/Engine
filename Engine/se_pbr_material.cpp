@@ -1,4 +1,5 @@
 #include "se_pbr_material.hpp"
+#include "se_swap_chain.hpp"
 
 // libs
 #define GLM_FORCE_RADIANS
@@ -46,7 +47,6 @@ namespace se
 		flags.ao = ao;
 
 		createUniformBuffer();
-
 		createDescriptorSets();
 	}
 
@@ -80,151 +80,160 @@ namespace se
 		// memoryRange.size = VK_WHOLE_SIZE;
 		// vkFlushMappedMemoryRanges(seDevice.device(), 1, &memoryRange);
 	}
-
 	void SEMaterial::createDescriptorSets()
 	{
-		if (descriptorSet != VK_NULL_HANDLE)
+		size_t framesInFlight = SESwapChain::MAX_FRAMES_IN_FLIGHT;
+		descriptorSets.resize(framesInFlight);
+		needUpdate.resize(framesInFlight, false);
+
+		for (size_t i = 0; i < framesInFlight; i++)
 		{
-			vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet);
+			if (descriptorSets[i] != VK_NULL_HANDLE)
+			{
+				vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSets[i]);
+			}
+
+			VkDescriptorSetAllocateInfo allocInfo{};
+			allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			allocInfo.descriptorPool = seDevice.getDescriptorPool();
+			allocInfo.descriptorSetCount = 1;
+			allocInfo.pSetLayouts = &descriptorSetLayout;
+
+			if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSets[i]) != VK_SUCCESS)
+			{
+				throw std::runtime_error("failed to allocate descriptor sets!");
+			}
+
+			// Update descriptor set right after allocation with default/static data if needed
+			updateDescriptorSet(i);
 		}
-
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = seDevice.getDescriptorPool();
-		allocInfo.descriptorSetCount = 1;
-		allocInfo.pSetLayouts = &descriptorSetLayout;
-
-		if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSet) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to allocate descriptor sets!");
-		}
-
-		// Uniform buffer descriptor UBO
-		// glm::mat4 view;
-		// glm::mat4 proj;
-		// glm::vec3 cameraPos;
-		std::vector<VkBuffer> uniformBuffers = seDevice.getUniformBuffers();
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = uniformBuffers[0];
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformBufferObject);
-
-		// Uniform buffer descriptor ( Material )
-		VkDescriptorBufferInfo matBufferInfo{};
-		matBufferInfo.buffer = matBuffer;
-		matBufferInfo.offset = 0;
-		matBufferInfo.range = sizeof(MaterialFlags);
-
-		// Diffuse texture descriptor
-		VkDescriptorImageInfo dummyImageInfo{};
-		dummyImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		dummyImageInfo.imageView = dummyTexture->getTextureImageView();
-		dummyImageInfo.sampler = dummyTexture->getTextureSampler();
-
-		// Descriptor writes array
-		std::vector<VkWriteDescriptorSet> descriptorWrites(7);
-
-		// Uniform buffer write
-		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = descriptorSet;
-		descriptorWrites[0].dstBinding = 0;
-		descriptorWrites[0].dstArrayElement = 0;
-		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[0].descriptorCount = 1;
-		descriptorWrites[0].pBufferInfo = &bufferInfo;
-
-		// Uniform buffer write ( Material )
-		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = descriptorSet;
-		descriptorWrites[1].dstBinding = 1;
-		descriptorWrites[1].dstArrayElement = 0;
-		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descriptorWrites[1].descriptorCount = 1;
-		descriptorWrites[1].pBufferInfo = &matBufferInfo;
-
-		// Diffuse texture descriptor
-		VkDescriptorImageInfo diffuseImageInfo{};
-		if (flags.hasDiffuseMap)
-		{
-			diffuseImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			diffuseImageInfo.imageView = diffuseTexture.value()->getTextureImageView();
-			diffuseImageInfo.sampler = diffuseTexture.value()->getTextureSampler();
-		}
-		// Diffuse texture write
-		descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[2].dstSet = descriptorSet;
-		descriptorWrites[2].dstBinding = 2;
-		descriptorWrites[2].dstArrayElement = 0;
-		descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[2].descriptorCount = 1;
-		descriptorWrites[2].pImageInfo = flags.hasDiffuseMap ? &diffuseImageInfo : &dummyImageInfo;
-
-		// Optional textures: Normal, Metallic, Roughness, AO
-
-		VkDescriptorImageInfo normalImageInfo{};
-		if (flags.hasNormalMap)
-		{
-			normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			normalImageInfo.imageView = normalTexture.value()->getTextureImageView();
-			normalImageInfo.sampler = normalTexture.value()->getTextureSampler();
-		}
-
-		descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[3].dstSet = descriptorSet;
-		descriptorWrites[3].dstBinding = 3; // Normal map binding
-		descriptorWrites[3].dstArrayElement = 0;
-		descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[3].descriptorCount = 1;
-		descriptorWrites[3].pImageInfo = flags.hasNormalMap ? &normalImageInfo : &dummyImageInfo;
-
-		VkDescriptorImageInfo metallicImageInfo{};
-		if (flags.hasMetallicMap)
-		{
-			metallicImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			metallicImageInfo.imageView = metallicTexture.value()->getTextureImageView();
-			metallicImageInfo.sampler = metallicTexture.value()->getTextureSampler();
-		}
-		descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[4].dstSet = descriptorSet;
-		descriptorWrites[4].dstBinding = 4; // Metallic map binding
-		descriptorWrites[4].dstArrayElement = 0;
-		descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[4].descriptorCount = 1;
-		descriptorWrites[4].pImageInfo = flags.hasMetallicMap ? &metallicImageInfo : &dummyImageInfo;
-
-		VkDescriptorImageInfo roughnessImageInfo{};
-		if (flags.hasRoughnessMap)
-		{
-			roughnessImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			roughnessImageInfo.imageView = roughnessTexture.value()->getTextureImageView();
-			roughnessImageInfo.sampler = roughnessTexture.value()->getTextureSampler();
-		}
-		descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[5].dstSet = descriptorSet;
-		descriptorWrites[5].dstBinding = 5; // Roughness map binding
-		descriptorWrites[5].dstArrayElement = 0;
-		descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[5].descriptorCount = 1;
-		descriptorWrites[5].pImageInfo = flags.hasRoughnessMap ? &roughnessImageInfo : &dummyImageInfo;
-
-		VkDescriptorImageInfo aoImageInfo{};
-		if (flags.hasAOMap)
-		{
-			aoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			aoImageInfo.imageView = aoTexture.value()->getTextureImageView();
-			aoImageInfo.sampler = aoTexture.value()->getTextureSampler();
-		}
-
-		descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[6].dstSet = descriptorSet;
-		descriptorWrites[6].dstBinding = 6; // AO map binding
-		descriptorWrites[6].dstArrayElement = 0;
-		descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descriptorWrites[6].descriptorCount = 1;
-		descriptorWrites[6].pImageInfo = flags.hasAOMap ? &aoImageInfo : &dummyImageInfo;
-
-		// Update only the descriptors that are written (ignoring empty ones)
-		vkUpdateDescriptorSets(seDevice.device(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 	}
 
+    void SEMaterial::updateDescriptorSet(size_t frameIndex)
+    {
+        memcpy(matBufferMapped, &flags, sizeof(flags));
+        std::vector<VkBuffer> uniformBuffers = seDevice.getUniformBuffers();
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = uniformBuffers[frameIndex];
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(UniformBufferObject);
+
+        VkDescriptorBufferInfo matBufferInfo{};
+        matBufferInfo.buffer = matBuffer;
+        matBufferInfo.offset = 0;
+        matBufferInfo.range = sizeof(MaterialFlags);
+
+        VkDescriptorImageInfo dummyImageInfo{};
+        dummyImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        dummyImageInfo.imageView = dummyTexture->getTextureImageView();
+        dummyImageInfo.sampler = dummyTexture->getTextureSampler();
+
+        // Setup image infos for textures with fallback to dummy textures
+        VkDescriptorImageInfo diffuseImageInfo{};
+        if (flags.hasDiffuseMap)
+        {
+            diffuseImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            diffuseImageInfo.imageView = diffuseTexture.value()->getTextureImageView();
+            diffuseImageInfo.sampler = diffuseTexture.value()->getTextureSampler();
+        }
+
+        VkDescriptorImageInfo normalImageInfo{};
+        if (flags.hasNormalMap)
+        {
+            normalImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            normalImageInfo.imageView = normalTexture.value()->getTextureImageView();
+            normalImageInfo.sampler = normalTexture.value()->getTextureSampler();
+        }
+
+        VkDescriptorImageInfo metallicImageInfo{};
+        if (flags.hasMetallicMap)
+        {
+            metallicImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            metallicImageInfo.imageView = metallicTexture.value()->getTextureImageView();
+            metallicImageInfo.sampler = metallicTexture.value()->getTextureSampler();
+        }
+
+        VkDescriptorImageInfo roughnessImageInfo{};
+        if (flags.hasRoughnessMap)
+        {
+            roughnessImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            roughnessImageInfo.imageView = roughnessTexture.value()->getTextureImageView();
+            roughnessImageInfo.sampler = roughnessTexture.value()->getTextureSampler();
+        }
+
+        VkDescriptorImageInfo aoImageInfo{};
+        if (flags.hasAOMap)
+        {
+            aoImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            aoImageInfo.imageView = aoTexture.value()->getTextureImageView();
+            aoImageInfo.sampler = aoTexture.value()->getTextureSampler();
+        }
+
+        std::vector<VkWriteDescriptorSet> descriptorWrites(7);
+
+        // Uniform buffer write
+        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[0].dstSet = descriptorSets[frameIndex];
+        descriptorWrites[0].dstBinding = 0;
+        descriptorWrites[0].dstArrayElement = 0;
+        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[0].descriptorCount = 1;
+        descriptorWrites[0].pBufferInfo = &bufferInfo;
+
+        // Material buffer write
+        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[1].dstSet = descriptorSets[frameIndex];
+        descriptorWrites[1].dstBinding = 1;
+        descriptorWrites[1].dstArrayElement = 0;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[1].descriptorCount = 1;
+        descriptorWrites[1].pBufferInfo = &matBufferInfo;
+
+        // Diffuse texture write
+        descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[2].dstSet = descriptorSets[frameIndex];
+        descriptorWrites[2].dstBinding = 2;
+        descriptorWrites[2].dstArrayElement = 0;
+        descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[2].descriptorCount = 1;
+        descriptorWrites[2].pImageInfo = flags.hasDiffuseMap ? &diffuseImageInfo : &dummyImageInfo;
+
+        // Normal texture write
+        descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[3].dstSet = descriptorSets[frameIndex];
+        descriptorWrites[3].dstBinding = 3;
+        descriptorWrites[3].dstArrayElement = 0;
+        descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[3].descriptorCount = 1;
+        descriptorWrites[3].pImageInfo = flags.hasNormalMap ? &normalImageInfo : &dummyImageInfo;
+
+        // Metallic texture write
+        descriptorWrites[4].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[4].dstSet = descriptorSets[frameIndex];
+        descriptorWrites[4].dstBinding = 4;
+        descriptorWrites[4].dstArrayElement = 0;
+        descriptorWrites[4].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[4].descriptorCount = 1;
+        descriptorWrites[4].pImageInfo = flags.hasMetallicMap ? &metallicImageInfo : &dummyImageInfo;
+
+        // Roughness texture write
+        descriptorWrites[5].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[5].dstSet = descriptorSets[frameIndex];
+        descriptorWrites[5].dstBinding = 5;
+        descriptorWrites[5].dstArrayElement = 0;
+        descriptorWrites[5].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[5].descriptorCount = 1;
+        descriptorWrites[5].pImageInfo = flags.hasRoughnessMap ? &roughnessImageInfo : &dummyImageInfo;
+
+        // AO texture write
+        descriptorWrites[6].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[6].dstSet = descriptorSets[frameIndex];
+        descriptorWrites[6].dstBinding = 6;
+        descriptorWrites[6].dstArrayElement = 0;
+        descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[6].descriptorCount = 1;
+        descriptorWrites[6].pImageInfo = flags.hasAOMap ? &aoImageInfo : &dummyImageInfo;
+
+        vkUpdateDescriptorSets(seDevice.device(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+    }
 }

@@ -34,7 +34,6 @@ void se::ImGuiManager::renderSceneHierarchy()
         {
             selectedGameObjectIndex = i;
             selectedAssetName = "";
-            selectedAssetCategory = "";
         }
 
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
@@ -76,8 +75,6 @@ void se::ImGuiManager::renderSceneHierarchy()
     ImGui::End();
 }
 
-
-
 void se::ImGuiManager::renderAssetBrowser()
 {
     if (!showAssetBrowser) return;
@@ -104,33 +101,45 @@ void se::ImGuiManager::renderAssetBrowser()
         if (ImGui::Selectable(category.c_str(), isSelected, flags))
         {
             selectedAssetCategory = category;
-            selectedAssetName = "";
-            selectedGameObjectIndex = -1;
+           /* selectedAssetName = "";
+            selectedGameObjectIndex = -1;*/
         }
     }
-    
+
+    renderAssetContextMenu();
+
+    ImGui::End();
+}
+
+void se::ImGuiManager::renderAssetContextMenu()
+{
     if (ImGui::BeginPopupContextWindow())
     {
         if (ImGui::MenuItem("Create Material")) {
             std::string name = "New Material " + std::to_string(resourceManager->getMaterials()->size());
             resourceManager->createMaterial(name);
         }
-        if (ImGui::MenuItem("Load Mesh")) 
+        if (ImGui::MenuItem("Load Mesh"))
         {
             IGFD::FileDialogConfig config;
             config.path = ".";
-            ImGuiFileDialog::Instance()->OpenDialog("ChooseModel", "Choose File", ".obj,.fbx,.*", config);
+            config.countSelectionMax = 0;
+            config.flags = ImGuiFileDialogFlags_CaseInsensitiveExtentionFiltering;
+            ImGuiFileDialog::Instance()->OpenDialog("ChooseModel", "Select Model Files", "Model Files{.obj,.fbx}", config);
+
         }
         if (ImGui::MenuItem("Load Texture")) {
             IGFD::FileDialogConfig config;
             config.path = ".";
+            config.countSelectionMax = 0;
+            config.flags = ImGuiFileDialogFlags_CaseInsensitiveExtentionFiltering;
 
-            ImGuiFileDialog::Instance()->OpenDialog("ChooseTexture", "Choose File", ".png,.jpg,.tga,.*", config);
+            ImGuiFileDialog::Instance()->OpenDialog("ChooseTexture", "Select Texture Files", "Texture Files{.png,.jpg,.tga,.bmp,.jpeg}", config);
+
         }
         ImGui::EndPopup();
     }
-
-    if (ImGuiFileDialog::Instance()->Display("ChooseModel")) {
+    if (ImGuiFileDialog::Instance()->Display("ChooseModel", ImGuiWindowFlags_NoCollapse, ImVec2(400.0f, 200.0f))) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
             std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
@@ -140,20 +149,18 @@ void se::ImGuiManager::renderAssetBrowser()
         ImGuiFileDialog::Instance()->Close();
     }
 
-    if (ImGuiFileDialog::Instance()->Display("ChooseTexture")) {
+    if (ImGuiFileDialog::Instance()->Display("ChooseTexture", ImGuiWindowFlags_NoCollapse, ImVec2(400.0f, 200.0f))) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
-            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-            std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
+            auto selection = ImGuiFileDialog::Instance()->GetSelection();
 
-            resourceManager->loadTexture(filePathName);
+            for (const auto& [filename, filepathname] : selection)
+            {
+
+                resourceManager->loadTexture(filepathname);
+            }
         }
         ImGuiFileDialog::Instance()->Close();
     }
-
-
-    
-
-    ImGui::End();
 }
 
 void se::ImGuiManager::renderAssetViewer()
@@ -165,7 +172,7 @@ void se::ImGuiManager::renderAssetViewer()
     ImVec2 workSize = viewport->WorkSize;
 
     float left = workPos.x + 300.0f;
-    float right = workPos.x + workSize.x - 400.0f;
+    float right = workPos.x + workSize.x - 300.0f;
     ImVec2 viewerPos(left, workPos.y + workSize.y - 200.0f);
     ImVec2 viewerSize(right - left, 200.0f);
 
@@ -213,27 +220,76 @@ void se::ImGuiManager::renderAssetViewer()
     }
     else if (selectedAssetCategory == "Textures")
     {
+        static char searchBuf[128] = "";
+        ImGui::InputTextWithHint("##Search", "Search textures...", searchBuf, IM_ARRAYSIZE(searchBuf));
+
+        ImGui::Separator();
+
+        const float thumbnailSize = 64.0f;
+        const float padding = 8.0f;
+        float cellSize = thumbnailSize + padding;
+        float panelWidth = ImGui::GetContentRegionAvail().x;
+        int columnCount = (int)(panelWidth / cellSize);
+        if (columnCount < 1) columnCount = 1;
+
+        ImGui::Columns(columnCount, nullptr, false);
+
         auto textures = resourceManager->getTextures();
         for (const auto& [key, texture] : *textures)
         {
-            std::string name = texture->getName().empty() ? key : texture->getName();
-            ImGuiSelectableFlags flags = ImGuiSelectableFlags_None;
-            bool isSelected = (selectedAssetName == key);
+            const std::string& name = texture->getName().empty() ? key : texture->getName();
+            if (strlen(searchBuf) > 0 && name.find(searchBuf) == std::string::npos)
+                continue;
 
-            if (ImGui::Selectable(name.c_str(), isSelected, flags))
+            ImGui::PushID(texture.get());
+
+            ImVec2 cursor = ImGui::GetCursorScreenPos();
+
+            // Draw the texture thumbnail
+            ImGui::Image((ImTextureID)texture->getTextureDescriptorSet(), { thumbnailSize, thumbnailSize });
+
+            // Draw hover highlight
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::GetWindowDrawList()->AddRect(
+                    cursor,
+                    ImVec2(cursor.x + thumbnailSize, cursor.y + thumbnailSize),
+                    IM_COL32(0, 155, 255, 255),
+                    4.0f,
+                    0,
+                    2.0f
+                );
+
+                ImGui::BeginTooltip();
+                ImGui::Text("Texture: %s", name.c_str());
+                ImGui::Text("GUID: %s", texture->getGUID().c_str());
+                ImGui::EndTooltip();
+            }
+
+            // Handle selection
+            if (ImGui::IsItemClicked())
             {
                 selectedAssetName = key;
                 selectedGameObjectIndex = -1;
+                ImGui::CloseCurrentPopup(); // Optional: only if in a popup
             }
+
+            // Center the name below the image
+            ImVec2 textSize = ImGui::CalcTextSize(name.c_str());
+            float textOffset = std::max(0.0f, (thumbnailSize - textSize.x) * 0.5f);
+
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + textOffset);
+            ImGui::TextWrapped("%s", name.c_str());
+
+            ImGui::NextColumn();
+            ImGui::PopID();
         }
+
+        ImGui::Columns(1);
     }
 
-    if (selectedAssetCategory == "Textures" && !selectedAssetName.empty())
-    {
-        ImGui::Separator();
-        ImGui::Text("Texture Preview");
-        // Add texture preview here if needed
-    }
+
+    renderAssetContextMenu();
 
     ImGui::End();
 }
@@ -247,8 +303,8 @@ void se::ImGuiManager::renderPropertiesPanel()
     ImVec2 workSize = viewport->WorkSize;
 
     // Fixed to right, full height, 400px wide
-    ImGui::SetNextWindowPos(ImVec2(workPos.x + workSize.x - 400, workPos.y), ImGuiCond_Always);
-    ImGui::SetNextWindowSize(ImVec2(400, workSize.y), ImGuiCond_Always);
+    ImGui::SetNextWindowPos(ImVec2(workPos.x + workSize.x - 300, workPos.y), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(300, workSize.y), ImGuiCond_Always);
 
     ImGui::Begin("Properties", &showProperties,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
@@ -326,7 +382,7 @@ void se::ImGuiManager::renderTransformComponent(se::SEGameObject& gameObject)
         if (ImGui::DragFloat3("Rotation", rotation, 0.1f)) {
             changed = true;
         }
-        if (ImGui::DragFloat3("Scale", scale, 0.1f)) {
+        if (ImGui::DragFloat3("Scale", scale, 0.01f)) {
             changed = true;
         }
 
@@ -362,41 +418,24 @@ void se::ImGuiManager::renderTransformComponent(se::SEGameObject& gameObject)
 
 void se::ImGuiManager::renderMeshComponent(se::SEGameObject& gameObject)
 {
-    if (ImGui::CollapsingHeader("Mesh Renderer"))
+    if (ImGui::CollapsingHeader("Mesh"))
     {
-        // Display current mesh
-        if (gameObject.getMesh())
-        {
-            ImGui::Text("Mesh: %s", gameObject.getMesh()->getName().c_str());
+        auto mesh = gameObject.getMesh();
 
-            if (ImGui::Button("Change Mesh"))
-            {
-                ImGui::OpenPopup("Select Mesh");
-            }
-        }
-        else
-        {
-            ImGui::Text("No mesh assigned");
-            if (ImGui::Button("Assign Mesh"))
-            {
-                ImGui::OpenPopup("Select Mesh");
-            }
-        }
+        renderMeshSelector(mesh,
+            [&gameObject](std::shared_ptr<se::SEMesh> mesh) {
+                gameObject.setMesh(mesh);
+            });
 
-        // Mesh selection popup
-        if (ImGui::BeginPopup("Select Mesh"))
+        if (mesh)
         {
-            auto meshes = resourceManager->getMeshes();
-            for (const auto& [key, mesh] : *meshes)
-            {
-				std::string name = mesh->getName().empty() ? key : mesh->getName();
-                if (ImGui::Selectable(name.c_str()))
-                {
-                    gameObject.setMesh(mesh);
-                    ImGui::CloseCurrentPopup();
-                }
-            }
-            ImGui::EndPopup();
+            ImGui::Text("GUID: %s", mesh->getGUID().c_str());
+            ImGui::Separator();
+
+            // Mesh-specific properties
+            ImGui::Text("Submeshes: %d", mesh->getSubMeshCount());
+            ImGui::Text("Vertices: %d", mesh->getVerticesCount());
+            ImGui::Text("Triangles: %d", mesh->getIndicesCount());
         }
     }
 }
@@ -405,51 +444,20 @@ void se::ImGuiManager::renderMaterialComponent(se::SEGameObject& gameObject)
 {
     if (ImGui::CollapsingHeader("Material"))
     {
+        auto material = gameObject.getMaterial();
 
-        // Display current material
-        if (gameObject.getMaterial())
+        renderMaterialSelector(material,
+            [&gameObject](std::shared_ptr<se::SEMaterial> mat) {
+                gameObject.setMaterial(mat);
+            });
+
+        if (material)
         {
-            auto material = gameObject.getMaterial();
-            ImGui::Text("Material: %s", material->getName().c_str());
-
-            if (ImGui::Button("Change Material"))
-            {
-                ImGui::OpenPopup("Select Material");
-            }
-
             ImGui::Separator();
             renderMaterialEditor(material);
         }
-        else
-        {
-            ImGui::Text("No material assigned");
-            if (ImGui::Button("Assign Material"))
-            {
-                ImGui::OpenPopup("Select Material");
-            }
-        }
 
-        // Material selection popup
-        if (ImGui::BeginPopup("Select Material"))
-        {
-            auto materials = resourceManager->getMaterials();
-            for (const auto& [key, material] : *materials)
-            {
-                std::string name = material->getName().empty() ? key : material->getName();
-                if (ImGui::Selectable(name.c_str()))
-                {
-                    gameObject.setMaterial(material);
-                    ImGui::CloseCurrentPopup();
-                }
-            }
-            ImGui::EndPopup();
-        }
     }
-    else
-    {
-        ImGui::Text("No mesh assigned to object");
-    }
-
 }
 
 void se::ImGuiManager::renderMeshProperties()
@@ -478,59 +486,6 @@ void se::ImGuiManager::renderMeshProperties()
         ImGui::Text("Submeshes: %d", mesh->getSubMeshCount());
         ImGui::Text("Vertices: %d", mesh->getVerticesCount());
         ImGui::Text("Triangles: %d", mesh->getIndicesCount());
-
-        /*
-        if (mesh->hasMaterial())
-        {
-            ImGui::Text("Assigned Material: %s", mesh->getMaterial()->getName().c_str());
-
-            ImGui::Separator();
-            if (ImGui::Button("Change Material"))
-            {
-                ImGui::OpenPopup("Select Mesh Material");
-            }
-
-            // Material selection popup for mesh
-            if (ImGui::BeginPopup("Select Mesh Material"))
-            {
-                auto materials = resourceManager->getMaterials();
-                for (const auto& [key, material] : *materials)
-                {
-					std::string name = material->getName().empty() ? key : material->getName();
-                    if (ImGui::Selectable(name.c_str()))
-                    {
-                        mesh->setMaterial(material);
-                        ImGui::CloseCurrentPopup();
-                    }
-                }
-                ImGui::EndPopup();
-            }
-        }
-        else
-        {
-            ImGui::Text("No material assigned");
-            if (ImGui::Button("Assign Material"))
-            {
-                ImGui::OpenPopup("Select Mesh Material");
-            }
-
-            // Material selection popup for mesh
-            if (ImGui::BeginPopup("Select Mesh Material"))
-            {
-                auto materials = resourceManager->getMaterials();
-                for (const auto& [key, material] : *materials)
-                {
-					std::string name = material->getName().empty() ? key : material->getName();
-                    if (ImGui::Selectable(name.c_str()))
-                    {
-                        mesh->setMaterial(material);
-                        ImGui::CloseCurrentPopup();
-                    }
-                }
-                ImGui::EndPopup();
-            }
-        }
-        */
     }
 }
 
@@ -588,6 +543,8 @@ void se::ImGuiManager::renderTextureProperties()
         ImGui::Text("Mip Levels: N/A"); // Would need to expose this from SETexture
         ImGui::Text("Filter Mode: Linear");
         ImGui::Text("Wrap Mode: Repeat");
+
+        ImGui::Image((ImTextureID)texture->getTextureDescriptorSet(), ImVec2(128, 128));
     }
 }
 
@@ -623,33 +580,30 @@ void se::ImGuiManager::renderMaterialEditor(std::shared_ptr<se::SEMaterial> mate
         [material](std::shared_ptr<se::SETexture> tex) {
             material->setDiffuseTexture(tex);
         });
-
+    ImGui::Separator();
     // Normal Texture
     renderTextureSelector("Normal", material->getNormalTexture(),
         [material](std::shared_ptr<se::SETexture> tex) {
             material->setNormalTexture(tex);
         });
-
+    ImGui::Separator();
     // Metallic Texture
     renderTextureSelector("Metallic", material->getMetallicTexture(),
         [material](std::shared_ptr<se::SETexture> tex) {
             material->setMetallicTexture(tex);
         });
-
+    ImGui::Separator();
     // Roughness Texture
     renderTextureSelector("Roughness", material->getRoughnessTexture(),
         [material](std::shared_ptr<se::SETexture> tex) {
             material->setRoughnessTexture(tex);
         });
-
+    ImGui::Separator();
     // AO Texture
     renderTextureSelector("AO", material->getAOTexture(),
         [material](std::shared_ptr<se::SETexture> tex) {
             material->setAOTexture(tex);
         });
-
-    // Update material if needed
-    material->update();
 }
 
 void se::ImGuiManager::renderTextureSelector(const std::string& label,
@@ -658,43 +612,245 @@ void se::ImGuiManager::renderTextureSelector(const std::string& label,
 {
     ImGui::PushID(label.c_str());
 
-    if (currentTexture)
-    {
-        ImGui::Text("%s: %s", label.c_str(), currentTexture->getName().c_str());
-        ImGui::SameLine();
-        if (ImGui::SmallButton("Change"))
-        {
-            ImGui::OpenPopup("Select Texture");
+    const float thumbnailSize = 24;
+    const ImVec2 imageSize(thumbnailSize, thumbnailSize);
+    bool openPopup = false;
+
+    ImGui::BeginGroup();
+
+    // Thumbnail image
+    if (currentTexture) {
+        ImTextureID descriptor = (ImTextureID)currentTexture->getTextureDescriptorSet();
+        if (ImGui::ImageButton(("##" + label).c_str(), descriptor, imageSize)) {
+            openPopup = true;
         }
     }
-    else
-    {
-        ImGui::Text("%s: None", label.c_str());
-        ImGui::SameLine();
-        if (ImGui::SmallButton("Assign"))
-        {
-            ImGui::OpenPopup("Select Texture");
+    else {
+        // Empty/placeholder preview
+        ImVec4 borderColor = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
+        if (ImGui::InvisibleButton("NoTexture", imageSize)) {
+            openPopup = true;
         }
+        if (ImGui::IsItemHovered()) {
+            ImGui::SetTooltip("No texture assigned");
+        }
+        ImGui::GetWindowDrawList()->AddRect(
+            ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImColor(borderColor));
+    }
+
+    ImGui::SameLine();
+
+    // Label (e.g., "Diffuse", "Normal") as clickable
+    if (ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_None, ImVec2(100, 0))) {
+        openPopup = true;
+    }
+
+    ImGui::EndGroup();
+
+    if (openPopup) {
+        ImGui::OpenPopup("Select Texture");
     }
 
     // Texture selection popup
     if (ImGui::BeginPopup("Select Texture"))
     {
+        static char searchBuf[128] = "";
+        ImGui::InputTextWithHint("##Search", "Search textures...", searchBuf, IM_ARRAYSIZE(searchBuf));
+
+        ImGui::Separator();
+        const float thumbnailSize = 64.0f;
+        const float padding = 8.0f;
+        float cellSize = thumbnailSize + padding;
+        float panelWidth = ImGui::GetContentRegionAvail().x;
+        int columnCount = (int)(panelWidth / cellSize);
+        if (columnCount < 1) columnCount = 1;
+
+        ImGui::BeginChild("TextureGrid", ImVec2(0, 300), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+        ImGui::Columns(columnCount, nullptr, false);
+
         auto textures = resourceManager->getTextures();
         for (const auto& [key, texture] : *textures)
         {
-			std::string name = texture->getName().empty() ? key : texture->getName();
-            if (ImGui::Selectable(name.c_str()))
+            const std::string& name = texture->getName().empty() ? key : texture->getName();
+            if (strlen(searchBuf) > 0 && name.find(searchBuf) == std::string::npos)
+                continue;
+
+            ImGui::PushID(texture.get());
+
+            ImVec2 imagePos = ImGui::GetCursorScreenPos();
+            ImGui::Image((ImTextureID)texture->getTextureDescriptorSet(), { thumbnailSize, thumbnailSize });
+
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::GetWindowDrawList()->AddRect(
+                    imagePos,
+                    ImVec2(imagePos.x + thumbnailSize, imagePos.y + thumbnailSize),
+                    IM_COL32(0, 155, 255, 255), // Blue border
+                    4.0f,                       // Corner rounding
+                    0,
+                    2.0f                        // Thickness
+                );
+
+                ImGui::BeginTooltip();
+                ImGui::Text("Texture: %s", name.c_str());
+                ImGui::Text("GUID: %s", texture->getGUID().c_str());
+                ImGui::EndTooltip();
+            }
+
+            if (ImGui::IsItemClicked())
             {
                 onTextureSelected(texture);
                 ImGui::CloseCurrentPopup();
             }
+
+            ImGui::TextWrapped("%s", name.c_str());
+
+            ImGui::NextColumn();
+            ImGui::PopID();
         }
+
+        ImGui::Columns(1);
+        ImGui::EndChild();
+
         ImGui::EndPopup();
     }
 
+
     ImGui::PopID();
 }
+
+void se::ImGuiManager::renderMaterialSelector(
+    std::shared_ptr<se::SEMaterial> currentMaterial,
+    std::function<void(std::shared_ptr<se::SEMaterial>)> onMaterialSelected)
+{
+	std::string label = currentMaterial ? currentMaterial->getName() : "No Material";
+    ImGui::PushID(label.c_str());
+
+    bool openPopup = false;
+
+    ImGui::BeginGroup();
+
+    // Label (e.g., "Diffuse", "Normal") as clickable
+    if (ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_None, ImVec2(100, 0))) {
+        openPopup = true;
+    }
+
+    ImGui::EndGroup();
+
+    if (openPopup) {
+        ImGui::OpenPopup("Select Material");
+    }
+
+    // Texture selection popup
+    if (ImGui::BeginPopup("Select Material"))
+    {
+        static char searchBuf[128] = "";
+        ImGui::InputTextWithHint("##Search", "Search materials...", searchBuf, IM_ARRAYSIZE(searchBuf));
+
+        ImGui::Separator();
+
+        ImGui::BeginChild("TextureGrid", ImVec2(0, 300), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+        ImGui::Columns(1, nullptr, false);
+
+        if (ImGui::Selectable("None", false, ImGuiSelectableFlags_AllowItemOverlap, ImVec2(0, 0)))
+        {
+            onMaterialSelected(nullptr);
+            ImGui::CloseCurrentPopup();
+        }
+
+        auto materials = resourceManager->getMaterials();
+        for (const auto& [key, material] : *materials)
+        {
+            const std::string& name = material->getName().empty() ? key : material->getName();
+            if (strlen(searchBuf) > 0 && name.find(searchBuf) == std::string::npos)
+                continue;
+
+            ImGui::PushID(material.get());
+
+            if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_AllowItemOverlap, ImVec2(0, 0)))
+            {
+                onMaterialSelected(material);
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::NextColumn();
+            ImGui::PopID();
+        }
+
+        ImGui::Columns(1);
+        ImGui::EndChild();
+
+        ImGui::EndPopup();
+    }
+
+
+    ImGui::PopID();
+}
+
+void se::ImGuiManager::renderMeshSelector(
+    std::shared_ptr<se::SEMesh> currentMesh,
+    std::function<void(std::shared_ptr<se::SEMesh>)> onMeshSelected)
+{
+    std::string label = currentMesh ? currentMesh->getName() : "No Mesh";
+    ImGui::PushID(label.c_str());
+
+    bool openPopup = false;
+
+    ImGui::BeginGroup();
+
+    // Label (e.g., "Diffuse", "Normal") as clickable
+    if (ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_None, ImVec2(100, 0))) {
+        openPopup = true;
+    }
+
+    ImGui::EndGroup();
+
+    if (openPopup) {
+        ImGui::OpenPopup("Select Mesh");
+    }
+
+    // Texture selection popup
+    if (ImGui::BeginPopup("Select Mesh"))
+    {
+        static char searchBuf[128] = "";
+        ImGui::InputTextWithHint("##Search", "Search meshes...", searchBuf, IM_ARRAYSIZE(searchBuf));
+
+        ImGui::Separator();
+
+        ImGui::BeginChild("TextureGrid", ImVec2(0, 300), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+        ImGui::Columns(1, nullptr, false);
+
+        auto meshes = resourceManager->getMeshes();
+        for (const auto& [key, mesh] : *meshes)
+        {
+            const std::string& name = mesh->getName().empty() ? key : mesh->getName();
+            if (strlen(searchBuf) > 0 && name.find(searchBuf) == std::string::npos)
+                continue;
+
+            ImGui::PushID(mesh.get());
+
+            if (ImGui::Selectable(name.c_str(), false, ImGuiSelectableFlags_AllowItemOverlap, ImVec2(0, 0)))
+            {
+
+                onMeshSelected(mesh);
+                ImGui::CloseCurrentPopup();
+
+            }
+
+            ImGui::NextColumn();
+            ImGui::PopID();
+        }
+
+        ImGui::Columns(1);
+        ImGui::EndChild();
+
+        ImGui::EndPopup();
+    }
+
+
+    ImGui::PopID();
+}
+
 
 void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, std::vector<se::SEGameObject>* gameobjects, se::ResourceManager* resourceManager)
 {

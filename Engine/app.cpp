@@ -50,17 +50,12 @@ void App::mainLoop()
         ubo.cameraPos = viewerObject.getTransform().translation;
 
         seDevice.updateUniformBuffers(ubo);
-        
-        for (auto& [_, mat] : *ResourceManager->getMaterials()) {
-            mat->update();
-        }
-        
-
+       
         if (auto commandBuffer = seRenderer.beginFrame())
         {
             seRenderer.beginSwapChainRenderPass(commandBuffer);
 
-            PBR->renderGameObjects(commandBuffer, gameObjects, camera, viewerObject);
+            PBR->renderGameObjects(commandBuffer, gameObjects, camera, viewerObject, seRenderer.getFrameIndex());
             PBR->renderCubeMap(commandBuffer);
 
             imguiManager.newFrame();

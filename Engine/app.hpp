@@ -36,8 +36,6 @@ public:
         ResourceManager->setMeshSystem(MeshSystem);
 
 		imguiManager.init(seDevice, seRenderer.getSwapChainRenderPass(), seWindow.getGLFWwindow(), &gameObjects, ResourceManager.get());
-
-
     }
     
     ~App() {}

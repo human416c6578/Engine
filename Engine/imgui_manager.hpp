@@ -28,6 +28,7 @@ namespace se
         // Core rendering methods
         void renderSceneHierarchy();
         void renderAssetBrowser();
+        void renderAssetContextMenu();
         void renderAssetViewer();
         void renderPropertiesPanel();
 
@@ -37,6 +38,7 @@ namespace se
         void renderMeshComponent(se::SEGameObject& gameObject);
         void renderMaterialComponent(se::SEGameObject& gameObject);
 
+
         // Asset properties
         void renderMeshProperties();
         void renderMaterialProperties();
@@ -45,6 +47,10 @@ namespace se
         // Utility methods
         void renderMaterialEditor(std::shared_ptr<se::SEMaterial> material);
         void renderTextureSelector(const std::string& label, std::shared_ptr<se::SETexture> currentTexture, std::function<void(std::shared_ptr<se::SETexture>)> onTextureSelected);
+
+        void renderMaterialSelector(std::shared_ptr<se::SEMaterial> currentMaterial, std::function<void(std::shared_ptr<se::SEMaterial>)> onMaterialSelected);
+
+        void renderMeshSelector(std::shared_ptr<se::SEMesh> currentMesh, std::function<void(std::shared_ptr<se::SEMesh>)> onMeshSelected);
 
         // Vulkan/ImGui setup
         GLFWwindow* window{ nullptr };

@@ -83,6 +83,8 @@ namespace se
         VkQueue graphicsQueue() { return graphicsQueue_; }
         VkQueue presentQueue() { return presentQueue_; }
 
+		VkDescriptorSetLayout getImGuiDescriptorSetLayout() { return imGuiDescriptorSetLayout; }
+
         void updateUniformBuffers(UniformBufferObject bufferObject);
 
         SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
@@ -128,6 +130,8 @@ namespace se
 
         VkDescriptorPool descriptorPool;
         std::vector<VkDescriptorSet> descriptorSets;
+        
+		VkDescriptorSetLayout imGuiDescriptorSetLayout;
 
         std::vector<VkBuffer> uniformBuffers;
         std::vector<VkDeviceMemory> uniformBuffersMemory;

@@ -27,13 +27,13 @@ namespace se
     VkCommandBuffer getCurrentCommandBuffer() const
     {
       assert(isFrameStarted && "Cannot get command buffer when frame not in progress");
-      return commandBuffers[currentFrameIndex];
+      return commandBuffers[seSwapChain->getCurrentFrame()];
     }
 
     int getFrameIndex() const
     {
       assert(isFrameStarted && "Cannot get frame index when frame not in progress");
-      return currentFrameIndex;
+      return seSwapChain->getCurrentFrame();
     }
 
    
@@ -63,7 +63,6 @@ namespace se
     std::unique_ptr<SEOffscreenRenderer> offscreenRenderer;
 
     uint32_t currentImageIndex;
-    int currentFrameIndex{0};
     bool isFrameStarted{ false };
     bool isOffscreenFrameStarted{ false };
   };

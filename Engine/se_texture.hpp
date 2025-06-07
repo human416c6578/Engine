@@ -18,6 +18,8 @@ namespace se
 
 		VkSampler getTextureSampler() { return textureSampler; }
 		VkImageView getTextureImageView() { return textureImageView; }
+		VkImageLayout getTextureImageLayout() { return textureImageLayout; }
+		VkDescriptorSet getTextureDescriptorSet() { return textureDescriptorSet; }
 
 	private:
 		SEDevice &seDevice;
@@ -27,7 +29,10 @@ namespace se
 		VkImage textureImage;
 		VkDeviceMemory textureImageMemory;
 		VkImageView textureImageView;
+		VkImageLayout textureImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		VkSampler textureSampler;
+
+		VkDescriptorSet textureDescriptorSet;
 
 		void createTextureImage(stbi_uc* pixels, int width, int height);
 		void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
@@ -36,6 +41,7 @@ namespace se
 		void createTextureSampler();
 		VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels);
 		void createImage(uint32_t width, uint32_t height, uint32_t mipLevels, VkSampleCountFlagBits numSamples, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage &image, VkDeviceMemory &imageMemory);
+		void createTextureDescriptorSet();
 		void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels);
 		void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
 	};

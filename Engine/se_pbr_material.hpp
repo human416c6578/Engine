@@ -59,7 +59,7 @@ namespace se
 		SEMaterial(const SEMaterial &) = delete;
 		SEMaterial &operator=(const SEMaterial &) = delete;
 
-		void bind(VkCommandBuffer commandBuffer) override
+		void bind(VkCommandBuffer commandBuffer, int frameIndex) override
 		{
 			vkCmdBindDescriptorSets(
 				commandBuffer,
@@ -67,7 +67,7 @@ namespace se
 				pipelineLayout,
 				1,  // Set 1 (Material Textures)
 				1,
-				&descriptorSet,
+				&descriptorSets[frameIndex],
 				0,
 				nullptr);
 		}
@@ -82,8 +82,8 @@ namespace se
 			return pipeline;
 		}
 
-		VkDescriptorSet getDescriptorSet() const override {
-			return descriptorSet;
+		VkDescriptorSet getDescriptorSet(int frameIndex) const override {
+			return descriptorSets[frameIndex];
 		}
 
 		VkDescriptorSetLayout getDescriptorSetLayout() const override {
@@ -139,62 +139,61 @@ namespace se
 		{
 			diffuseTexture = texture;
 			flags.hasDiffuseMap = (texture != dummyTexture);
-			needUpdate = true;
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 
 		void setNormalTexture(std::shared_ptr<SETexture> texture)
 		{
 			normalTexture = texture;
-			flags.hasNormalMap = (texture != dummyTexture);;
-			needUpdate = true;;
+			flags.hasNormalMap = (texture != dummyTexture);
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 
 		void setMetallicTexture(std::shared_ptr<SETexture> texture)
 		{
 			metallicTexture = texture;
-			flags.hasMetallicMap = (texture != dummyTexture);;
-			needUpdate = true;
+			flags.hasMetallicMap = (texture != dummyTexture);
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 
 		void setRoughnessTexture(std::shared_ptr<SETexture> texture)
 		{
 			roughnessTexture = texture;
-			flags.hasRoughnessMap = (texture != dummyTexture);;
-			needUpdate = true;
+			flags.hasRoughnessMap = (texture != dummyTexture);
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 
 		void setAOTexture(std::shared_ptr<SETexture> texture)
 		{
 			aoTexture = texture;
-			flags.hasAOMap = (texture != dummyTexture);;
-			needUpdate = true;
+			flags.hasAOMap = (texture != dummyTexture);
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 
 		void setMetallic(float metallic)
 		{
 			flags.metallic = metallic;
-			needUpdate = true;
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 
 		void setRoughness(float roughness)
 		{
 			flags.roughness = roughness;
-			needUpdate = true;
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 		
 		void setAO(float ao)
 		{
 			flags.ao = ao;
-			needUpdate = true;
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 
-		void update()
+		void update(int frameIndex)
 		{
-			if (needUpdate)
+			if (needUpdate[frameIndex])
 			{
-				createUniformBuffer();
-				createDescriptorSets();
-				needUpdate = false;
+				updateDescriptorSet(frameIndex);
+				needUpdate[frameIndex] = false;
 			}
 		}
 
@@ -202,13 +201,16 @@ namespace se
 		void createUniformBuffer();
 		void createDescriptorSets();
 
-		bool needUpdate = false;
+		void updateDescriptorSet(size_t frameIndex);
+
+		std::vector<bool> needUpdate;
+
 
 		SEDevice &seDevice;
 		VkPipeline pipeline;
 		VkPipelineLayout pipelineLayout;
 		VkDescriptorSetLayout descriptorSetLayout;
-		VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+		std::vector<VkDescriptorSet> descriptorSets;
 
 		MaterialFlags flags{};
 

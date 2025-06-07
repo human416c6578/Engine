@@ -26,11 +26,7 @@ namespace se
 		VkPipelineLayout getPipelineLayout() { return pipelineLayout; }
         VkPipeline getPipeline() { return sePipeline->getPipeline(); }
 
-        void renderGameObjects(
-            VkCommandBuffer commandBuffer,
-            std::vector<SEGameObject>& gameObjects,
-            const SECamera& camera,
-            se::SEGameObject& viewerObject);
+        void renderGameObjects(VkCommandBuffer commandBuffer, std::vector<SEGameObject>& gameObjects, const SECamera& camera, se::SEGameObject& viewerObject, int frameIndex);
         
         void renderCubeMap(VkCommandBuffer commandBuffer);
 
@@ -38,6 +34,7 @@ namespace se
         void createPipelineLayout();
         void createPipeline(VkRenderPass renderPass);
         void createDescriptorSets();
+        
         void createGlobalDescriptorSetLayout();
         void createMaterialDescriptorSetLayout();
 

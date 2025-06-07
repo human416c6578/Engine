@@ -67,9 +67,9 @@ namespace se
         SEMesh &operator=(const SEMesh &) = delete;
 
         //void bind(VkCommandBuffer commandBuffer);
-		void draw(VkCommandBuffer commandBuffer, std::shared_ptr<SEMaterial> goMaterial, SimplePushConstantData push);
-
         std::vector<std::unique_ptr<SESubMesh>> loadMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout);
+
+		void draw(VkCommandBuffer commandBuffer, std::shared_ptr<SEMaterial> goMaterial, SimplePushConstantData push, int frameIndex);
 
 		
 

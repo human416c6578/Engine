@@ -1,5 +1,6 @@
 #include "se_texture.hpp"
 
+#include "imgui/imgui_impl_vulkan.h"
 
 namespace se
 {
@@ -9,6 +10,7 @@ namespace se
         createTextureImage(pixels, width, height);
         createTextureImageView();
         createTextureSampler();
+        createTextureDescriptorSet();
     }
 
     SETexture::~SETexture()
@@ -231,6 +233,37 @@ namespace se
         vkBindImageMemory(seDevice.device(), image, imageMemory, 0);
     }
 
+    void SETexture::createTextureDescriptorSet()
+    {
+        VkDescriptorPool pool = seDevice.getDescriptorPool();
+		VkDescriptorSetLayout layout = seDevice.getImGuiDescriptorSetLayout();
+
+        // Create Descriptor Set:
+        {
+            VkDescriptorSetAllocateInfo alloc_info = {};
+            alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            alloc_info.descriptorPool = pool;
+            alloc_info.descriptorSetCount = 1;
+            alloc_info.pSetLayouts = &layout;
+            VkResult err = vkAllocateDescriptorSets(seDevice.device(), &alloc_info, &textureDescriptorSet);
+        }
+
+        // Update the Descriptor Set:
+        {
+            VkDescriptorImageInfo desc_image[1] = {};
+            desc_image[0].sampler = textureSampler;
+            desc_image[0].imageView = textureImageView;
+            desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            VkWriteDescriptorSet write_desc[1] = {};
+            write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write_desc[0].dstSet = textureDescriptorSet;
+            write_desc[0].descriptorCount = 1;
+            write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write_desc[0].pImageInfo = desc_image;
+            vkUpdateDescriptorSets(seDevice.device(), 1, write_desc, 0, nullptr);
+        }
+    }
+
     void SETexture::transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevels)
     {
         VkCommandBuffer commandBuffer = seDevice.beginSingleTimeCommands();
@@ -279,6 +312,8 @@ namespace se
             0, nullptr,
             0, nullptr,
             1, &barrier);
+
+		this->textureImageLayout = newLayout;
 
         seDevice.endSingleTimeCommands(commandBuffer);
     }
