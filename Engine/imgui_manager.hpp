@@ -8,6 +8,7 @@
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_vulkan.h"
 #include "imgui_filedialog/ImGuiFileDialog.h"
+#include "se_pbr.hpp"
 
 namespace se
 {
@@ -17,8 +18,7 @@ namespace se
         ImGuiManager() = default;
         ~ImGuiManager() = default;
 
-        void init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window,
-            std::vector<se::SEGameObject>* gameobjects, se::ResourceManager* resourceManager);
+        void init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, std::vector<se::SEGameObject>* gameobjects, se::ResourceManager* resourceManager);
 
         void newFrame();
         void render(VkCommandBuffer commandBuffer);
@@ -37,6 +37,7 @@ namespace se
         void renderTransformComponent(se::SEGameObject& gameObject);
         void renderMeshComponent(se::SEGameObject& gameObject);
         void renderMaterialComponent(se::SEGameObject& gameObject);
+        void renderLightComponent(se::SEGameObject& gameObject);
 
 
         // Asset properties
@@ -65,6 +66,7 @@ namespace se
 
         // Data references
         std::vector<se::SEGameObject>* gameobjects{ nullptr };
+        std::vector<se::Light>* lights{ nullptr };
         se::ResourceManager* resourceManager{ nullptr };
 
         // Selection state

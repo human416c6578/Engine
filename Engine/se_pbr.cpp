@@ -16,9 +16,9 @@ namespace se
     PBR::PBR(SEDevice& device, VkRenderPass renderPass, SECubemap& cubemap)
         : seDevice{ device }, seCubemap{ cubemap }
     {
-
         createGlobalDescriptorSetLayout();
         createMaterialDescriptorSetLayout();
+        createUniformBuffer();
         createDescriptorSets();
         createPipelineLayout();
         createPipeline(renderPass);
@@ -99,6 +99,14 @@ namespace se
         BRDFLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
         bindings.push_back(BRDFLayoutBinding);
+
+        VkDescriptorSetLayoutBinding lightsLayoutBinding{};
+        lightsLayoutBinding.binding = 3;
+        lightsLayoutBinding.descriptorCount = 1;
+        lightsLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        lightsLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        bindings.push_back(lightsLayoutBinding);
 
         // Descriptor set layout create info
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -189,21 +197,63 @@ namespace se
         }
     }
 
+    void PBR::createUniformBuffer()
+    {
+        VkDeviceSize bufferSize = sizeof(se::LightUBO);
+
+        size_t framesInFlight = SESwapChain::MAX_FRAMES_IN_FLIGHT;
+        lightBuffers.resize(framesInFlight);
+
+        for (size_t i = 0; i < framesInFlight; i++)
+        {
+            seDevice.createBuffer(
+                bufferSize,
+                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                lightBuffers[i].buffer,
+                lightBuffers[i].memory);
+
+            VkResult result = vkMapMemory(seDevice.device(), lightBuffers[i].memory, 0, bufferSize, 0, &lightBuffers[i].mapped);
+            if (result != VK_SUCCESS)
+            {
+                throw std::runtime_error("Failed to map uniform buffer memory!");
+            }
+
+        }
+    }
+
     void PBR::createDescriptorSets()
     {
-        VkDescriptorSetAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = seDevice.getDescriptorPool();
-        allocInfo.descriptorSetCount = 1;
-        allocInfo.pSetLayouts = &globalDescriptorSetLayout;
+        size_t framesInFlight = SESwapChain::MAX_FRAMES_IN_FLIGHT;
+        descriptorSets.resize(framesInFlight);
+        needUpdate.resize(framesInFlight, false);
 
-        if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSet) != VK_SUCCESS)
+        for (size_t i = 0; i < framesInFlight; i++)
         {
-            throw std::runtime_error("failed to allocate descriptor sets!");
-        }
+            if (descriptorSets[i] != VK_NULL_HANDLE)
+            {
+                vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSets[i]);
+            }
 
+            VkDescriptorSetAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+            allocInfo.descriptorPool = seDevice.getDescriptorPool();
+            allocInfo.descriptorSetCount = 1;
+            allocInfo.pSetLayouts = &globalDescriptorSetLayout;
+
+            if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSets[i]) != VK_SUCCESS)
+            {
+                throw std::runtime_error("failed to allocate descriptor sets!");
+            }
+
+            updateDescriptorSet(i);
+        }
+    }
+
+    void PBR::updateDescriptorSet(size_t frameIndex)
+    {
         // Descriptor writes array
-        std::vector<VkWriteDescriptorSet> descriptorWrites(3);
+        std::vector<VkWriteDescriptorSet> descriptorWrites(4);
 
         // Diffuse texture descriptor
         VkDescriptorImageInfo diffuseImageInfo{};
@@ -213,7 +263,7 @@ namespace se
 
         // Diffuse texture write
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = descriptorSet;
+        descriptorWrites[0].dstSet = descriptorSets[frameIndex];
         descriptorWrites[0].dstBinding = 0;
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -228,7 +278,7 @@ namespace se
 
         // Specular texture write
         descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet = descriptorSet;
+        descriptorWrites[1].dstSet = descriptorSets[frameIndex];
         descriptorWrites[1].dstBinding = 1;
         descriptorWrites[1].dstArrayElement = 0;
         descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -243,15 +293,39 @@ namespace se
 
         // BRDF texture write
         descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[2].dstSet = descriptorSet;
+        descriptorWrites[2].dstSet = descriptorSets[frameIndex];
         descriptorWrites[2].dstBinding = 2;
         descriptorWrites[2].dstArrayElement = 0;
         descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptorWrites[2].descriptorCount = 1;
         descriptorWrites[2].pImageInfo = &BRDFImageInfo;
 
+        VkDescriptorBufferInfo lightBufferInfo{};
+        lightBufferInfo.buffer = lightBuffers[frameIndex].buffer;
+        lightBufferInfo.offset = 0;
+        lightBufferInfo.range = sizeof(LightUBO);
+
+        descriptorWrites[3].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[3].dstSet = descriptorSets[frameIndex];
+        descriptorWrites[3].dstBinding = 3;
+        descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrites[3].descriptorCount = 1;
+        descriptorWrites[3].pBufferInfo = &lightBufferInfo;
+
         // Update only the descriptors that are written (ignoring empty ones)
         vkUpdateDescriptorSets(seDevice.device(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+    }
+    
+    void PBR::updateLightsBuffer(int frameIndex, std::vector<Light> lights) {
+        if (!needUpdate[frameIndex]) return;
+
+        LightUBO ubo{};
+        ubo.lightCount = static_cast<int>(lights.size());
+        std::memcpy(ubo.lights, lights.data(), sizeof(Light) * lights.size());
+
+        std::memcpy(lightBuffers[frameIndex].mapped, &ubo, sizeof(LightUBO));
+
+        needUpdate[frameIndex] = false;
     }
 
     void PBR::renderGameObjects(
@@ -261,16 +335,29 @@ namespace se
         se::SEGameObject& viewerObject,
         int frameIndex) 
     {
+		std::vector<Light> lights;
+		for (auto& obj : gameObjects)
+		{
+			if (obj.hasLight()) {
+				const auto& transform = obj.getTransform();
+				Light light = obj.getLight();
+                light.direction = transform.rotation;
+                light.position = transform.translation;
+				lights.push_back(light);
+			}
+		}
+		needUpdate[frameIndex] = true;
+        updateLightsBuffer(frameIndex, lights);
+
         for (auto& obj : gameObjects)
         {
             auto mesh = obj.getMesh();
             if (!mesh) continue;
 
             se::SimplePushConstantData push{};
-            push.color = obj.getColor();
             push.transform = obj.getTransformMat4();
 
-            bind(commandBuffer);
+            bind(commandBuffer, frameIndex);
 
             auto material = obj.getMaterial();
                 

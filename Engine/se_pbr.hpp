@@ -12,6 +12,20 @@
 
 namespace se
 {
+	constexpr int MAX_LIGHTS = 100;
+
+    struct alignas(16) LightUBO {
+        alignas(4) int lightCount;
+        alignas(16) glm::vec3 padding;
+        alignas(16) Light lights[MAX_LIGHTS];
+    };
+
+    struct Buffer {
+        VkBuffer buffer;
+        VkDeviceMemory memory;
+        void* mapped;
+    };
+
     class PBR
     {
     public:
@@ -34,11 +48,17 @@ namespace se
         void createPipelineLayout();
         void createPipeline(VkRenderPass renderPass);
         void createDescriptorSets();
+
+        void updateDescriptorSet(size_t frameIndex);
+
+        void updateLightsBuffer(int frameIndex, std::vector<Light> lights);
         
         void createGlobalDescriptorSetLayout();
         void createMaterialDescriptorSetLayout();
 
-        void bind(VkCommandBuffer commandBuffer)
+        void createUniformBuffer();
+
+        void bind(VkCommandBuffer commandBuffer, int frameIndex)
         {
             sePipeline->bind(commandBuffer);
 
@@ -48,19 +68,23 @@ namespace se
                 pipelineLayout,
                 0,  // Set 0 (Global UBO)
                 1,
-                &descriptorSet,
+                &descriptorSets[frameIndex],
                 0,
                 nullptr);
         }
 
         SEDevice& seDevice;
         SECubemap& seCubemap;
-        VkDescriptorSet descriptorSet;
+        std::vector<VkDescriptorSet> descriptorSets;
         VkDescriptorSetLayout globalDescriptorSetLayout;
         VkDescriptorSetLayout materialDescriptorSetLayout;
 
         std::unique_ptr<SEPipeline> sePipeline;
         VkPipelineLayout pipelineLayout;
+
+		std::vector<Buffer> lightBuffers;
+        std::vector<bool> needUpdate;
+		
     };
 
 

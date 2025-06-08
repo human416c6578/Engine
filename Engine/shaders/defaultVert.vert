@@ -2,7 +2,6 @@
 
 layout(push_constant) uniform PushConstants {
     mat4 transform;
-    vec3 color;
 } pushConstants;
 
 layout(location = 0) in vec3 inPosition;

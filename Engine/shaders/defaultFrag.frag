@@ -8,7 +8,6 @@ layout(set = 0, binding = 0) uniform UBO {
 
 layout(push_constant) uniform PushConstants {
     mat4 transform;
-    vec3 color;
 } pushConstants;
 
 
@@ -33,5 +32,5 @@ vec3 lightPositions[4] = vec3[](
 
 void main()
 {		
-    outColor = vec4(pushConstants.color, 1.0);
+    outColor = vec4(1.0, 1.0, 1.0, 1.0);
 }

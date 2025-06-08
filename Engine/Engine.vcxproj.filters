@@ -247,12 +247,6 @@
     <None Include="shaders\defaultVert.vert">
       <Filter>Source Files\shaders</Filter>
     </None>
-    <None Include="shaders\matfrag.frag">
-      <Filter>Source Files\shaders</Filter>
-    </None>
-    <None Include="shaders\matvert.vert">
-      <Filter>Source Files\shaders</Filter>
-    </None>
     <None Include="hdr\snowy_forest_4k.hdr">
       <Filter>Resource Files</Filter>
     </None>

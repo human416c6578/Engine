@@ -2,7 +2,6 @@
 
 layout(push_constant) uniform PushConstants {
     mat4 transform;
-    vec3 color;
 } pushConstants;
 
 layout(set = 1, binding = 0) uniform UBO {
@@ -12,6 +11,7 @@ layout(set = 1, binding = 0) uniform UBO {
 } ubo;
 
 layout(set = 1, binding = 1) uniform FLAGS {
+    vec3 color;          // 16 bytes
     int hasDiffuseMap;    // 4 bytes
     int hasNormalMap;     // 4 bytes
     int hasRoughnessMap;  // 4 bytes
@@ -33,6 +33,27 @@ layout(set = 0, binding = 0) uniform samplerCube irradianceDiffuseMap;
 layout(set = 0, binding = 1) uniform samplerCube irradianceSpecularMap;
 layout(set = 0, binding = 2) uniform sampler2D BRDFMap;
 
+const int LightType_None = 0;
+const int LightType_Point = 1;
+const int LightType_Directional = 2;
+const int LightType_Spot = 3;
+
+struct Light {
+    vec3 position;  // xyz: position, w: type
+    int type; // 0: None, 1: Point, 2: Directional, 3: Spot
+    vec3 color;     // xyz: color, w: intensity
+    float intensity; // intensity of the light
+    vec3 direction; // xyz: direction, w: spotAngle
+    float spotAngle; // angle of the spot light
+};
+
+layout(std140, set = 0, binding = 3) uniform LIGHTS {
+    int lightCount;
+    vec3 _pad0;         // pad to 16 bytes
+    Light lights[100];
+} uboL;
+
+
 layout(location = 0) in vec3 WorldPos;
 layout(location = 1) in vec2 TexCoords;
 layout(location = 2) in vec3 Normal;
@@ -40,18 +61,6 @@ layout(location = 2) in vec3 Normal;
 layout(location = 0) out vec4 outColor;
 
 const float PI = 3.14159265359;
-
-vec3 lightColors[3] = vec3[](
-    vec3(1.0, 0.0, 0.0),
-    vec3(0.0, 1.0, 0.0),
-    vec3(0.0, 0.0, 1.0)
-);
-
-vec3 lightPositions[3] = vec3[](
-    vec3(0.5, 3.0, 0.0),
-    vec3(0.5, 2.5, 0.5),
-    vec3(0.0, 4.0, 0.0)
-);
 
 vec3 getNormalFromMap()
 {
@@ -118,7 +127,7 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 
 void main()
 {	
-    vec3 albedo = pushConstants.color;
+    vec3 albedo = flags.color.xyz;
     if(flags.hasDiffuseMap != 0)
         albedo = texture(albedoMap, TexCoords).rgb;
     
@@ -151,15 +160,15 @@ void main()
     // reflectance equation
     vec3 Lo = vec3(0.0);
     
-    for(int i = 0; i < 3; ++i) 
+    for(int i = 0; i < uboL.lightCount; ++i) 
     {
         // calculate per-light radiance
-        vec3 L = normalize(lightPositions[i] - WorldPos);
+        vec3 L = normalize(uboL.lights[i].position - WorldPos);
         vec3 H = normalize(V + L);
-        float distance = length(lightPositions[i] - WorldPos);
+        float distance = length(uboL.lights[i].position - WorldPos);
         //float attenuation = 1.0 / (distance * distance);
         float attenuation = 1.0 / log(distance + 1.0);
-        vec3 radiance = lightColors[i] * attenuation;
+        vec3 radiance = uboL.lights[i].color.xyz * attenuation * uboL.lights[i].intensity;
 
         // Cook-Torrance BRDF
         float NDF = DistributionGGX(N, H, roughness);   

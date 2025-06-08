@@ -76,16 +76,6 @@ void App::mainLoop()
 
 }
 
-std::vector<glm::vec3> lightPositions = {
-    glm::vec3(0.5f, 4.5f, 1.0f),
-    glm::vec3(0.5f, 4.5f, 0.5f),
-    glm::vec3(0.0f, 4.5f, 0.0f)};
-
-std::vector<glm::vec3> lightColors = {
-    glm::vec3(0.5f, 0.0f, 0.0f),
-    glm::vec3(0.0f, 0.5f, 0.0f),
-    glm::vec3(0.0f, 0.0f, 0.5f)};
-
 void App::loadGameObjects()
 {
     std::shared_ptr<se::SEMaterial> lightMat = ResourceManager->createMaterial("light_material");
@@ -95,17 +85,6 @@ void App::loadGameObjects()
 
     //std::shared_ptr<se::SEMesh> lightMesh = ResourceManager->loadMesh("models/test.obj");
 	std::shared_ptr<se::SEMesh> lightMesh = ResourceManager->createSphere("light_mesh");
-
-    for (int i = 0;i < 3;i++)
-    {
-        auto light = se::SEGameObject::createGameObject("light_"+std::to_string(i));
-        light.setMesh(lightMesh);
-		light.setTransform(se::TransformComponent{
-            lightPositions[i], { 0.2f, 0.2f, 0.2f }, { .0f, .0f, .0f } });
-        light.setColor(lightColors[i]);
-		light.setMaterial(lightMat);
-        gameObjects.push_back(std::move(light));
-    }
    
 	std::shared_ptr<se::SETexture> diffuse = ResourceManager->loadTexture("textures/Dark/texture_01.png");
 	std::shared_ptr<se::SEMaterial> floorMat = ResourceManager->createMaterial("floor_material");
@@ -124,7 +103,6 @@ void App::loadGameObjects()
     floor.setMesh(cubeMesh);
 	floor.setTransform(se::TransformComponent{
 	{ .0f, 6.0f, .0f }, { 10.0f, 2.0f, 10.0f }, { .0f, .0f, .0f } });
-    floor.setColor({ 1.f, 1.f, 1.f });
     floor.setMaterial(floorMat);
 
     gameObjects.push_back(std::move(floor));

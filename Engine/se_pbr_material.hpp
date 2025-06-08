@@ -14,7 +14,6 @@ namespace se
 	struct SimplePushConstantData
 	{
 		glm::mat4 transform{1.f};
-		alignas(16) glm::vec3 color{};
 	};
 	
 	class SEMaterial : public SEMaterialBase, public Resource
@@ -23,6 +22,7 @@ namespace se
 	public:
 		struct alignas(16) MaterialFlags
 		{
+			alignas(16) glm::vec3 color;
 			alignas(4) int hasDiffuseMap;
 			alignas(4) int hasNormalMap;
 			alignas(4) int hasRoughnessMap;
@@ -93,6 +93,11 @@ namespace se
 		const MaterialFlags& getFlags() const
 		{
 			return flags;
+		}
+
+		glm::vec3 getColor() const
+		{
+			return flags.color;
 		}
 
 		float getMetallic() const
@@ -185,6 +190,12 @@ namespace se
 		void setAO(float ao)
 		{
 			flags.ao = ao;
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
+		}
+
+		void setColor(const glm::vec3& color)
+		{
+			flags.color = color;
 			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 

@@ -8,7 +8,6 @@ layout(set = 1, binding = 0) uniform UBO {
 
 layout(push_constant) uniform PushConstants {
     mat4 transform;  // Model matrix
-    vec3 color;      // Color
 } pushConstants;
 
 layout(location = 0) in vec3 inPosition;   // Vertex position

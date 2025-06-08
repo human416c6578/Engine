@@ -218,8 +218,6 @@
     <None Include="shaders\defaultFrag.frag" />
     <None Include="shaders\defaultVert.vert" />
     <None Include="shaders\irradianceSpecular.frag" />
-    <None Include="shaders\matfrag.frag" />
-    <None Include="shaders\matvert.vert" />
     <None Include="shaders\pbrFrag.frag" />
     <None Include="shaders\pbrVert.vert" />
   </ItemGroup>

@@ -1,10 +1,12 @@
 #include "imgui_manager.hpp"
+#include "se_pbr.hpp"
 
 void se::ImGuiManager::renderSceneHierarchy()
 {
     static int emptyCount = 0;
 	static int cubeCount = 0;
     static int sphereCount = 0;
+    static int lightCount = 0;
     bool itemHovered = false;
 
     if (!showSceneHierarchy) return;
@@ -60,14 +62,22 @@ void se::ImGuiManager::renderSceneHierarchy()
             SEGameObject go = SEGameObject::createGameObject("Cube_" + std::to_string(cubeCount++));
             go.setMesh(resourceManager->createCube("CubeMesh_" + std::to_string(cubeCount)));
 			go.setMaterial(resourceManager->createMaterial("CubeMaterial_" + std::to_string(cubeCount)));
-			go.setColor({ 1.0f, 1.0f, 1.0f });
             gameobjects->emplace_back(std::move(go));
         }
         if (ImGui::MenuItem("Create Sphere")) {
             SEGameObject go = SEGameObject::createGameObject("Sphere_" + std::to_string(sphereCount++));
             go.setMesh(resourceManager->createSphere("SphereMesh_" + std::to_string(sphereCount)));
             go.setMaterial(resourceManager->createMaterial("SphereMaterial_" + std::to_string(sphereCount)));
-            go.setColor({ 1.0f, 1.0f, 1.0f });
+            gameobjects->emplace_back(std::move(go));
+        }
+        if (ImGui::MenuItem("Create Light")) {
+            SEGameObject go = SEGameObject::createGameObject("Light_" + std::to_string(lightCount++));
+            Light light{};
+			light.type = LightType::Point;
+			light.color = { 1.0f, 1.0f, 1.0f };
+			light.intensity = 1.0f;
+            go.setLight(light);
+
             gameobjects->emplace_back(std::move(go));
         }
         ImGui::EndPopup();
@@ -134,7 +144,7 @@ void se::ImGuiManager::renderAssetContextMenu()
             config.countSelectionMax = 0;
             config.flags = ImGuiFileDialogFlags_CaseInsensitiveExtentionFiltering;
 
-            ImGuiFileDialog::Instance()->OpenDialog("ChooseTexture", "Select Texture Files", "Texture Files{.png,.jpg,.tga,.bmp,.jpeg}", config);
+            ImGuiFileDialog::Instance()->OpenDialog("ChooseTexture", "Select Texture Files", "Texture Files{.png,.jpg,.jpeg,.tga,.bmp,.hdr}", config);
 
         }
         ImGui::EndPopup();
@@ -360,6 +370,7 @@ void se::ImGuiManager::renderGameObjectProperties()
     renderTransformComponent(gameObject);
     renderMeshComponent(gameObject);
 	renderMaterialComponent(gameObject);
+    renderLightComponent(gameObject);
 }
 
 void se::ImGuiManager::renderTransformComponent(se::SEGameObject& gameObject)
@@ -371,8 +382,6 @@ void se::ImGuiManager::renderTransformComponent(se::SEGameObject& gameObject)
         float position[3] = { transform.translation.x, transform.translation.y, transform.translation.z };
         float rotation[3] = { transform.rotation.x, transform.rotation.y, transform.rotation.z };
         float scale[3] = { transform.scale.x, transform.scale.y, transform.scale.z };
-
-        float color[3] = { gameObject.getColor().r, gameObject.getColor().g, gameObject.getColor().b };
 
         bool changed = false;
 
@@ -394,25 +403,6 @@ void se::ImGuiManager::renderTransformComponent(se::SEGameObject& gameObject)
             gameObject.setTransform(newTransform);
         }
 
-
-        ImGui::Spacing();
-        ImGui::Separator();
-        ImGui::Spacing();
-
-        if (ImGui::DragFloat3("Color", color, 0.01f))
-        {
-            gameObject.setColor({
-                std::clamp(color[0], 0.0f, 1.0f),
-                std::clamp(color[1], 0.0f, 1.0f),
-                std::clamp(color[2], 0.0f, 1.0f)
-            });
-        }
-
-        ImGui::SameLine();
-        if (ImGui::ColorEdit3("Color", (float*)&color, ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel))
-        {
-            gameObject.setColor({ color[0], color[1], color[2] });
-        }
     }
 }
 
@@ -459,6 +449,49 @@ void se::ImGuiManager::renderMaterialComponent(se::SEGameObject& gameObject)
 
     }
 }
+
+void se::ImGuiManager::renderLightComponent(se::SEGameObject& gameObject)
+{
+    if (!gameObject.hasLight()) return;
+
+    if (ImGui::CollapsingHeader("Light"))
+    {
+        auto& light = gameObject.getLight();
+
+        // Light type selector
+        static const char* lightTypeNames[] = {"Point", "Directional", "Spot" };
+        int typeIndex = static_cast<int>(light.type) - 1;
+        if (ImGui::Combo("Type", &typeIndex, lightTypeNames, IM_ARRAYSIZE(lightTypeNames)))
+        {
+            light.type = static_cast<se::LightType>(typeIndex+1);
+        }
+
+        // Color picker
+        if (ImGui::ColorEdit3("Color", &light.color.x, ImGuiColorEditFlags_Float))
+        {
+            // Clamp to [0, 1] in case user enters out-of-range values
+            light.color.r = std::clamp(light.color.r, 0.0f, 1.0f);
+            light.color.g = std::clamp(light.color.g, 0.0f, 1.0f);
+            light.color.b = std::clamp(light.color.b, 0.0f, 1.0f);
+        }
+
+        // Intensity slider
+        ImGui::SliderFloat("Intensity", &light.intensity, 0.0f, 10.0f, "%.2f");
+
+        // Direction (for Directional and Spot lights)
+        if (light.type == se::LightType::Directional || light.type == se::LightType::Spot)
+        {
+            ImGui::DragFloat3("Direction", &light.direction.x, 0.1f, -1.0f, 1.0f);
+        }
+
+        // Spot angle (for Spot lights)
+        if (light.type == se::LightType::Spot)
+        {
+            ImGui::SliderFloat("Spot Angle", &light.spotAngle, 0.0f, 90.0f, "%.1f deg");
+        }
+    }
+}
+
 
 void se::ImGuiManager::renderMeshProperties()
 {
@@ -553,9 +586,21 @@ void se::ImGuiManager::renderMaterialEditor(std::shared_ptr<se::SEMaterial> mate
     if (!material) return;
 
     // PBR Properties
+	glm::vec3 color = material->getColor();
     float metallic = material->getMetallic();
     float roughness = material->getRoughness();
     float ao = material->getAO();
+
+    // Color picker
+    if (ImGui::ColorEdit3("Color", &color.x, ImGuiColorEditFlags_Float))
+    {
+        // Clamp to [0, 1] in case user enters out-of-range values
+        color.r = std::clamp(color.r, 0.0f, 1.0f);
+        color.g = std::clamp(color.g, 0.0f, 1.0f);
+        color.b = std::clamp(color.b, 0.0f, 1.0f);
+
+		material->setColor(color);
+    }
 
     if (ImGui::SliderFloat("Metallic", &metallic, 0.0f, 1.0f))
     {
@@ -858,6 +903,7 @@ void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwin
     this->renderPass = renderPass;
     this->gameobjects = gameobjects;
     this->resourceManager = resourceManager;
+	this->lights = lights;
     // Create ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

@@ -1,13 +1,34 @@
 #pragma once
 
 #include "se_mesh.hpp"
-
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <memory>
 
 namespace se
 {
+    enum class LightType {
+        None = 0,
+        Point = 1,
+        Directional = 2,
+        Spot = 3
+    };
+
+
+    //struct alignas(16) Light {
+    //    glm::vec4 position;     // xyz: position, w: int type
+    //    glm::vec4 color;        // xyz: color, w: intensify
+    //    glm::vec4 direction;    // xyz: direction, w: spotAngle 
+    //};
+
+    struct alignas(16) Light {
+        glm::vec3 position; 
+        alignas(4) LightType type;
+        glm::vec3 color;     
+        alignas(4) float intensity;
+        glm::vec3 direction; 
+        alignas(4) float spotAngle;
+    };
 
     struct TransformComponent
     {
@@ -89,12 +110,6 @@ namespace se
             material = newMaterial;
         }
 
-        const glm::vec3& getColor() const { return color; }
-        void setColor(const glm::vec3& newColor)
-        {
-            color = newColor;
-        }
-
         const glm::mat4& getTransformMat4() { return transform.mat4(); }
 
         const TransformComponent& getTransform() const { return transform; }
@@ -102,6 +117,18 @@ namespace se
         void setTransform(const TransformComponent& newTransform)
         {
             transform = newTransform;
+        }
+
+        const Light& getLight() const { return light; }
+        Light& getLight() { return light; }
+
+		void setLight(Light newLight)
+		{
+			light = newLight;
+		}
+
+        bool hasLight() const {
+            return light.type != LightType::None;
         }
 
 
@@ -115,7 +142,7 @@ namespace se
 
         std::shared_ptr<SEMesh> mesh{};
         std::shared_ptr<SEMaterial> material{};
-        glm::vec3 color{};
+        Light light{};
         TransformComponent transform{};
     };
 }

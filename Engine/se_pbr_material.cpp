@@ -36,6 +36,7 @@ namespace se
 		  roughnessTexture{roughnessTexture}, aoTexture{aoTexture},
 		Resource(guid, name)
 	{
+        flags.color = { 1.0f, 1.0f, 1.0f }; // Default color
 		flags.hasDiffuseMap = diffuseTexture.has_value();
 		flags.hasNormalMap = normalTexture.has_value();
 		flags.hasMetallicMap = metallicTexture.has_value();
@@ -45,6 +46,7 @@ namespace se
 		flags.metallic = metallic;
 		flags.roughness = roughness;
 		flags.ao = ao;
+		
 
 		createUniformBuffer();
 		createDescriptorSets();
@@ -112,6 +114,7 @@ namespace se
     void SEMaterial::updateDescriptorSet(size_t frameIndex)
     {
         memcpy(matBufferMapped, &flags, sizeof(flags));
+
         std::vector<VkBuffer> uniformBuffers = seDevice.getUniformBuffers();
         VkDescriptorBufferInfo bufferInfo{};
         bufferInfo.buffer = uniformBuffers[frameIndex];
