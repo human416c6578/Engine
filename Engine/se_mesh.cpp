@@ -207,32 +207,24 @@ namespace se
 
     void SEMesh::draw(
         VkCommandBuffer commandBuffer,
+        VkPipelineLayout pipelineLayout,
         std::shared_ptr<SEMaterial> goMaterial,
         SimplePushConstantData push,
 		int  frameIndex
         )
     {
+        if (goMaterial)
+        {
+            goMaterial->update(frameIndex);
+            goMaterial->bind(commandBuffer, frameIndex);
+        }
+
         for (auto& submesh : seSubmeshes)
         {
-            VkPipelineLayout pipelineLayout = nullptr;
-
-            if (goMaterial)
-            {
-				goMaterial->update(frameIndex);
-                goMaterial->bind(commandBuffer, frameIndex);
-                pipelineLayout = goMaterial->getPipelineLayout();
-            }
-            else if (submesh->hasMaterial())
+            if (submesh->hasMaterial())
             {
                 submesh->updateMaterial(frameIndex);
                 submesh->bindMaterial(commandBuffer, frameIndex);
-                pipelineLayout = submesh->getPipelineLayout();
-            }
-
-            if (pipelineLayout == nullptr)
-            {
-                // Skip submesh if no valid pipeline layout
-                continue;
             }
 
             submesh->bind(commandBuffer);

@@ -4,11 +4,12 @@
 #include "se_renderer.hpp"
 #include "se_gameobject.hpp"
 #include "se_resource_manager.hpp"
+#include "se_scene_manager.hpp"
 #include <imgui/imgui.h>
 #include "imgui/imgui_impl_glfw.h"
 #include "imgui/imgui_impl_vulkan.h"
 #include "imgui_filedialog/ImGuiFileDialog.h"
-#include "se_pbr.hpp"
+
 
 namespace se
 {
@@ -18,7 +19,7 @@ namespace se
         ImGuiManager() = default;
         ~ImGuiManager() = default;
 
-        void init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, std::vector<se::SEGameObject>* gameobjects, se::ResourceManager* resourceManager);
+        void init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, se::ResourceManager* resourceManager);
 
         void newFrame();
         void render(VkCommandBuffer commandBuffer);
@@ -34,10 +35,11 @@ namespace se
 
         // GameObject properties
         void renderGameObjectProperties();
-        void renderTransformComponent(se::SEGameObject& gameObject);
-        void renderMeshComponent(se::SEGameObject& gameObject);
-        void renderMaterialComponent(se::SEGameObject& gameObject);
-        void renderLightComponent(se::SEGameObject& gameObject);
+        void renderTransformComponent(std::unique_ptr<se::SEGameObject>& gameObject);
+        void renderMeshComponent(std::unique_ptr<se::SEGameObject>& gameObject);
+        void renderMaterialComponent(std::unique_ptr<se::SEGameObject>& gameObject);
+        void renderLightComponent(std::unique_ptr<se::SEGameObject>& gameObject);
+        void renderScriptComponent(std::unique_ptr<se::SEGameObject>& gameObject);
 
 
         // Asset properties
@@ -53,6 +55,8 @@ namespace se
 
         void renderMeshSelector(std::shared_ptr<se::SEMesh> currentMesh, std::function<void(std::shared_ptr<se::SEMesh>)> onMeshSelected);
 
+        void renderScriptSelector(std::unique_ptr<se::ScriptComponent>& currentScript, std::function<void(std::unique_ptr<se::ScriptComponent>)> onScriptSelected);
+
         // Vulkan/ImGui setup
         GLFWwindow* window{ nullptr };
         VkInstance instance{ VK_NULL_HANDLE };
@@ -65,9 +69,8 @@ namespace se
         uint32_t imageCount{ 0 };
 
         // Data references
-        std::vector<se::SEGameObject>* gameobjects{ nullptr };
-        std::vector<se::Light>* lights{ nullptr };
         se::ResourceManager* resourceManager{ nullptr };
+        se::SceneManager* sceneManager{ nullptr };
 
         // Selection state
         int selectedGameObjectIndex = -1;
@@ -75,7 +78,7 @@ namespace se
         std::string selectedAssetName = "";
 
         // Asset categories
-        std::vector<std::string> assetCategories = { "Meshes", "Materials", "Textures" };
+        std::vector<std::string> assetCategories = { "Meshes", "Materials", "Textures", "Scripts"};
 
         // UI flags
         bool showSceneHierarchy = true;

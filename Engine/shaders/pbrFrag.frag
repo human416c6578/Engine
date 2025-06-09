@@ -33,6 +33,7 @@ layout(set = 0, binding = 0) uniform samplerCube irradianceDiffuseMap;
 layout(set = 0, binding = 1) uniform samplerCube irradianceSpecularMap;
 layout(set = 0, binding = 2) uniform sampler2D BRDFMap;
 
+
 const int LightType_None = 0;
 const int LightType_Point = 1;
 const int LightType_Directional = 2;
@@ -52,7 +53,6 @@ layout(std140, set = 0, binding = 3) uniform LIGHTS {
     vec3 _pad0;         // pad to 16 bytes
     Light lights[100];
 } uboL;
-
 
 layout(location = 0) in vec3 WorldPos;
 layout(location = 1) in vec2 TexCoords;
@@ -159,6 +159,7 @@ void main()
 
     // reflectance equation
     vec3 Lo = vec3(0.0);
+    
     
     for(int i = 0; i < uboL.lightCount; ++i) 
     {

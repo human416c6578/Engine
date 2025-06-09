@@ -69,13 +69,7 @@ namespace se
         //void bind(VkCommandBuffer commandBuffer);
         std::vector<std::unique_ptr<SESubMesh>> loadMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout);
 
-		void draw(VkCommandBuffer commandBuffer, std::shared_ptr<SEMaterial> goMaterial, SimplePushConstantData push, int frameIndex);
-
-		
-
-		
-
-		
+		void draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, std::shared_ptr<SEMaterial> goMaterial, SimplePushConstantData push, int frameIndex);
 
     private:
         SEDevice &seDevice;

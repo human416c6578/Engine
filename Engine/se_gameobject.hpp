@@ -5,6 +5,9 @@
 
 #include <memory>
 
+#include "se_script_component.hpp"
+#include "se_script_manager.hpp"
+
 namespace se
 {
     enum class LightType {
@@ -85,9 +88,24 @@ namespace se
         {
             if (name.empty())
                 return SEGameObject{ currentId++, std::string("GameObject_") + std::to_string(currentId) };
-            return SEGameObject{ currentId++, name };
+            return SEGameObject{ currentId++, name +  "_" + std::to_string(currentId) };
         }
 
+        template<typename T, typename... Args>
+        void addScript(Args&&... args) {
+            static_assert(std::is_base_of<ScriptComponent, T>::value, "Script must inherit from ScriptComponent");
+            script = std::make_unique<T>(std::forward<Args>(args)...);
+            script->setOwner(this);
+            script->onCreate();
+        }
+
+        void onUpdate(float dt) {
+            if (script) script->onUpdate(dt);
+        }
+
+        void onDestroy() {
+            if (script) script->onDestroy();
+        }
 
         //SEGameObject(const SEGameObject &) = delete;
         //SEGameObject &operator=(const SEGameObject &) = delete;
@@ -113,8 +131,10 @@ namespace se
         const glm::mat4& getTransformMat4() { return transform.mat4(); }
 
         const TransformComponent& getTransform() const { return transform; }
+        TransformComponent& getTransform() { return transform; }
 
-        void setTransform(const TransformComponent& newTransform)
+
+        void setTransform(const TransformComponent newTransform)
         {
             transform = newTransform;
         }
@@ -131,6 +151,19 @@ namespace se
             return light.type != LightType::None;
         }
 
+		void setScript(std::unique_ptr<ScriptComponent> newScript)
+		{
+			script = std::move(newScript);
+			if (script) {
+				script->setOwner(this);
+				script->onCreate();
+			}
+		}
+
+		std::unique_ptr <ScriptComponent>& getScript() {
+			return script;
+		}
+
 
     private:
         static id_t currentId;
@@ -144,5 +177,7 @@ namespace se
         std::shared_ptr<SEMaterial> material{};
         Light light{};
         TransformComponent transform{};
+
+        std::unique_ptr<ScriptComponent> script{};
     };
 }

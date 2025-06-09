@@ -100,6 +100,7 @@ namespace se
 
         bindings.push_back(BRDFLayoutBinding);
 
+        
         VkDescriptorSetLayoutBinding lightsLayoutBinding{};
         lightsLayoutBinding.binding = 3;
         lightsLayoutBinding.descriptorCount = 1;
@@ -107,6 +108,7 @@ namespace se
         lightsLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
         bindings.push_back(lightsLayoutBinding);
+        
 
         // Descriptor set layout create info
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
@@ -300,6 +302,7 @@ namespace se
         descriptorWrites[2].descriptorCount = 1;
         descriptorWrites[2].pImageInfo = &BRDFImageInfo;
 
+        
         VkDescriptorBufferInfo lightBufferInfo{};
         lightBufferInfo.buffer = lightBuffers[frameIndex].buffer;
         lightBufferInfo.offset = 0;
@@ -311,7 +314,7 @@ namespace se
         descriptorWrites[3].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrites[3].descriptorCount = 1;
         descriptorWrites[3].pBufferInfo = &lightBufferInfo;
-
+        
         // Update only the descriptors that are written (ignoring empty ones)
         vkUpdateDescriptorSets(seDevice.device(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
@@ -330,17 +333,18 @@ namespace se
 
     void PBR::renderGameObjects(
         VkCommandBuffer commandBuffer,
-        std::vector<SEGameObject>& gameObjects,
+        const std::vector<std::unique_ptr<se::SEGameObject>>& gameObjects,
         const SECamera& camera,
         se::SEGameObject& viewerObject,
         int frameIndex) 
     {
+        
 		std::vector<Light> lights;
 		for (auto& obj : gameObjects)
 		{
-			if (obj.hasLight()) {
-				const auto& transform = obj.getTransform();
-				Light light = obj.getLight();
+			if (obj->hasLight()) {
+				const auto& transform = obj->getTransform();
+				Light light = obj->getLight();
                 light.direction = transform.rotation;
                 light.position = transform.translation;
 				lights.push_back(light);
@@ -348,20 +352,20 @@ namespace se
 		}
 		needUpdate[frameIndex] = true;
         updateLightsBuffer(frameIndex, lights);
-
+        
         for (auto& obj : gameObjects)
         {
-            auto mesh = obj.getMesh();
+            auto mesh = obj->getMesh();
             if (!mesh) continue;
 
             se::SimplePushConstantData push{};
-            push.transform = obj.getTransformMat4();
+            push.transform = obj->getTransformMat4();
 
             bind(commandBuffer, frameIndex);
 
-            auto material = obj.getMaterial();
+            auto material = obj->getMaterial();
                 
-            mesh->draw(commandBuffer, material, push, frameIndex);
+            mesh->draw(commandBuffer, pipelineLayout, material, push, frameIndex);
         }
     }
 

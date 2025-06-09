@@ -40,8 +40,7 @@ namespace se
 		VkPipelineLayout getPipelineLayout() { return pipelineLayout; }
         VkPipeline getPipeline() { return sePipeline->getPipeline(); }
 
-        void renderGameObjects(VkCommandBuffer commandBuffer, std::vector<SEGameObject>& gameObjects, const SECamera& camera, se::SEGameObject& viewerObject, int frameIndex);
-        
+        void renderGameObjects(VkCommandBuffer commandBuffer, const std::vector<std::unique_ptr<se::SEGameObject>>& gameObjects, const SECamera& camera, se::SEGameObject& viewerObject, int frameIndex);
         void renderCubeMap(VkCommandBuffer commandBuffer);
 
     private:
@@ -52,7 +51,7 @@ namespace se
         void updateDescriptorSet(size_t frameIndex);
 
         void updateLightsBuffer(int frameIndex, std::vector<Light> lights);
-        
+
         void createGlobalDescriptorSetLayout();
         void createMaterialDescriptorSetLayout();
 

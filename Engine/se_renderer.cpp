@@ -121,7 +121,6 @@ namespace se
         }
 
         isFrameStarted = false;
-        currentImageIndex = currentImageIndex + 1 % SESwapChain::MAX_FRAMES_IN_FLIGHT;
     }
 
     void SERenderer::beginSwapChainRenderPass(VkCommandBuffer commandBuffer)

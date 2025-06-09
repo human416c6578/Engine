@@ -34,6 +34,21 @@
     <Filter Include="Header Files\imgui">
       <UniqueIdentifier>{f9b2a2ac-f948-4751-82a0-07d98020e30e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Components">
+      <UniqueIdentifier>{27c9ccf4-e697-4cf8-a4c9-a539c806c8af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Components">
+      <UniqueIdentifier>{8a02d6d5-778c-4bf2-abaf-a39166eab90d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scripts">
+      <UniqueIdentifier>{dfecea9c-5e02-4994-9bf5-5f48d3dcb60a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Scene">
+      <UniqueIdentifier>{59712221-24f6-4ca5-882d-a1c075afeba6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Scene">
+      <UniqueIdentifier>{17847cf4-ec2f-497e-950f-9594bd18e508}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="app.cpp">
@@ -144,6 +159,15 @@
     <ClCompile Include="include\imgui_filedialog\ImGuiFileDialog.cpp">
       <Filter>Source Files\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="se_input_system.cpp">
+      <Filter>Source Files\Resources</Filter>
+    </ClCompile>
+    <ClCompile Include="se_scene.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
+    <ClCompile Include="se_scene_manager.cpp">
+      <Filter>Source Files\Scene</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\stb_image.h">
@@ -238,6 +262,27 @@
     </ClInclude>
     <ClInclude Include="imgui_manager.hpp">
       <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="se_script_component.hpp">
+      <Filter>Header Files\Components</Filter>
+    </ClInclude>
+    <ClInclude Include="ExampleScript.hpp">
+      <Filter>Header Files\Scripts</Filter>
+    </ClInclude>
+    <ClInclude Include="se_script_manager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TestScript.hpp">
+      <Filter>Header Files\Scripts</Filter>
+    </ClInclude>
+    <ClInclude Include="se_input_system.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="se_scene.hpp">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="se_scene_manager.hpp">
+      <Filter>Header Files\Scene</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

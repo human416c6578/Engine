@@ -149,6 +149,7 @@
     <ClCompile Include="keyboard_movement_controller.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="se_gameobject.cpp" />
+    <ClCompile Include="se_input_system.cpp" />
     <ClCompile Include="se_material_base.cpp" />
     <ClCompile Include="se_material_system.cpp" />
     <ClCompile Include="se_camera.cpp" />
@@ -167,6 +168,8 @@
     <ClCompile Include="se_renderer.cpp" />
     <ClCompile Include="se_resource.cpp" />
     <ClCompile Include="se_resource_manager.cpp" />
+    <ClCompile Include="se_scene.cpp" />
+    <ClCompile Include="se_scene_manager.cpp" />
     <ClCompile Include="se_submesh.cpp" />
     <ClCompile Include="se_swap_chain.cpp" />
     <ClCompile Include="se_texture.cpp" />
@@ -175,10 +178,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="app.hpp" />
+    <ClInclude Include="ExampleScript.hpp" />
     <ClInclude Include="imgui_manager.hpp" />
     <ClInclude Include="include\stb_image.h" />
     <ClInclude Include="include\tiny_obj_loader.h" />
     <ClInclude Include="keyboard_movement_controller.hpp" />
+    <ClInclude Include="se_input_system.hpp" />
     <ClInclude Include="se_material_base.hpp" />
     <ClInclude Include="se_material_system.hpp" />
     <ClInclude Include="se_camera.hpp" />
@@ -198,6 +203,10 @@
     <ClInclude Include="se_renderer.hpp" />
     <ClInclude Include="se_resource.hpp" />
     <ClInclude Include="se_resource_manager.hpp" />
+    <ClInclude Include="se_scene.hpp" />
+    <ClInclude Include="se_scene_manager.hpp" />
+    <ClInclude Include="se_script_component.hpp" />
+    <ClInclude Include="se_script_manager.hpp" />
     <ClInclude Include="se_submesh.hpp" />
     <ClInclude Include="se_swap_chain.hpp" />
     <ClInclude Include="se_texture.hpp" />
@@ -205,6 +214,7 @@
     <ClInclude Include="se_vertex.hpp" />
     <ClInclude Include="se_window.hpp" />
     <ClInclude Include="simple_render_system.hpp" />
+    <ClInclude Include="TestScript.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="hdr\snowy_forest_4k.hdr" />

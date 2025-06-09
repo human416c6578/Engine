@@ -3,11 +3,12 @@
 
 void se::ImGuiManager::renderSceneHierarchy()
 {
-    static int emptyCount = 0;
 	static int cubeCount = 0;
     static int sphereCount = 0;
     static int lightCount = 0;
     bool itemHovered = false;
+    auto scene = sceneManager->getActiveScene();
+    std::vector<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
 
     if (!showSceneHierarchy) return;
 
@@ -23,16 +24,16 @@ void se::ImGuiManager::renderSceneHierarchy()
     ImGui::Begin("Scene Hierarchy", &showSceneHierarchy,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-    ImGui::Text("Game Objects (%d)", gameobjects->size());
+    ImGui::Text("Game Objects (%d)", gameobjects.size());
     ImGui::Separator();
 
-    for (int i = 0; i < gameobjects->size(); i++)
+    for (int i = 0; i < gameobjects.size(); i++)
     {
-        auto& gameObject = gameobjects->at(i);
+        auto& gameObject = gameobjects.at(i);
         ImGuiSelectableFlags flags = ImGuiSelectableFlags_None;
         bool isSelected = (selectedGameObjectIndex == i);
 
-        if (ImGui::Selectable((gameObject.getName() + "##" +std::to_string(gameObject.getId())).c_str(), isSelected, flags))
+        if (ImGui::Selectable((gameObject->getName() + "##" +std::to_string(gameObject->getId())).c_str(), isSelected, flags))
         {
             selectedGameObjectIndex = i;
             selectedAssetName = "";
@@ -45,7 +46,7 @@ void se::ImGuiManager::renderSceneHierarchy()
         {
             if (ImGui::MenuItem("Delete"))
             {
-                gameobjects->erase(gameobjects->begin() + i);
+                gameobjects.erase(gameobjects.begin() + i);
                 if (selectedGameObjectIndex == i) selectedGameObjectIndex = -1;
                 else if (selectedGameObjectIndex > i) selectedGameObjectIndex--;
             }
@@ -53,32 +54,29 @@ void se::ImGuiManager::renderSceneHierarchy()
         }
     }
 
-
     if (!itemHovered && ImGui::BeginPopupContextWindow()) {
         if (ImGui::MenuItem("Create Empty")) {
-            gameobjects->emplace_back(std::move(SEGameObject::createGameObject("Empty_" + std::to_string(emptyCount++))));
+            scene->createGameObject("Empty");
+            
         }
         if (ImGui::MenuItem("Create Cube")) {
-            SEGameObject go = SEGameObject::createGameObject("Cube_" + std::to_string(cubeCount++));
-            go.setMesh(resourceManager->createCube("CubeMesh_" + std::to_string(cubeCount)));
-			go.setMaterial(resourceManager->createMaterial("CubeMaterial_" + std::to_string(cubeCount)));
-            gameobjects->emplace_back(std::move(go));
+            auto& go = scene->createGameObject("Cube");
+            go.setMesh(resourceManager->createCube("CubeMesh_" + std::to_string(++cubeCount)));
+            go.setMaterial(resourceManager->createMaterial("CubeMaterial_" + std::to_string(cubeCount)));
         }
         if (ImGui::MenuItem("Create Sphere")) {
-            SEGameObject go = SEGameObject::createGameObject("Sphere_" + std::to_string(sphereCount++));
-            go.setMesh(resourceManager->createSphere("SphereMesh_" + std::to_string(sphereCount)));
+            auto& go = scene->createGameObject("Sphere");
+            go.setMesh(resourceManager->createSphere("SphereMesh_" + std::to_string(++sphereCount)));
             go.setMaterial(resourceManager->createMaterial("SphereMaterial_" + std::to_string(sphereCount)));
-            gameobjects->emplace_back(std::move(go));
+
         }
         if (ImGui::MenuItem("Create Light")) {
-            SEGameObject go = SEGameObject::createGameObject("Light_" + std::to_string(lightCount++));
+            auto& go = scene->createGameObject("Light");
             Light light{};
 			light.type = LightType::Point;
 			light.color = { 1.0f, 1.0f, 1.0f };
 			light.intensity = 1.0f;
             go.setLight(light);
-
-            gameobjects->emplace_back(std::move(go));
         }
         ImGui::EndPopup();
     }
@@ -297,7 +295,23 @@ void se::ImGuiManager::renderAssetViewer()
 
         ImGui::Columns(1);
     }
+    else if (selectedAssetCategory == "Scripts")
+    {
+        for (auto& [name, factory] : se::getScriptRegistry()) {
+            if (ImGui::Selectable(name.c_str())) {
+                auto script = factory();
 
+                ImGuiSelectableFlags flags = ImGuiSelectableFlags_None;
+                bool isSelected = (selectedAssetName == name);
+
+                if (ImGui::Selectable(name.c_str(), isSelected, flags))
+                {
+                    selectedAssetName = name;
+                    selectedGameObjectIndex = -1;
+                }
+            }
+        }
+    }
 
     renderAssetContextMenu();
 
@@ -307,6 +321,9 @@ void se::ImGuiManager::renderAssetViewer()
 void se::ImGuiManager::renderPropertiesPanel()
 {
     if (!showProperties) return;
+
+    auto scene = sceneManager->getActiveScene();
+    std::vector<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
 
     auto* viewport = ImGui::GetMainViewport();
     ImVec2 workPos = viewport->WorkPos;
@@ -319,7 +336,7 @@ void se::ImGuiManager::renderPropertiesPanel()
     ImGui::Begin("Properties", &showProperties,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-    if (selectedGameObjectIndex >= 0 && selectedGameObjectIndex < gameobjects->size())
+    if (selectedGameObjectIndex >= 0 && selectedGameObjectIndex < gameobjects.size())
     {
         renderGameObjectProperties();
     }
@@ -349,20 +366,23 @@ void se::ImGuiManager::renderPropertiesPanel()
 
 void se::ImGuiManager::renderGameObjectProperties()
 {
-    auto& gameObject = (*gameobjects)[selectedGameObjectIndex];
+    auto scene = sceneManager->getActiveScene();
+    std::vector<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
+
+    auto& gameObject = gameobjects[selectedGameObjectIndex];
     static char nameBuffer[128] = { 0 };
 
-    strcpy_s(nameBuffer, sizeof(nameBuffer), gameObject.getName().c_str());
+    strcpy_s(nameBuffer, sizeof(nameBuffer), gameObject->getName().c_str());
 
-    ImGui::Text("GameObject: ", gameObject.getName().c_str());
+    ImGui::Text("GameObject: ", gameObject->getName().c_str());
     ImGui::SameLine();
 
     if (ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer))) {
-        gameObject.setName(nameBuffer);
+        gameObject->setName(nameBuffer);
     }
 
-    std::string name = gameObject.getName().empty() ?
-        ("GameObject_" + std::to_string(selectedGameObjectIndex)) : gameObject.getName();
+    std::string name = gameObject->getName().empty() ?
+        ("GameObject_" + std::to_string(selectedGameObjectIndex)) : gameObject->getName();
 
     ImGui::Text("GameObject: %s", name.c_str());
     ImGui::Separator();
@@ -371,13 +391,14 @@ void se::ImGuiManager::renderGameObjectProperties()
     renderMeshComponent(gameObject);
 	renderMaterialComponent(gameObject);
     renderLightComponent(gameObject);
+    renderScriptComponent(gameObject);
 }
 
-void se::ImGuiManager::renderTransformComponent(se::SEGameObject& gameObject)
+void se::ImGuiManager::renderTransformComponent(std::unique_ptr<se::SEGameObject>& gameObject)
 {
     if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
     {
-        auto transform = gameObject.getTransform();
+        auto transform = gameObject->getTransform();
 
         float position[3] = { transform.translation.x, transform.translation.y, transform.translation.z };
         float rotation[3] = { transform.rotation.x, transform.rotation.y, transform.rotation.z };
@@ -400,21 +421,21 @@ void se::ImGuiManager::renderTransformComponent(se::SEGameObject& gameObject)
             newTransform.translation = { position[0], position[1], position[2] };
             newTransform.rotation = { rotation[0], rotation[1], rotation[2] };
             newTransform.scale = { scale[0], scale[1], scale[2] };
-            gameObject.setTransform(newTransform);
+            gameObject->setTransform(newTransform);
         }
 
     }
 }
 
-void se::ImGuiManager::renderMeshComponent(se::SEGameObject& gameObject)
+void se::ImGuiManager::renderMeshComponent(std::unique_ptr<se::SEGameObject>& gameObject)
 {
     if (ImGui::CollapsingHeader("Mesh"))
     {
-        auto mesh = gameObject.getMesh();
+        auto mesh = gameObject->getMesh();
 
         renderMeshSelector(mesh,
             [&gameObject](std::shared_ptr<se::SEMesh> mesh) {
-                gameObject.setMesh(mesh);
+                gameObject->setMesh(mesh);
             });
 
         if (mesh)
@@ -430,15 +451,15 @@ void se::ImGuiManager::renderMeshComponent(se::SEGameObject& gameObject)
     }
 }
 
-void se::ImGuiManager::renderMaterialComponent(se::SEGameObject& gameObject)
+void se::ImGuiManager::renderMaterialComponent(std::unique_ptr<se::SEGameObject>& gameObject)
 {
     if (ImGui::CollapsingHeader("Material"))
     {
-        auto material = gameObject.getMaterial();
+        auto material = gameObject->getMaterial();
 
         renderMaterialSelector(material,
             [&gameObject](std::shared_ptr<se::SEMaterial> mat) {
-                gameObject.setMaterial(mat);
+                gameObject->setMaterial(mat);
             });
 
         if (material)
@@ -450,13 +471,13 @@ void se::ImGuiManager::renderMaterialComponent(se::SEGameObject& gameObject)
     }
 }
 
-void se::ImGuiManager::renderLightComponent(se::SEGameObject& gameObject)
+void se::ImGuiManager::renderLightComponent(std::unique_ptr<se::SEGameObject>& gameObject)
 {
-    if (!gameObject.hasLight()) return;
+    if (!gameObject->hasLight()) return;
 
     if (ImGui::CollapsingHeader("Light"))
     {
-        auto& light = gameObject.getLight();
+        auto& light = gameObject->getLight();
 
         // Light type selector
         static const char* lightTypeNames[] = {"Point", "Directional", "Spot" };
@@ -467,7 +488,7 @@ void se::ImGuiManager::renderLightComponent(se::SEGameObject& gameObject)
         }
 
         // Color picker
-        if (ImGui::ColorEdit3("Color", &light.color.x, ImGuiColorEditFlags_Float))
+        if (ImGui::ColorEdit3("Color##", &light.color.x, ImGuiColorEditFlags_Float))
         {
             // Clamp to [0, 1] in case user enters out-of-range values
             light.color.r = std::clamp(light.color.r, 0.0f, 1.0f);
@@ -490,6 +511,22 @@ void se::ImGuiManager::renderLightComponent(se::SEGameObject& gameObject)
             ImGui::SliderFloat("Spot Angle", &light.spotAngle, 0.0f, 90.0f, "%.1f deg");
         }
     }
+}
+
+void se::ImGuiManager::renderScriptComponent(std::unique_ptr<se::SEGameObject>& gameObject)
+{
+    //if (!gameObject->hasScript()) return;
+
+    if (ImGui::CollapsingHeader("Script"))
+    {
+        auto& script = gameObject->getScript();
+
+        renderScriptSelector(script,
+            [&gameObject](std::unique_ptr<se::ScriptComponent> selectedScript) {
+                gameObject->setScript(std::move(selectedScript));
+            });
+    }
+
 }
 
 
@@ -896,14 +933,76 @@ void se::ImGuiManager::renderMeshSelector(
     ImGui::PopID();
 }
 
-
-void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, std::vector<se::SEGameObject>* gameobjects, se::ResourceManager* resourceManager)
+void se::ImGuiManager::renderScriptSelector(
+    std::unique_ptr<se::ScriptComponent>& currentScript,
+    std::function<void(std::unique_ptr<se::ScriptComponent>)> onScriptSelected)
 {
+    std::string label = currentScript ? currentScript->getName() : "No Script";
+    ImGui::PushID(label.c_str());
+
+    bool openPopup = false;
+
+    ImGui::BeginGroup();
+
+    if (ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_None, ImVec2(100, 0))) {
+        openPopup = true;
+    }
+
+    ImGui::EndGroup();
+
+    if (openPopup) {
+        ImGui::OpenPopup("Select Script");
+    }
+
+    if (ImGui::BeginPopup("Select Script"))
+    {
+        static char searchBuf[128] = "";
+        ImGui::InputTextWithHint("##Search", "Search scripts...", searchBuf, IM_ARRAYSIZE(searchBuf));
+        ImGui::Separator();
+
+        ImGui::BeginChild("ScriptList", ImVec2(0, 300), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+        ImGui::Columns(1, nullptr, false);
+
+        // Option to remove script
+        if (ImGui::Selectable("None", false)) {
+            onScriptSelected(nullptr);
+            ImGui::CloseCurrentPopup();
+        }
+
+        // Iterate over all registered scripts
+        for (const auto& [name, factory] : se::getScriptRegistry())
+        {
+            if (strlen(searchBuf) > 0 && name.find(searchBuf) == std::string::npos)
+                continue;
+
+            ImGui::PushID(name.c_str());
+
+            if (ImGui::Selectable(name.c_str(), false)) {
+                onScriptSelected(factory());
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::NextColumn();
+            ImGui::PopID();
+        }
+
+        ImGui::Columns(1);
+        ImGui::EndChild();
+
+        ImGui::EndPopup();
+    }
+
+    ImGui::PopID();
+}
+
+
+void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, se::ResourceManager* resourceManager) 
+{
+    sceneManager = &se::SceneManager::getInstance();
+
     this->window = window;
     this->renderPass = renderPass;
-    this->gameobjects = gameobjects;
     this->resourceManager = resourceManager;
-	this->lights = lights;
     // Create ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

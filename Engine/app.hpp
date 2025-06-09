@@ -8,12 +8,14 @@
 #include "se_texture_system.hpp"
 #include "se_mesh_system.hpp"
 #include "se_resource_manager.hpp"
+#include "se_input_system.hpp"
 
 #include <exception>
 #include <cstdlib>
 #include <iostream>
 #include <chrono>
 #include "imgui_manager.hpp"
+#include "se_scene_manager.hpp"
 
 
 const int WIDTH = 800;
@@ -24,6 +26,8 @@ class App
 public:
     App()
     {
+        se::SEInputSystem::initialize(seWindow.getGLFWwindow());
+
 		PBR = std::make_unique<se::PBR>(seDevice, seRenderer.getSwapChainRenderPass(), seCubemap);
         MaterialSystem = std::make_shared<se::MaterialSystem>(seDevice, PBR->getPipelineLayout(), PBR->getPipeline(), PBR->getMaterialDescriptorSetLayout());
 		TextureSystem = std::make_shared<se::TextureSystem>(seDevice);
@@ -35,7 +39,11 @@ public:
 		ResourceManager->setMaterialSystem(MaterialSystem);
         ResourceManager->setMeshSystem(MeshSystem);
 
-		imguiManager.init(seDevice, seRenderer.getSwapChainRenderPass(), seWindow.getGLFWwindow(), &gameObjects, ResourceManager.get());
+        sceneManager = &se::SceneManager::getInstance();
+        auto& mainScene = sceneManager->createScene("MainScene");
+        sceneManager->setActiveScene("MainScene");
+
+		imguiManager.init(seDevice, seRenderer.getSwapChainRenderPass(), seWindow.getGLFWwindow(), ResourceManager.get());
     }
     
     ~App() {}
@@ -60,10 +68,9 @@ private:
     std::shared_ptr<se::MaterialSystem> MaterialSystem;
     std::shared_ptr<se::TextureSystem> TextureSystem;
     std::shared_ptr<se::MeshSystem> MeshSystem;
-	se::ImGuiManager imguiManager;
+    se::SceneManager* sceneManager;
+    se::ImGuiManager imguiManager;
 
-    void loadGameObjects();
-    void updateGameObjects(float dt);
     void mainLoop();
-    std::vector<se::SEGameObject> gameObjects;
+   
 };
