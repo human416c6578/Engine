@@ -1,0 +1,229 @@
+{
+    "scene": {
+        "gameObjects": [
+            {
+                "id": 5,
+                "material": "GUID_19_material_0",
+                "mesh": "GUID_19",
+                "name": "cerberus",
+                "transform": {
+                    "position": [
+                        2.0,
+                        -1.2999999523162842,
+                        0.0
+                    ],
+                    "rotation": [
+                        1.600000023841858,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        0.019999999552965164,
+                        -0.019999999552965164,
+                        0.019999999552965164
+                    ]
+                }
+            },
+            {
+                "id": 6,
+                "material": "GUID_0",
+                "mesh": "CUBE",
+                "name": "cube",
+                "script": "ExampleScript",
+                "transform": {
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        83.62140655517578,
+                        0.0
+                    ],
+                    "scale": [
+                        10.0,
+                        1.0,
+                        10.0
+                    ]
+                }
+            },
+            {
+                "id": 7,
+                "material": "GUID_1",
+                "mesh": "SPHERE",
+                "name": "sphere",
+                "transform": {
+                    "position": [
+                        0.0,
+                        -3.299999952316284,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            },
+            {
+                "id": 8,
+                "light": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "intensity": 10.0,
+                    "type": 1
+                },
+                "material": "GUID_20",
+                "mesh": "SPHERE",
+                "name": "light",
+                "script": "TestScript",
+                "transform": {
+                    "position": [
+                        0.0,
+                        -1.600000023841858,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        0.20000000298023224,
+                        0.20000000298023224,
+                        0.20000000298023224
+                    ]
+                }
+            }
+        ],
+        "materials": [
+            {
+                "ao": 1.0,
+                "aoTexture": "GUID_DUMMY",
+                "color": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "diffuseTexture": "GUID_15",
+                "guid": "GUID_19_material_0",
+                "metallic": 0.949999988079071,
+                "metallicTexture": "GUID_16",
+                "name": "ceberus",
+                "normalTexture": "GUID_17",
+                "roughness": 0.949999988079071,
+                "roughnessTexture": "GUID_18"
+            },
+            {
+                "ao": 1.0,
+                "aoTexture": "GUID_DUMMY",
+                "color": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "diffuseTexture": "GUID_5",
+                "guid": "GUID_0",
+                "metallic": 0.5360000133514404,
+                "metallicTexture": "GUID_DUMMY",
+                "name": "CubeMaterial_1",
+                "normalTexture": "GUID_DUMMY",
+                "roughness": 0.34599998593330383,
+                "roughnessTexture": "GUID_DUMMY"
+            },
+            {
+                "ao": 1.0,
+                "aoTexture": "GUID_DUMMY",
+                "color": [
+                    0.9754902124404907,
+                    0.028690915554761887,
+                    0.028690915554761887
+                ],
+                "diffuseTexture": "GUID_DUMMY",
+                "guid": "GUID_1",
+                "metallic": 0.7649999856948853,
+                "metallicTexture": "GUID_DUMMY",
+                "name": "SphereMaterial_1",
+                "normalTexture": "GUID_DUMMY",
+                "roughness": 0.44699999690055847,
+                "roughnessTexture": "GUID_DUMMY"
+            },
+            {
+                "ao": 1.0,
+                "aoTexture": "GUID_DUMMY",
+                "color": [
+                    0.9474473595619202,
+                    0.9656862616539001,
+                    0.34556421637535095
+                ],
+                "diffuseTexture": "GUID_DUMMY",
+                "guid": "GUID_20",
+                "metallic": 0.0,
+                "metallicTexture": "GUID_DUMMY",
+                "name": "lightMat",
+                "normalTexture": "GUID_DUMMY",
+                "roughness": 0.949999988079071,
+                "roughnessTexture": "GUID_DUMMY"
+            }
+        ],
+        "meshes": [
+            {
+                "guid": "GUID_19",
+                "name": "Cerberus_LP.FBX",
+                "path": "D:\\Workspace\\programing\\cpp\\Engine\\Engine\\models\\cerberus\\Cerberus_LP.FBX"
+            },
+            {
+                "guid": "SPHERE",
+                "name": "SPHERE",
+                "path": "SPHERE"
+            },
+            {
+                "guid": "CUBE",
+                "name": "CUBE",
+                "path": "CUBE"
+            }
+        ],
+        "name": "MainScene",
+        "textures": [
+            {
+                "guid": "GUID_16",
+                "name": "Cerberus_M.tga",
+                "path": "D:\\Workspace\\programing\\cpp\\Engine\\Engine\\models\\cerberus\\Textures\\Cerberus_M.tga"
+            },
+            {
+                "guid": "GUID_15",
+                "name": "Cerberus_A.tga",
+                "path": "D:\\Workspace\\programing\\cpp\\Engine\\Engine\\models\\cerberus\\Textures\\Cerberus_A.tga"
+            },
+            {
+                "guid": "GUID_17",
+                "name": "Cerberus_N.tga",
+                "path": "D:\\Workspace\\programing\\cpp\\Engine\\Engine\\models\\cerberus\\Textures\\Cerberus_N.tga"
+            },
+            {
+                "guid": "GUID_5",
+                "name": "texture_04.png",
+                "path": "D:\\Workspace\\programing\\cpp\\Engine\\Engine\\textures\\Dark\\texture_04.png"
+            },
+            {
+                "guid": "GUID_18",
+                "name": "Cerberus_R.tga",
+                "path": "D:\\Workspace\\programing\\cpp\\Engine\\Engine\\models\\cerberus\\Textures\\Cerberus_R.tga"
+            },
+            {
+                "guid": "GUID_DUMMY",
+                "name": "DUMMY",
+                "path": ""
+            }
+        ]
+    }
+}

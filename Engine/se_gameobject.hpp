@@ -88,7 +88,7 @@ namespace se
         {
             if (name.empty())
                 return SEGameObject{ currentId++, std::string("GameObject_") + std::to_string(currentId) };
-            return SEGameObject{ currentId++, name +  "_" + std::to_string(currentId) };
+            return SEGameObject{ currentId++, name };
         }
 
         template<typename T, typename... Args>

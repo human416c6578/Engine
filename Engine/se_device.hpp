@@ -26,7 +26,7 @@ const std::vector<const char *> validationLayers = {
 const std::vector<const char *> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
-//#define NDEBUG
+#define NDEBUG
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;

@@ -227,6 +227,9 @@ namespace se
                 submesh->bindMaterial(commandBuffer, frameIndex);
             }
 
+            if (!goMaterial && !submesh->hasMaterial())
+                continue;
+
             submesh->bind(commandBuffer);
 
             vkCmdPushConstants(

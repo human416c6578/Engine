@@ -145,8 +145,27 @@ void se::ImGuiManager::renderAssetContextMenu()
             ImGuiFileDialog::Instance()->OpenDialog("ChooseTexture", "Select Texture Files", "Texture Files{.png,.jpg,.jpeg,.tga,.bmp,.hdr}", config);
 
         }
+        if (ImGui::MenuItem("Load Scene"))
+        {
+            IGFD::FileDialogConfig config;
+            config.path = ".";
+            config.countSelectionMax = 0;
+            config.flags = ImGuiFileDialogFlags_CaseInsensitiveExtentionFiltering;
+            ImGuiFileDialog::Instance()->OpenDialog("ChooseScene", "Select Scene File", "Scene File{.json}", config);
+
+        }
+        if (ImGui::MenuItem("Save Scene")) {
+            IGFD::FileDialogConfig config;
+            config.path = ".";
+            config.countSelectionMax = 1;
+            config.flags = ImGuiFileDialogFlags_ConfirmOverwrite;
+            ImGuiFileDialog::Instance()->OpenDialog("SaveScene", "Save Scene File", "Scene File{.json}", config);
+        }
         ImGui::EndPopup();
     }
+
+    
+
     if (ImGuiFileDialog::Instance()->Display("ChooseModel", ImGuiWindowFlags_NoCollapse, ImVec2(400.0f, 200.0f))) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
@@ -166,6 +185,26 @@ void se::ImGuiManager::renderAssetContextMenu()
 
                 resourceManager->loadTexture(filepathname);
             }
+        }
+        ImGuiFileDialog::Instance()->Close();
+    }
+
+    if (ImGuiFileDialog::Instance()->Display("ChooseScene", ImGuiWindowFlags_NoCollapse, ImVec2(400.0f, 200.0f))) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            auto selection = ImGuiFileDialog::Instance()->GetSelection();
+            if (!selection.empty()) {
+                const auto& [filename, filepathname] = *selection.begin();
+                sceneManager->loadScene(filepathname, filename);
+                sceneManager->setActiveScene(filename);
+            }
+        }
+        ImGuiFileDialog::Instance()->Close();
+    }
+
+    if (ImGuiFileDialog::Instance()->Display("SaveScene", ImGuiWindowFlags_NoCollapse, ImVec2(400.0f, 200.0f))) {
+        if (ImGuiFileDialog::Instance()->IsOk()) {
+            std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
+            sceneManager->saveActiveScene(filePathName);
         }
         ImGuiFileDialog::Instance()->Close();
     }

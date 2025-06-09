@@ -33,20 +33,25 @@ public:
 		TextureSystem = std::make_shared<se::TextureSystem>(seDevice);
 		MeshSystem = std::make_shared<se::MeshSystem>(seDevice);
 
-		ResourceManager = std::make_shared<se::ResourceManager>();
+		ResourceManager = std::make_unique<se::ResourceManager>();
 
         ResourceManager->setTextureSystem(TextureSystem);
 		ResourceManager->setMaterialSystem(MaterialSystem);
         ResourceManager->setMeshSystem(MeshSystem);
 
         sceneManager = &se::SceneManager::getInstance();
+        sceneManager->setResourceManager(ResourceManager.get());
         auto& mainScene = sceneManager->createScene("MainScene");
         sceneManager->setActiveScene("MainScene");
 
 		imguiManager.init(seDevice, seRenderer.getSwapChainRenderPass(), seWindow.getGLFWwindow(), ResourceManager.get());
     }
     
-    ~App() {}
+    ~App() {
+        if (sceneManager) {
+            sceneManager->destroyAllScenes();
+        }
+    }
 
     App(const App &) = delete;
     App &operator=(const App &) = delete;
@@ -57,16 +62,15 @@ public:
     }
 
 private:
-    se::SEWindow seWindow{WIDTH, HEIGHT, "Vulkan"};
-    se::SEDevice seDevice{seWindow};
-    se::SERenderer seRenderer{seWindow, seDevice};
+    se::SEWindow seWindow{ WIDTH, HEIGHT, "Vulkan" };
+    se::SEDevice seDevice{ seWindow };
+    se::SERenderer seRenderer{ seWindow, seDevice };
     se::SECubemap seCubemap{ seDevice, seRenderer, "hdr/rostock_laage_airport_2k.hdr" };
 
-    std::shared_ptr<se::ResourceManager> ResourceManager;
-
+    std::unique_ptr<se::ResourceManager> ResourceManager;
     std::unique_ptr<se::PBR> PBR;
-    std::shared_ptr<se::MaterialSystem> MaterialSystem;
     std::shared_ptr<se::TextureSystem> TextureSystem;
+    std::shared_ptr<se::MaterialSystem> MaterialSystem;
     std::shared_ptr<se::MeshSystem> MeshSystem;
     se::SceneManager* sceneManager;
     se::ImGuiManager imguiManager;

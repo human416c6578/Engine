@@ -1,0 +1,191 @@
+{
+    "scene": {
+        "gameObjects": [
+            {
+                "id": 5,
+                "material": "GUID_0",
+                "mesh": "CUBE",
+                "name": "cube",
+                "script": "ExampleScript",
+                "transform": {
+                    "position": [
+                        0.0,
+                        -0.699999988079071,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        231.7393798828125,
+                        0.0
+                    ],
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            },
+            {
+                "id": 6,
+                "material": "GUID_1",
+                "mesh": "SPHERE",
+                "name": "sphere",
+                "transform": {
+                    "position": [
+                        0.0,
+                        -3.299999952316284,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            },
+            {
+                "id": 7,
+                "light": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "intensity": 3.630000114440918,
+                    "type": 1
+                },
+                "material": "GUID_20",
+                "mesh": "SPHERE",
+                "name": "light",
+                "script": "TestScript",
+                "transform": {
+                    "position": [
+                        -7.178755760192871,
+                        -1.600000023841858,
+                        -0.9496163129806519
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        0.20000000298023224,
+                        0.20000000298023224,
+                        0.20000000298023224
+                    ]
+                }
+            },
+            {
+                "id": 11,
+                "mesh": "a237089b-ffcb-aa36-21c7-4678bb67a52a",
+                "name": "sponza",
+                "transform": {
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        0.009999999776482582,
+                        -0.009999999776482582,
+                        0.009999999776482582
+                    ]
+                }
+            }
+        ],
+        "materials": [
+            {
+                "ao": 1.0,
+                "aoTexture": "GUID_DUMMY",
+                "color": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "diffuseTexture": "GUID_5",
+                "guid": "GUID_0",
+                "metallic": 0.5360000133514404,
+                "metallicTexture": "GUID_DUMMY",
+                "name": "CubeMaterial_1",
+                "normalTexture": "GUID_DUMMY",
+                "roughness": 0.34599998593330383,
+                "roughnessTexture": "GUID_DUMMY"
+            },
+            {
+                "ao": 1.0,
+                "aoTexture": "GUID_DUMMY",
+                "color": [
+                    0.9754902124404907,
+                    0.028690915554761887,
+                    0.028690915554761887
+                ],
+                "diffuseTexture": "GUID_DUMMY",
+                "guid": "GUID_1",
+                "metallic": 0.7649999856948853,
+                "metallicTexture": "GUID_DUMMY",
+                "name": "SphereMaterial_1",
+                "normalTexture": "GUID_DUMMY",
+                "roughness": 0.44699999690055847,
+                "roughnessTexture": "GUID_DUMMY"
+            },
+            {
+                "ao": 1.0,
+                "aoTexture": "GUID_DUMMY",
+                "color": [
+                    0.9474473595619202,
+                    0.9656862616539001,
+                    0.34556421637535095
+                ],
+                "diffuseTexture": "GUID_DUMMY",
+                "guid": "GUID_20",
+                "metallic": 0.0,
+                "metallicTexture": "GUID_DUMMY",
+                "name": "lightMat",
+                "normalTexture": "GUID_DUMMY",
+                "roughness": 0.949999988079071,
+                "roughnessTexture": "GUID_DUMMY"
+            }
+        ],
+        "meshes": [
+            {
+                "guid": "CUBE",
+                "name": "CUBE",
+                "path": "CUBE"
+            },
+            {
+                "guid": "SPHERE",
+                "name": "SPHERE",
+                "path": "SPHERE"
+            },
+            {
+                "guid": "a237089b-ffcb-aa36-21c7-4678bb67a52a",
+                "name": "sponza.obj",
+                "path": "D:\\Workspace\\programing\\cpp\\Engine\\Engine\\models\\sponza\\sponza.obj"
+            }
+        ],
+        "name": "test_scene2.json",
+        "textures": [
+            {
+                "guid": "GUID_5",
+                "name": "texture_04.png",
+                "path": "D:\\Workspace\\programing\\cpp\\Engine\\Engine\\textures\\Dark\\texture_04.png"
+            },
+            {
+                "guid": "GUID_DUMMY",
+                "name": "DUMMY",
+                "path": ""
+            }
+        ]
+    }
+}
