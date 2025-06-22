@@ -149,6 +149,7 @@
     <ClCompile Include="keyboard_movement_controller.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="se_gameobject.cpp" />
+    <ClCompile Include="se_gameobject_handle.cpp" />
     <ClCompile Include="se_input_system.cpp" />
     <ClCompile Include="se_material_base.cpp" />
     <ClCompile Include="se_material_system.cpp" />
@@ -183,6 +184,8 @@
     <ClInclude Include="include\stb_image.h" />
     <ClInclude Include="include\tiny_obj_loader.h" />
     <ClInclude Include="keyboard_movement_controller.hpp" />
+    <ClInclude Include="StressTest.hpp" />
+    <ClInclude Include="se_gameobject_handle.hpp" />
     <ClInclude Include="se_input_system.hpp" />
     <ClInclude Include="se_material_base.hpp" />
     <ClInclude Include="se_material_system.hpp" />
@@ -214,6 +217,7 @@
     <ClInclude Include="se_vertex.hpp" />
     <ClInclude Include="se_window.hpp" />
     <ClInclude Include="simple_render_system.hpp" />
+    <ClInclude Include="Snake.hpp" />
     <ClInclude Include="TestScript.hpp" />
   </ItemGroup>
   <ItemGroup>

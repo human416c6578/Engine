@@ -1,5 +1,6 @@
 #include "se_scene_manager.hpp"
 #include "se_script_component.hpp"
+#include <glm/gtc/type_ptr.hpp>
 
 #include "nlohmann/json.hpp"
 
@@ -11,6 +12,25 @@ bool se::SceneManager::saveScene(const std::string& sceneName, const std::string
 
     json jscene;
     jscene["scene"]["name"] = scene->getName();
+    
+    auto& camera = scene->getCamera();
+
+    // Save translation
+    auto transform = camera.getTransform();
+    auto pos = camera.getTransform().translation;
+    auto rot = camera.getTransform().rotation;
+
+    jscene["scene"]["camera"]["translation"] = { pos.x, pos.y, pos.z };
+    jscene["scene"]["camera"]["rotation"] = { rot.x, rot.y, rot.z };
+
+    // Save projection matrix (16 floats)
+    const glm::mat4& proj = camera.getProjection();
+    jscene["scene"]["camera"]["projection"] = std::vector<float>(glm::value_ptr(proj), glm::value_ptr(proj) + 16);
+
+    // Save view matrix (16 floats)
+    const glm::mat4& view = camera.getView();
+    jscene["scene"]["camera"]["view"] = std::vector<float>(glm::value_ptr(view), glm::value_ptr(view) + 16);
+
 
     std::unordered_set<std::shared_ptr<SEMaterial>> usedMaterials;
     std::unordered_set<std::shared_ptr<SEMesh>> usedMeshes;
@@ -124,6 +144,51 @@ bool se::SceneManager::loadScene(const std::string& filePath, const std::string&
     auto& sceneData = jscene["scene"];
 
     Scene& scene = createScene(sceneName);
+    setActiveScene(sceneName);
+
+    auto& camera = scene.getCamera();
+    if (jscene["scene"].contains("camera")) {
+        auto jcamera = jscene["scene"]["camera"];
+        TransformComponent transform;
+
+        // Load translation
+        if (jcamera.contains("translation")) {
+            auto t = jcamera["translation"];
+            glm::vec3 translation(t[0].get<float>(), t[1].get<float>(), t[2].get<float>());
+            transform.translation = translation;
+            
+        }
+
+        // Load rotation
+        if (jcamera.contains("rotation")) {
+            auto r = jcamera["rotation"];
+            glm::vec3 rotation(r[0].get<float>(), r[1].get<float>(), r[2].get<float>());
+            transform.rotation = rotation;
+        }
+
+        camera.setTransform(transform);
+
+        // Load projection matrix
+        if (jcamera.contains("projection")) {
+            auto projArray = jcamera["projection"];
+            glm::mat4 projMat;
+            for (int i = 0; i < 16; ++i) {
+                projMat[i / 4][i % 4] = projArray[i].get<float>();
+            }
+            camera.setProjection(projMat);
+        }
+
+        // Load view matrix
+        if (jcamera.contains("view")) {
+            auto viewArray = jcamera["view"];
+            glm::mat4 viewMat;
+            for (int i = 0; i < 16; ++i) {
+                viewMat[i / 4][i % 4] = viewArray[i].get<float>();
+            }
+            camera.setView(viewMat);
+        }
+        camera.setViewYXZ();
+    }
 
     // --- Load meshes ---
     if (sceneData.contains("meshes")) {
@@ -201,7 +266,7 @@ bool se::SceneManager::loadScene(const std::string& filePath, const std::string&
 
     // --- Create game objects ---
     for (const auto& jgo : sceneData["gameObjects"]) {
-        auto& go = scene.createGameObject(jgo["name"]);
+        auto& go = scene.createGameObjectRef(jgo["name"]);
 
         // Transform
         if (jgo.contains("transform")) {

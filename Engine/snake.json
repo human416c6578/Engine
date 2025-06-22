@@ -1,0 +1,232 @@
+{
+    "scene": {
+        "camera": {
+            "projection": [
+                0.5255208611488342,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.001001000404358,
+                1.0,
+                0.0,
+                0.0,
+                -0.10010010004043579,
+                0.0
+            ],
+            "rotation": [
+                -1.5352110862731934,
+                0.013872116804122925,
+                0.0
+            ],
+            "translation": [
+                0.5682439804077148,
+                -12.678278923034668,
+                -3.334745407104492
+            ],
+            "view": [
+                0.9999037981033325,
+                -0.01386289019137621,
+                0.0004935225588269532,
+                0.0,
+                0.0,
+                0.03557772934436798,
+                0.9993669390678406,
+                0.0,
+                -0.013871671631932259,
+                -0.9992707967758179,
+                0.035574305802583694,
+                0.0,
+                -0.614447832107544,
+                -2.8733718395233154,
+                12.788603782653809,
+                1.0
+            ]
+        },
+        "gameObjects": [
+            {
+                "id": 4,
+                "material": "aad371cb-07b8-f0c8-57fd-4a7795c3607e",
+                "mesh": "CUBE",
+                "name": "floor",
+                "transform": {
+                    "position": [
+                        0.0,
+                        1.0,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        20.0,
+                        1.0,
+                        20.0
+                    ]
+                }
+            },
+            {
+                "id": 5,
+                "material": "e50d7fd3-f3ab-9ce9-1ff6-c50a21af152f",
+                "mesh": "SPHERE",
+                "name": "apple",
+                "transform": {
+                    "position": [
+                        8.0,
+                        0.0,
+                        8.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        0.5,
+                        0.5,
+                        0.5
+                    ]
+                }
+            },
+            {
+                "id": 6,
+                "material": "068ba55b-c2b0-ddd1-223d-5c35dc44ab3e",
+                "mesh": "CUBE",
+                "name": "snake",
+                "script": "SnakeScript",
+                "transform": {
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            },
+            {
+                "id": 7,
+                "light": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "intensity": 8.319999694824219,
+                    "type": 1
+                },
+                "name": "Light",
+                "transform": {
+                    "position": [
+                        0.0,
+                        -6.0,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            }
+        ],
+        "materials": [
+            {
+                "ao": 1.0,
+                "aoTexture": "GUID_DUMMY",
+                "color": [
+                    0.08823537826538086,
+                    1.0,
+                    0.0
+                ],
+                "diffuseTexture": "GUID_DUMMY",
+                "guid": "068ba55b-c2b0-ddd1-223d-5c35dc44ab3e",
+                "metallic": 0.0,
+                "metallicTexture": "GUID_DUMMY",
+                "name": "CubeMaterial_3",
+                "normalTexture": "GUID_DUMMY",
+                "roughness": 0.7369999885559082,
+                "roughnessTexture": "GUID_DUMMY"
+            },
+            {
+                "ao": 1.0,
+                "aoTexture": "GUID_DUMMY",
+                "color": [
+                    0.15686273574829102,
+                    0.14840444922447205,
+                    0.14840444922447205
+                ],
+                "diffuseTexture": "358e1d1c-2cc3-5d4c-26dd-04a9dee86aea",
+                "guid": "aad371cb-07b8-f0c8-57fd-4a7795c3607e",
+                "metallic": 0.0,
+                "metallicTexture": "GUID_DUMMY",
+                "name": "CubeMaterial_1",
+                "normalTexture": "GUID_DUMMY",
+                "roughness": 0.3190000057220459,
+                "roughnessTexture": "GUID_DUMMY"
+            },
+            {
+                "ao": 1.0,
+                "aoTexture": "GUID_DUMMY",
+                "color": [
+                    1.0,
+                    0.0,
+                    0.0
+                ],
+                "diffuseTexture": "GUID_DUMMY",
+                "guid": "e50d7fd3-f3ab-9ce9-1ff6-c50a21af152f",
+                "metallic": 0.02199999988079071,
+                "metallicTexture": "GUID_DUMMY",
+                "name": "CubeMaterial_2",
+                "normalTexture": "GUID_DUMMY",
+                "roughness": 0.843999981880188,
+                "roughnessTexture": "GUID_DUMMY"
+            }
+        ],
+        "meshes": [
+            {
+                "guid": "SPHERE",
+                "name": "SPHERE",
+                "path": "SPHERE"
+            },
+            {
+                "guid": "CUBE",
+                "name": "CUBE",
+                "path": "CUBE"
+            }
+        ],
+        "name": "snake.json",
+        "textures": [
+            {
+                "guid": "GUID_DUMMY",
+                "name": "DUMMY",
+                "path": ""
+            },
+            {
+                "guid": "358e1d1c-2cc3-5d4c-26dd-04a9dee86aea",
+                "name": "texture_06.png",
+                "path": "D:\\Workspace\\programing\\cpp\\Engine\\Engine\\textures\\Dark\\texture_06.png"
+            }
+        ]
+    }
+}

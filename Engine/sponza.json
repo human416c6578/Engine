@@ -1,0 +1,148 @@
+{
+    "scene": {
+        "camera": {
+            "projection": [
+                0.5255208611488342,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.001001000404358,
+                1.0,
+                0.0,
+                0.0,
+                -0.10010010004043579,
+                0.0
+            ],
+            "rotation": [
+                -0.3965640366077423,
+                1.1927489042282104,
+                0.0
+            ],
+            "translation": [
+                -9.73237419128418,
+                -2.8876614570617676,
+                -1.7736972570419312
+            ],
+            "view": [
+                0.3691064715385437,
+                -0.35897698998451233,
+                0.8572606444358826,
+                0.0,
+                0.0,
+                0.9223935604095459,
+                0.3862513303756714,
+                0.0,
+                -0.929387092590332,
+                -0.14256787300109863,
+                0.3404614329338074,
+                0.0,
+                1.943830966949463,
+                -1.083010196685791,
+                10.062419891357422,
+                1.0
+            ]
+        },
+        "gameObjects": [
+            {
+                "id": 4,
+                "mesh": "9542f5ec-8d49-2b19-1c98-beff6c5cba2c",
+                "name": "sponza",
+                "transform": {
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        0.009999999776482582,
+                        -0.009999999776482582,
+                        0.009999999776482582
+                    ]
+                }
+            },
+            {
+                "id": 5,
+                "light": {
+                    "color": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ],
+                    "intensity": 3.8499999046325684,
+                    "type": 1
+                },
+                "material": "9542f5ec-8d49-2b19-1c98-beff6c5cba2c_material_0",
+                "mesh": "SPHERE",
+                "name": "Light",
+                "script": "TestScript",
+                "transform": {
+                    "position": [
+                        -2.152012825012207,
+                        -2.5,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        2.0940802097320557,
+                        0.0
+                    ],
+                    "scale": [
+                        0.30000001192092896,
+                        0.30000001192092896,
+                        0.30000001192092896
+                    ]
+                }
+            }
+        ],
+        "materials": [
+            {
+                "ao": 1.0,
+                "aoTexture": "GUID_DUMMY",
+                "color": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "diffuseTexture": "GUID_DUMMY",
+                "guid": "9542f5ec-8d49-2b19-1c98-beff6c5cba2c_material_0",
+                "metallic": 0.05000000074505806,
+                "metallicTexture": "GUID_DUMMY",
+                "name": "DefaultMaterial_material_0",
+                "normalTexture": "GUID_DUMMY",
+                "roughness": 0.949999988079071,
+                "roughnessTexture": "GUID_DUMMY"
+            }
+        ],
+        "meshes": [
+            {
+                "guid": "9542f5ec-8d49-2b19-1c98-beff6c5cba2c",
+                "name": "sponza.obj",
+                "path": "D:\\Workspace\\programing\\cpp\\Engine\\Engine\\models\\sponza\\sponza.obj"
+            },
+            {
+                "guid": "SPHERE",
+                "name": "SPHERE",
+                "path": "SPHERE"
+            }
+        ],
+        "name": "MainScene",
+        "textures": [
+            {
+                "guid": "GUID_DUMMY",
+                "name": "DUMMY",
+                "path": ""
+            }
+        ]
+    }
+}

@@ -333,9 +333,7 @@ namespace se
 
     void PBR::renderGameObjects(
         VkCommandBuffer commandBuffer,
-        const std::vector<std::unique_ptr<se::SEGameObject>>& gameObjects,
-        const SECamera& camera,
-        se::SEGameObject& viewerObject,
+        const std::list<std::unique_ptr<se::SEGameObject>>& gameObjects,
         int frameIndex) 
     {
         

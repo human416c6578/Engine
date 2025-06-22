@@ -7,7 +7,7 @@ namespace se
 {
 
     void KeyboardMovementController::moveInPlaneXZ(
-        GLFWwindow* window, float dt, SEGameObject& gameObject)
+        GLFWwindow* window, float dt, TransformComponent& transform)
     {
         static bool captured = false;
         glm::vec3 rotate{ 0 };
@@ -57,8 +57,6 @@ namespace se
         }
 
 
-        auto transform = gameObject.getTransform();
-
         // Handle rotation
         if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon())
         {
@@ -103,9 +101,6 @@ namespace se
         {
             transform.translation += moveSpeed * dt * glm::normalize(moveDir);
         }
-
-        // Write back the modified transform
-        gameObject.setTransform(transform);
 
         oldX = posX;
         oldY = posY;

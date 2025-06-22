@@ -1,0 +1,143 @@
+0. Cuprins
+1. Introducere
+1.1 Scopul și motivația proiectului
+1.2 Obiective generale și specifice
+1.3 Metodologia abordată
+1.4 Rezumat contributia studentului si rezultate obtinute
+
+2. Stadiul actual al cercetării
+2.1 Studiu de literatură
+2.2 Proiecte similare și tehnologii
+2.3 Platforme populare ( game engines )
+
+3. Fundamentare teoretică
+3.1 Programare orientată pe componente
+3.1.1 Principiile programării orientate pe componente (Component-Based Architecture)
+3.1.2 Avantajele față de arhitecturile orientate pe obiecte tradiționale în game development
+3.1.3 Exemple din motoare populare (Unity, ECS din Unity DOTS, Unreal)
+3.2 Vulkan
+3.2.1 Prezentare generala
+3.2.2 Diferente versus OpenGL
+3.2.3 Avantaje si provocari in utilizare ( idk )
+3.3 GPU Pipeline
+3.3.1 Etapele principale ale pipeline-ului grafic: input assembly, vertex shading, rasterizare, fragment shading etc.
+3.3.2 Procesul de randare pas cu pas
+3.3.3 Impactul configurării pipeline-ului asupra performanței
+3.4 Shaders
+3.4.1 Vertex Shader
+3.4.2 Fragment Shader
+3.5 PBR
+3.5.1 Theory
+3.5.2 Lighting
+3.5.3 Cubemaps
+3.5.4 IBL
+3.6 Models / Textures
+
+4. Proiectarea aplicației
+4.1 Arhitectura game engine-ului
+4.2 Structura claselor
+4.3 Pipeline Grafic
+4.4 Managementul resurselor și scenelor
+4.5 Arhitectura editorului (GUI)
+
+5. Implementarea soluției
+
+ 5.1 Tehnologii utilizate
+
+   Limbaje și biblioteci: C++, GLM (OpenGL Mathematics), JSON
+   Interfață și sistem de ferestre: GLFW, ImGUI
+   Grafică și randare: Vulkan API
+   Încărcare de resurse: Assimp (modele 3D), stb ( imagini )
+
+ 5.2 Sistem de fereastră și gestionare input
+
+   Inițializarea și configurarea ferestrei cu GLFW
+   Tratarea evenimentelor de tastatură și mouse
+   Integrarea cu sistemul de randare
+
+ 5.3 Infrastructura Vulkan
+
+   Inițializarea dispozitivului fizic și logic
+   Configurarea swapchain-ului
+   Crearea renderer-ului și a componentelor grafice de bază
+
+ 5.4 Shaders și procesarea grafică
+
+   5.4.1 Conversia HDR în cubemap și generarea Irradiance Map
+   5.4.2 Implementarea shading-ului PBR (Physically Based Rendering)
+   Organizarea și compilarea shader-elor în cadrul aplicației
+
+ 5.5 Modele 3D și texturi
+
+   Sisteme pentru încărcarea, stocarea și afișarea modelelor și texturilor
+   Obiecte Vulkan asociate: buffers, samplers, image views
+   Integrarea Assimp pentru importul modelelor
+   Integrarea stb pentru importul texturilor
+
+ 5.6 Gestionarea materialelor
+
+   Clasa Material și structurarea componentelor PBR
+   Asocierea texturilor cu materialele
+   Configurarea descriptor sets pentru shading
+
+ 5.7 Scripting și logică dinamică
+
+   Sistem de scripturi atașabile la GameObjects
+   Implementare statică în C++ (fără compilare runtime)
+   Limitări și posibile extinderi viitoare
+
+5.8 Managementul resurselor
+
+   Gestionare centralizată pentru texturi, modele și materiale
+   Arhitectură bazată pe manageri și cache-uri
+   Încărcare și reutilizare eficientă a resurselor
+
+ 5.9 Arhitectura GameObject
+
+   Definirea entităților din scenă sub formă de GameObjects
+   Componente asociabile: mesh, material, transform, script
+   Logica de inițializare, actualizare și randare
+
+ 5.10 Structura scenelor
+
+   Clasa Scene pentru gruparea și organizarea GameObject-urilor
+   Conținut: entități, camere, lumini, resurse asociate
+   Suport pentru mai multe scene
+
+ 5.11 Managerul de scene și serializare
+
+   Salvarea și încărcarea scenelor în format JSON
+   Comutare între scene și gestionarea stării
+   Funcționalitate statică pentru acces global
+
+ 5.12 Interfața grafică și editorul visual
+
+   Construirea UI-ului cu ImGUI
+   Funcționalități oferite:
+       Scene Hierarchy – afișarea structurii GameObject-urilor
+       Asset Browser & Viewer – explorarea și previzualizarea resurselor
+       Inspector – editarea proprietăților (Mesh, Material, Transform etc.)
+
+
+6. Testare și rezultate
+6.1 Scene de test
+6.2 Probleme întâmpinate și soluții ( Implementare PBR, Cubemaps, Descriptor Sets, Scenes, Scripts ( C++ doesn't runtime compile ), etc. )
+6.3 Performanță și benchmark-uri (FPS, loading times, VRAM usage)
+
+7. Contribuții proprii
+7.1 Optimizări
+7.2 Elemente unice
+7.2 Comparare cu motoare existente (Unity/Unreal vs engine-ul tău)
+7.3 Feedback si iterari
+
+8. Concluzii
+8.1 Evaluarea obiectivelor
+8.2 Posibilități de extindere
+8.3 Lecții învățate
+
+9. Bibliografie
+https://learnopengl.com
+https://docs.vulkan.org/spec/latest/index.html
+https://docs.vulkan.org/tutorial/latest/00_Introduction.html
+Gregory, Jason -- Game Engine Architecture, 3, 2019
+10. Anexe

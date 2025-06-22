@@ -115,7 +115,7 @@ namespace se
         VkPhysicalDeviceProperties properties;
 
     private:
-        const int MAX_FRAMES_IN_FLIGHT = 2;
+        const int MAX_FRAMES_IN_FLIGHT = 3;
 
         VkInstance instance = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT debugMessenger;

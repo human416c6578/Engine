@@ -168,6 +168,9 @@
     <ClCompile Include="se_scene_manager.cpp">
       <Filter>Source Files\Scene</Filter>
     </ClCompile>
+    <ClCompile Include="se_gameobject_handle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\stb_image.h">
@@ -283,6 +286,15 @@
     </ClInclude>
     <ClInclude Include="se_scene_manager.hpp">
       <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="Snake.hpp">
+      <Filter>Header Files\Scripts</Filter>
+    </ClInclude>
+    <ClInclude Include="se_gameobject_handle.hpp">
+      <Filter>Header Files\Scene</Filter>
+    </ClInclude>
+    <ClInclude Include="StressTest.hpp">
+      <Filter>Header Files\Scripts</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

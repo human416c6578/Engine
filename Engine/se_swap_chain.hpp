@@ -16,7 +16,7 @@ namespace se
   class SESwapChain
   {
   public:
-    static constexpr int MAX_FRAMES_IN_FLIGHT = 2;
+    static constexpr int MAX_FRAMES_IN_FLIGHT = 3;
 
     SESwapChain(SEDevice &deviceRef, VkExtent2D windowExtent);
     SESwapChain(

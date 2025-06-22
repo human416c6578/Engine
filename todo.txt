@@ -10,3 +10,15 @@ create only one pipeline for cubemap offscreen rendering
 remove depth image from offscreen rendering ?
 take the output from offscreen rendering to create a sampler cube for Diffuse IBL and Specular IBL
 implement Diffuse IBL and Specular IBL
+
+TODO
+Lights CPU->GPU - DONE ( SOMEHOW )
+SCRIPTS ON GAMEOBJECTS - DONE
+CHILDREN ON GAMEOBJECTS
+SCENES - DONE
+SHADOW MAPPING
+
+UI:
+ADD OPTION TO DELETE MATERIALS/TEXTURES/MESHES
+
+FIX DESCRIPTOR SETS UPDATING AT THE WRONG TIME - DONE

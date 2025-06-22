@@ -56,8 +56,11 @@ namespace se
         setViewDirection(position, target - position, up);
     }
 
-    void SECamera::setViewYXZ(glm::vec3 position, glm::vec3 rotation)
+    void SECamera::setViewYXZ()
     {
+        auto position = transform.translation;
+        auto rotation = transform.rotation;
+
         const float c3 = glm::cos(rotation.z);
         const float s3 = glm::sin(rotation.z);
         const float c2 = glm::cos(rotation.x);

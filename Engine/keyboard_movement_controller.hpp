@@ -22,7 +22,7 @@ namespace se
             int lookDown = GLFW_KEY_DOWN;
         };
 
-        void moveInPlaneXZ(GLFWwindow *window, float dt, SEGameObject &gameObject);
+        void moveInPlaneXZ(GLFWwindow *window, float dt, TransformComponent &transform);
 
         KeyMappings keys{};
         float moveSpeed{1.5f};

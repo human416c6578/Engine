@@ -8,7 +8,7 @@ void se::ImGuiManager::renderSceneHierarchy()
     static int lightCount = 0;
     bool itemHovered = false;
     auto scene = sceneManager->getActiveScene();
-    std::vector<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
+    std::list<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
 
     if (!showSceneHierarchy) return;
 
@@ -29,7 +29,9 @@ void se::ImGuiManager::renderSceneHierarchy()
 
     for (int i = 0; i < gameobjects.size(); i++)
     {
-        auto& gameObject = gameobjects.at(i);
+        auto it = gameobjects.begin();
+        std::advance(it, i);
+        auto& gameObject = *it;
         ImGuiSelectableFlags flags = ImGuiSelectableFlags_None;
         bool isSelected = (selectedGameObjectIndex == i);
 
@@ -46,7 +48,9 @@ void se::ImGuiManager::renderSceneHierarchy()
         {
             if (ImGui::MenuItem("Delete"))
             {
-                gameobjects.erase(gameobjects.begin() + i);
+                auto it = gameobjects.begin();
+                std::advance(it, i);
+                gameobjects.erase(it);
                 if (selectedGameObjectIndex == i) selectedGameObjectIndex = -1;
                 else if (selectedGameObjectIndex > i) selectedGameObjectIndex--;
             }
@@ -56,22 +60,22 @@ void se::ImGuiManager::renderSceneHierarchy()
 
     if (!itemHovered && ImGui::BeginPopupContextWindow()) {
         if (ImGui::MenuItem("Create Empty")) {
-            scene->createGameObject("Empty");
+            scene->createGameObjectRef("Empty");
             
         }
         if (ImGui::MenuItem("Create Cube")) {
-            auto& go = scene->createGameObject("Cube");
+            auto& go = scene->createGameObjectRef("Cube");
             go.setMesh(resourceManager->createCube("CubeMesh_" + std::to_string(++cubeCount)));
             go.setMaterial(resourceManager->createMaterial("CubeMaterial_" + std::to_string(cubeCount)));
         }
         if (ImGui::MenuItem("Create Sphere")) {
-            auto& go = scene->createGameObject("Sphere");
+            auto& go = scene->createGameObjectRef("Sphere");
             go.setMesh(resourceManager->createSphere("SphereMesh_" + std::to_string(++sphereCount)));
             go.setMaterial(resourceManager->createMaterial("SphereMaterial_" + std::to_string(sphereCount)));
 
         }
         if (ImGui::MenuItem("Create Light")) {
-            auto& go = scene->createGameObject("Light");
+            auto& go = scene->createGameObjectRef("Light");
             Light light{};
 			light.type = LightType::Point;
 			light.color = { 1.0f, 1.0f, 1.0f };
@@ -362,7 +366,7 @@ void se::ImGuiManager::renderPropertiesPanel()
     if (!showProperties) return;
 
     auto scene = sceneManager->getActiveScene();
-    std::vector<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
+    std::list<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
 
     auto* viewport = ImGui::GetMainViewport();
     ImVec2 workPos = viewport->WorkPos;
@@ -406,9 +410,13 @@ void se::ImGuiManager::renderPropertiesPanel()
 void se::ImGuiManager::renderGameObjectProperties()
 {
     auto scene = sceneManager->getActiveScene();
-    std::vector<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
+    std::list<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
 
-    auto& gameObject = gameobjects[selectedGameObjectIndex];
+    auto it = gameobjects.begin();
+    std::advance(it, selectedGameObjectIndex);
+
+    auto& gameObject = *it;
+
     static char nameBuffer[128] = { 0 };
 
     strcpy_s(nameBuffer, sizeof(nameBuffer), gameObject->getName().c_str());

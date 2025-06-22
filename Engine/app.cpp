@@ -3,12 +3,11 @@
 #include "se_material_system.hpp"
 #include "ExampleScript.hpp"
 #include "TestScript.hpp"
+#include "Snake.hpp"
+#include "StressTest.hpp"
 
 void App::mainLoop()
 {
-
-    se::SECamera camera{};
-    auto viewerObject = se::SEGameObject::createGameObject();
     se::KeyboardMovementController cameraController{};
     static std::string str("");
 
@@ -37,17 +36,18 @@ void App::mainLoop()
         float frameTime =
             std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
         currentTime = newTime;
-
-        cameraController.moveInPlaneXZ(seWindow.getGLFWwindow(), frameTime, viewerObject);
-        camera.setViewYXZ(viewerObject.getTransform().translation, viewerObject.getTransform().rotation);
+        se::TransformComponent transform = sceneManager->getCamera().getTransform();
+        cameraController.moveInPlaneXZ(seWindow.getGLFWwindow(), frameTime, transform);
+        sceneManager->getCamera().setTransform(transform);
+        sceneManager->getCamera().setViewYXZ();
 
         float aspect = seRenderer.getAspectRatio();
-        camera.setPerspectiveProjection(glm::radians(90.f), aspect, 0.1f, 100.f);
+        sceneManager->getCamera().setPerspectiveProjection(glm::radians(90.f), aspect, 0.1f, 100.f);
 
         UniformBufferObject ubo{};
-        ubo.proj = camera.getProjection();
-        ubo.view = camera.getView();
-        ubo.cameraPos = viewerObject.getTransform().translation;
+        ubo.proj = sceneManager->getCamera().getProjection();
+        ubo.view = sceneManager->getCamera().getView();
+        ubo.cameraPos = sceneManager->getCamera().getTransform().translation;
 
         seDevice.updateUniformBuffers(ubo);
 
@@ -64,7 +64,7 @@ void App::mainLoop()
         {
             seRenderer.beginSwapChainRenderPass(commandBuffer);
 
-            PBR->renderGameObjects(commandBuffer, gameObjects, camera, viewerObject, seRenderer.getFrameIndex());
+            PBR->renderGameObjects(commandBuffer, gameObjects, seRenderer.getFrameIndex());
             PBR->renderCubeMap(commandBuffer);
 
             imguiManager.newFrame();

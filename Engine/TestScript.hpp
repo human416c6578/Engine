@@ -14,6 +14,7 @@ namespace se {
         void onCreate() override {
             sceneManager = &se::SceneManager::getInstance();
             scene = sceneManager->getActiveScene();
+            resourceManager = sceneManager->getResourceManager();
         }
 
         void onUpdate(float dt) override {
@@ -49,6 +50,7 @@ namespace se {
     private:
         se::SceneManager* sceneManager{ nullptr };
         se::Scene* scene{ nullptr };
+        se::ResourceManager* resourceManager{ nullptr };
         bool created{ false };
     };
 

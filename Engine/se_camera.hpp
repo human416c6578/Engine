@@ -3,6 +3,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include "se_gameobject.hpp"
 
 namespace se
 {
@@ -18,13 +19,31 @@ namespace se
             glm::vec3 position, glm::vec3 direction, glm::vec3 up = glm::vec3{0.f, -1.f, 0.f});
         void setViewTarget(
             glm::vec3 position, glm::vec3 target, glm::vec3 up = glm::vec3{0.f, -1.f, 0.f});
-        void setViewYXZ(glm::vec3 position, glm::vec3 rotation);
+        void setViewYXZ();
+        //void setViewYXZ(glm::vec3 position, glm::vec3 rotation);
+
+        void setTransform(TransformComponent t)
+        {
+            transform = t;
+        }
+
+        void setProjection(glm::mat4 m)
+        {
+            projectionMatrix = m;
+        }
+
+        void setView(glm::mat4 m)
+        {
+            viewMatrix = m;
+        }
 
         const glm::mat4 &getProjection() const { return projectionMatrix; }
         const glm::mat4 &getView() const { return viewMatrix; }
+        const TransformComponent& getTransform() const { return transform; }
 
     private:
         glm::mat4 projectionMatrix{1.f};
         glm::mat4 viewMatrix{1.f};
+        TransformComponent transform;
     };
 }

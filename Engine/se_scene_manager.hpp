@@ -4,6 +4,7 @@
 #include <string>
 #include "se_scene.hpp"
 #include "se_resource_manager.hpp"
+#include "se_camera.hpp"
 
 namespace se {
 
@@ -23,6 +24,11 @@ namespace se {
         void setResourceManager(ResourceManager* rm)
         {
             resourceManager = rm;
+        }
+
+        ResourceManager* getResourceManager()
+        {
+            return resourceManager;
         }
 
         Scene& createScene(const std::string& name)
@@ -46,6 +52,8 @@ namespace se {
 
         Scene* getActiveScene() { return activeScene; }
 
+        SECamera& getCamera() { return activeScene->getCamera(); }
+
         bool saveActiveScene(const std::string& filePath);
 
         bool saveScene(const std::string& sceneName, const std::string& filePath);
@@ -57,6 +65,7 @@ namespace se {
         ResourceManager* resourceManager = nullptr;
         std::unordered_map<std::string, std::unique_ptr<Scene>> scenes;
         Scene* activeScene = nullptr;
+        
     };
 
 } // namespace se

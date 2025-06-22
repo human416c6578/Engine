@@ -1,8 +1,56 @@
 {
     "scene": {
+        "camera": {
+            "projection": [
+                0.5255208611488342,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.001001000404358,
+                1.0,
+                0.0,
+                0.0,
+                -0.10010010004043579,
+                0.0
+            ],
+            "rotation": [
+                -0.49161532521247864,
+                6.263110637664795,
+                0.0
+            ],
+            "translation": [
+                0.7651445269584656,
+                -3.7903547286987305,
+                -6.865067005157471
+            ],
+            "view": [
+                0.9997985363006592,
+                0.00947562139481306,
+                -0.017696067690849304,
+                0.0,
+                0.0,
+                0.8815714716911316,
+                0.4720505177974701,
+                0.0,
+                0.02007332071661949,
+                -0.47195541858673096,
+                0.8813938498497009,
+                0.0,
+                -0.6271857023239136,
+                0.09421277046203613,
+                7.853607177734375,
+                1.0
+            ]
+        },
         "gameObjects": [
             {
-                "id": 6,
+                "id": 1034,
                 "material": "GUID_0",
                 "mesh": "CUBE",
                 "name": "cube",
@@ -15,7 +63,7 @@
                     ],
                     "rotation": [
                         0.0,
-                        114.86148071289063,
+                        134.0665283203125,
                         0.0
                     ],
                     "scale": [
@@ -26,7 +74,7 @@
                 }
             },
             {
-                "id": 7,
+                "id": 1035,
                 "material": "GUID_1",
                 "mesh": "SPHERE",
                 "name": "sphere",
@@ -49,7 +97,7 @@
                 }
             },
             {
-                "id": 8,
+                "id": 1036,
                 "light": {
                     "color": [
                         1.0,
@@ -82,7 +130,7 @@
                 }
             },
             {
-                "id": 9,
+                "id": 1037,
                 "name": "Empty",
                 "transform": {
                     "position": [
@@ -103,7 +151,7 @@
                 }
             },
             {
-                "id": 10,
+                "id": 1038,
                 "name": "Empty",
                 "transform": {
                     "position": [
@@ -124,7 +172,7 @@
                 }
             },
             {
-                "id": 11,
+                "id": 1039,
                 "name": "Empty",
                 "transform": {
                     "position": [
@@ -145,7 +193,7 @@
                 }
             },
             {
-                "id": 12,
+                "id": 1040,
                 "name": "Empty",
                 "transform": {
                     "position": [
@@ -171,17 +219,17 @@
                 "ao": 1.0,
                 "aoTexture": "GUID_DUMMY",
                 "color": [
-                    0.9754902124404907,
-                    0.028690915554761887,
-                    0.028690915554761887
+                    0.9474473595619202,
+                    0.9656862616539001,
+                    0.34556421637535095
                 ],
                 "diffuseTexture": "GUID_DUMMY",
-                "guid": "GUID_1",
-                "metallic": 0.7649999856948853,
+                "guid": "GUID_20",
+                "metallic": 0.0,
                 "metallicTexture": "GUID_DUMMY",
-                "name": "SphereMaterial_1",
+                "name": "lightMat",
                 "normalTexture": "GUID_DUMMY",
-                "roughness": 0.44699999690055847,
+                "roughness": 0.949999988079071,
                 "roughnessTexture": "GUID_DUMMY"
             },
             {
@@ -205,17 +253,17 @@
                 "ao": 1.0,
                 "aoTexture": "GUID_DUMMY",
                 "color": [
-                    0.9474473595619202,
-                    0.9656862616539001,
-                    0.34556421637535095
+                    0.9754902124404907,
+                    0.028690915554761887,
+                    0.028690915554761887
                 ],
                 "diffuseTexture": "GUID_DUMMY",
-                "guid": "GUID_20",
-                "metallic": 0.0,
+                "guid": "GUID_1",
+                "metallic": 0.7649999856948853,
                 "metallicTexture": "GUID_DUMMY",
-                "name": "lightMat",
+                "name": "SphereMaterial_1",
                 "normalTexture": "GUID_DUMMY",
-                "roughness": 0.949999988079071,
+                "roughness": 0.44699999690055847,
                 "roughnessTexture": "GUID_DUMMY"
             }
         ],
@@ -231,7 +279,7 @@
                 "path": "SPHERE"
             }
         ],
-        "name": "test_scene.json",
+        "name": "test_scene2.json",
         "textures": [
             {
                 "guid": "GUID_DUMMY",

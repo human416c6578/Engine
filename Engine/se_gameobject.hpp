@@ -78,6 +78,10 @@ namespace se
     public:
         using id_t = unsigned int;
 
+        SEGameObject() : id{ currentId++ }, name{ std::string("GameObject_") + std::to_string(currentId) } {}
+
+        SEGameObject(const std::string& name) : id{ currentId++ }, name{ name } {}
+
         static SEGameObject createGameObject()
         {
             return SEGameObject{ currentId++, std::string("GameObject_") + std::to_string(currentId) };
@@ -164,13 +168,14 @@ namespace se
 			return script;
 		}
 
+        id_t id;
 
     private:
         static id_t currentId;
 
         SEGameObject(id_t objId, std::string objName) : id{ objId }, name{ objName } {}
 
-        id_t id;
+        
         std::string name;
 
         std::shared_ptr<SEMesh> mesh{};
@@ -178,6 +183,6 @@ namespace se
         Light light{};
         TransformComponent transform{};
 
-        std::unique_ptr<ScriptComponent> script{};
+        std::unique_ptr<ScriptComponent> script{nullptr};
     };
 }
