@@ -48,6 +48,45 @@ add_executable(EngineApp
     ${IMGUI_SOURCES}
 )
 
+# GLSL → SPIR-V compilation
+set(SHADER_DIR ${PROJECT_SOURCE_DIR}/assets/shaders)
+set(SHADER_OUTPUT_DIR ${PROJECT_SOURCE_DIR}/assets/shaders)
+
+file(GLOB SHADER_SOURCES
+    ${SHADER_DIR}/*.vert
+    ${SHADER_DIR}/*.frag
+    ${SHADER_DIR}/*.comp
+)
+
+find_program(GLSLC glslc HINTS
+    $ENV{VULKAN_SDK}/Bin
+    $ENV{VULKAN_SDK}/bin
+)
+
+if(NOT GLSLC)
+    message(FATAL_ERROR "glslc not found — install Vulkan SDK")
+endif()
+
+foreach(SHADER ${SHADER_SOURCES})
+    get_filename_component(FILE_NAME ${SHADER} NAME)
+    set(SPIRV ${SHADER_OUTPUT_DIR}/${FILE_NAME}.spv)
+
+    add_custom_command(
+        OUTPUT ${SPIRV}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${SHADER_OUTPUT_DIR}
+        COMMAND ${GLSLC} ${SHADER} -o ${SPIRV}
+        DEPENDS ${SHADER}
+        COMMENT "Compiling shader: ${FILE_NAME}"
+    )
+
+    list(APPEND SPIRV_BINARIES ${SPIRV})
+endforeach()
+
+# Create custom target so shaders always build
+add_custom_target(Shaders ALL DEPENDS ${SPIRV_BINARIES})
+
+# Ensure Engine builds shaders first
+add_dependencies(EngineApp Shaders)
 
 # Link libraries
 target_link_libraries(EngineApp

@@ -12,14 +12,21 @@ layout(set = 1, binding = 0) uniform UBO {
 
 layout(set = 1, binding = 1) uniform FLAGS {
     vec3 color;          // 16 bytes
+
     int hasDiffuseMap;    // 4 bytes
     int hasNormalMap;     // 4 bytes
     int hasRoughnessMap;  // 4 bytes
     int hasMetallicMap;   // 4 bytes
+
     int hasAOMap;         // 4 bytes
+    int hasHeightMap;     // 4 bytes
     float metallic;       // 4 bytes
     float roughness;      // 4 bytes
+
     float ao;             // 4 bytes
+    float heightScale;    // 4 bytes
+    float idk1;
+    float idk2;
 } flags;
 
 
@@ -28,6 +35,7 @@ layout(set = 1, binding = 3) uniform sampler2D normalMap;
 layout(set = 1, binding = 4) uniform sampler2D metallicMap;
 layout(set = 1, binding = 5) uniform sampler2D roughnessMap;
 layout(set = 1, binding = 6) uniform sampler2D aoMap;
+layout(set = 1, binding = 7) uniform sampler2D heightMap;
 
 layout(set = 0, binding = 0) uniform samplerCube irradianceDiffuseMap;
 layout(set = 0, binding = 1) uniform samplerCube irradianceSpecularMap;
@@ -62,22 +70,23 @@ layout(location = 0) out vec4 outColor;
 
 const float PI = 3.14159265359;
 
-vec3 getNormalFromMap()
+vec3 getNormalFromMap(vec2 texCoords)
 {
-    vec3 tangentNormal = texture(normalMap, TexCoords).xyz * 2.0 - 1.0;
+    vec3 tangentNormal = texture(normalMap, texCoords).xyz * 2.0 - 1.0;
 
     vec3 Q1  = dFdx(WorldPos);
     vec3 Q2  = dFdy(WorldPos);
-    vec2 st1 = dFdx(TexCoords);
-    vec2 st2 = dFdy(TexCoords);
+    vec2 st1 = dFdx(texCoords);
+    vec2 st2 = dFdy(texCoords);
 
     vec3 N   = normalize(Normal);
-    vec3 T  = normalize(Q1*st2.t - Q2*st1.t);
-    vec3 B  = -normalize(cross(N, T));
+    vec3 T   = normalize(Q1 * st2.t - Q2 * st1.t);
+    vec3 B   = -normalize(cross(N, T));
     mat3 TBN = mat3(T, B, N);
 
     return normalize(TBN * tangentNormal);
 }
+
 // ----------------------------------------------------------------------------
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
@@ -124,28 +133,76 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
 }
 
+vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
+{
+    float height = texture(heightMap, texCoords).r;
+
+    // optional inversion
+    // height = 1.0 - height;
+
+    // improve depth contrast
+    height = height * height;
+
+    float heightScale = flags.heightScale;
+
+    vec2 p = viewDir.xy / max(viewDir.z, 0.001) * (height * heightScale);
+
+    return texCoords - p;
+}
+
+
+
+
+mat3 computeTBN()
+{
+    vec3 Q1  = dFdx(WorldPos);
+    vec3 Q2  = dFdy(WorldPos);
+    vec2 st1 = dFdx(TexCoords);
+    vec2 st2 = dFdy(TexCoords);
+
+    vec3 N   = normalize(Normal);
+    vec3 T   = normalize(Q1 * st2.t - Q2 * st1.t);
+    vec3 B   = -normalize(cross(N, T));
+
+    return mat3(T, B, N);
+}
+
+
 
 void main()
 {	
+    vec2 texCoords = TexCoords;
+
+    if(flags.hasHeightMap != 0)
+    {
+        mat3 TBN = computeTBN();
+        vec3 viewDir = normalize(ubo.camPos - WorldPos);
+        vec3 viewDirTangent = normalize(transpose(TBN) * viewDir);
+
+        texCoords = ParallaxMapping(texCoords, viewDirTangent);
+
+        texCoords = clamp(texCoords, 0.0, 1.0);
+    }
+
     vec3 albedo = flags.color.xyz;
     if(flags.hasDiffuseMap != 0)
-        albedo = texture(albedoMap, TexCoords).rgb;
+        albedo = texture(albedoMap, texCoords).rgb;
     
     vec3 N = Normal;
     if(flags.hasNormalMap != 0)
-        N = getNormalFromMap();
+        N = getNormalFromMap(texCoords);
 
     float metallic = flags.metallic;
     if(flags.hasMetallicMap != 0)
-        metallic  = texture(metallicMap, TexCoords).r;
+        metallic  = texture(metallicMap, texCoords).r;
     
     float roughness = flags.roughness;
     if(flags.hasRoughnessMap != 0)
-        roughness = texture(roughnessMap, TexCoords).r;
+        roughness = texture(roughnessMap, texCoords).r;
     
     float ao = flags.ao;
     if(flags.hasAOMap != 0)
-        ao = texture(aoMap, TexCoords).r;
+        ao = texture(aoMap, texCoords).r;
 
     vec3 V = normalize(ubo.camPos - WorldPos);
     vec3 R = reflect(-V, N);

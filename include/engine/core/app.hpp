@@ -46,7 +46,7 @@ public:
 
 		imguiManager.init(seDevice, seRenderer.getSwapChainRenderPass(), seWindow.getGLFWwindow(), ResourceManager.get());
     }
-    
+
     ~App() {
         if (sceneManager) {
             sceneManager->destroyAllScenes();
@@ -55,7 +55,7 @@ public:
 
     App(const App &) = delete;
     App &operator=(const App &) = delete;
-    
+
     void run()
     {
         mainLoop();
@@ -76,5 +76,5 @@ private:
     se::ImGuiManager imguiManager;
 
     void mainLoop();
-   
+
 };

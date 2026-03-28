@@ -186,6 +186,14 @@ namespace se
         aoLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
         bindings.push_back(aoLayoutBinding);
 
+        VkDescriptorSetLayoutBinding heightLayoutBinding{};
+        heightLayoutBinding.binding = 7;
+        heightLayoutBinding.descriptorCount = 1;
+        heightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        heightLayoutBinding.pImmutableSamplers = nullptr;
+        heightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        bindings.push_back(heightLayoutBinding);
+
         // Descriptor set layout create info
         VkDescriptorSetLayoutCreateInfo layoutInfo{};
         layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;

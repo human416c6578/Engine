@@ -23,14 +23,22 @@ namespace se
 		struct alignas(16) MaterialFlags
 		{
 			alignas(16) glm::vec3 color;
+
 			alignas(4) int hasDiffuseMap;
 			alignas(4) int hasNormalMap;
 			alignas(4) int hasRoughnessMap;
 			alignas(4) int hasMetallicMap;
+
 			alignas(4) int hasAOMap;
+			alignas(4) int hasHeightMap;
 			alignas(4) float metallic;
 			alignas(4) float roughness;
+
 			alignas(4) float ao;
+			alignas(4) float heightScale;
+
+			alignas(4) float idk1;
+			alignas(4) float idk2;
 
 			// Padding to make the structure size a multiple of 16 bytes (4 padding bytes)
 			//alignas(4) int padding; // 4 bytes padding
@@ -50,7 +58,8 @@ namespace se
 					std::optional<std::shared_ptr<SETexture>> normalTexture = std::nullopt,
 					std::optional<std::shared_ptr<SETexture>> metallicTexture = std::nullopt,
 					std::optional<std::shared_ptr<SETexture>> roughnessTexture = std::nullopt,
-					std::optional<std::shared_ptr<SETexture>> aoTexture = std::nullopt);
+					std::optional<std::shared_ptr<SETexture>> aoTexture = std::nullopt,
+					std::optional<std::shared_ptr<SETexture>> heightTexture = std::nullopt);
 
 		~SEMaterial()
 		{
@@ -115,6 +124,11 @@ namespace se
 			return flags.ao;
 		}
 
+		float getHeightScale() const
+		{
+			return flags.heightScale;
+		}
+
 		std::shared_ptr<SETexture> getDiffuseTexture() const
 		{
 			return diffuseTexture.value_or(dummyTexture);
@@ -138,6 +152,11 @@ namespace se
 		std::shared_ptr<SETexture> getAOTexture() const
 		{
 			return aoTexture.value_or(dummyTexture);
+		}
+
+		std::shared_ptr<SETexture> getHeightTexture() const
+		{
+			return heightTexture.value_or(dummyTexture);
 		}
 
 		void setDiffuseTexture(std::shared_ptr<SETexture> texture)
@@ -175,6 +194,13 @@ namespace se
 			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 
+		void setHeightTexture(std::shared_ptr<SETexture> texture)
+		{
+			heightTexture = texture;
+			flags.hasHeightMap = (texture != dummyTexture);
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
+		}
+
 		void setMetallic(float metallic)
 		{
 			flags.metallic = metallic;
@@ -196,6 +222,12 @@ namespace se
 		void setColor(const glm::vec3& color)
 		{
 			flags.color = color;
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
+		}
+
+		void setHeightScale(float heightScale)
+		{
+			flags.heightScale = heightScale;
 			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 
@@ -236,6 +268,7 @@ namespace se
 		std::optional<std::shared_ptr<SETexture>> metallicTexture;
 		std::optional<std::shared_ptr<SETexture>> roughnessTexture;
 		std::optional<std::shared_ptr<SETexture>> aoTexture;
+		std::optional<std::shared_ptr<SETexture>> heightTexture;
 
 	};
 

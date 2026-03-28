@@ -29,11 +29,12 @@ namespace se
 		std::optional<std::shared_ptr<SETexture>> normalTexture,
 		std::optional<std::shared_ptr<SETexture>> metallicTexture,
 		std::optional<std::shared_ptr<SETexture>> roughnessTexture,
-		std::optional<std::shared_ptr<SETexture>> aoTexture)
+		std::optional<std::shared_ptr<SETexture>> aoTexture,
+        std::optional<std::shared_ptr<SETexture>> heightTexture)
 		: seDevice{ device }, pipelineLayout{ pipelineLayout }, pipeline{ pipeline },  
 		descriptorSetLayout {descSetLayout}, dummyTexture{ dummyTexture }, diffuseTexture{diffuseTexture},
 		  normalTexture{normalTexture}, metallicTexture{metallicTexture},
-		  roughnessTexture{roughnessTexture}, aoTexture{aoTexture},
+		  roughnessTexture{roughnessTexture}, aoTexture{aoTexture}, heightTexture{heightTexture},
 		Resource(guid, name)
 	{
         flags.color = { 1.0f, 1.0f, 1.0f }; // Default color
@@ -42,6 +43,7 @@ namespace se
 		flags.hasMetallicMap = metallicTexture.has_value();
 		flags.hasRoughnessMap = roughnessTexture.has_value();
 		flags.hasAOMap = aoTexture.has_value();
+        flags.hasHeightMap = heightTexture.has_value();
 
 		flags.metallic = metallic;
 		flags.roughness = roughness;
@@ -172,7 +174,15 @@ namespace se
             aoImageInfo.sampler = aoTexture.value()->getTextureSampler();
         }
 
-        std::vector<VkWriteDescriptorSet> descriptorWrites(7);
+        VkDescriptorImageInfo heightImageInfo{};
+        if (flags.hasHeightMap)
+        {
+            heightImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            heightImageInfo.imageView = heightTexture.value()->getTextureImageView();
+            heightImageInfo.sampler = heightTexture.value()->getTextureSampler();
+        }
+
+        std::vector<VkWriteDescriptorSet> descriptorWrites(8);
 
         // Uniform buffer write
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -236,6 +246,15 @@ namespace se
         descriptorWrites[6].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         descriptorWrites[6].descriptorCount = 1;
         descriptorWrites[6].pImageInfo = flags.hasAOMap ? &aoImageInfo : &dummyImageInfo;
+
+        // Height texture write
+        descriptorWrites[7].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[7].dstSet = descriptorSets[frameIndex];
+        descriptorWrites[7].dstBinding = 7;
+        descriptorWrites[7].dstArrayElement = 0;
+        descriptorWrites[7].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[7].descriptorCount = 1;
+        descriptorWrites[7].pImageInfo = flags.hasHeightMap ? &heightImageInfo : &dummyImageInfo;
 
         vkUpdateDescriptorSets(seDevice.device(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }

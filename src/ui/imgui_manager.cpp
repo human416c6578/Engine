@@ -678,6 +678,7 @@ void se::ImGuiManager::renderMaterialEditor(std::shared_ptr<se::SEMaterial> mate
     float metallic = material->getMetallic();
     float roughness = material->getRoughness();
     float ao = material->getAO();
+    float heightScale = material->getHeightScale();
 
     // Color picker
     if (ImGui::ColorEdit3("Color", &color.x, ImGuiColorEditFlags_Float))
@@ -703,6 +704,11 @@ void se::ImGuiManager::renderMaterialEditor(std::shared_ptr<se::SEMaterial> mate
     if (ImGui::SliderFloat("Ambient Occlusion", &ao, 0.0f, 1.0f))
     {
         material->setAO(ao);
+    }
+
+    if (ImGui::SliderFloat("Height Scale", &heightScale, 0.0f, 1.0f))
+    {
+        material->setHeightScale(heightScale);
     }
 
     ImGui::Separator();
@@ -736,6 +742,11 @@ void se::ImGuiManager::renderMaterialEditor(std::shared_ptr<se::SEMaterial> mate
     renderTextureSelector("AO", material->getAOTexture(),
         [material](std::shared_ptr<se::SETexture> tex) {
             material->setAOTexture(tex);
+        });
+    // AO Texture
+    renderTextureSelector("Height", material->getHeightTexture(),
+        [material](std::shared_ptr<se::SETexture> tex) {
+            material->setHeightTexture(tex);
         });
 }
 
