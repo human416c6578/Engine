@@ -1,0 +1,215 @@
+{
+    "scene": {
+        "camera": {
+            "projection": [
+                0.5260416865348816,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                1.001001000404358,
+                1.0,
+                0.0,
+                0.0,
+                -0.10010010004043579,
+                0.0
+            ],
+            "rotation": [
+                -0.2611703872680664,
+                0.19269828498363495,
+                0.0
+            ],
+            "translation": [
+                -0.6506145596504211,
+                -0.4998207986354828,
+                -1.5659539699554443
+            ],
+            "view": [
+                0.9814910888671875,
+                -0.04944953694939613,
+                0.18501359224319458,
+                0.0,
+                0.0,
+                0.9660884141921997,
+                0.2582114338874817,
+                0.0,
+                -0.19150793552398682,
+                -0.2534322142601013,
+                0.9482071399688721,
+                0.0,
+                0.33867979049682617,
+                0.05383530259132385,
+                1.7342807054519653,
+                1.0
+            ]
+        },
+        "gameObjects": [
+            {
+                "id": 4,
+                "material": "fed24940-8b0c-ab16-9028-b59f902fe893",
+                "mesh": "CUBE",
+                "name": "Cube",
+                "transform": {
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            },
+            {
+                "id": 5,
+                "light": {
+                    "color": [
+                        0.1921432763338089,
+                        0.9411764740943909,
+                        0.09227219969034195
+                    ],
+                    "intensity": 1.0,
+                    "type": 1
+                },
+                "name": "Light",
+                "transform": {
+                    "position": [
+                        0.10000000149011612,
+                        -0.8999999761581421,
+                        -0.20000000298023224
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        1.0,
+                        1.0,
+                        1.0
+                    ]
+                }
+            },
+            {
+                "id": 6,
+                "material": "c544fcda-d331-ebc6-ffa8-974ee359e925_material_1",
+                "mesh": "c544fcda-d331-ebc6-ffa8-974ee359e925",
+                "name": "Sphere",
+                "transform": {
+                    "position": [
+                        -1.399999976158142,
+                        0.0,
+                        0.0
+                    ],
+                    "rotation": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "scale": [
+                        0.009999999776482582,
+                        0.009999999776482582,
+                        0.009999999776482582
+                    ]
+                }
+            }
+        ],
+        "materials": [
+            {
+                "ao": 1.0,
+                "aoTexture": "4cfcc967-7541-e517-0138-8c57920ae77a",
+                "color": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "diffuseTexture": "01fa63e1-6497-844c-5756-2c4aff162edc",
+                "guid": "c544fcda-d331-ebc6-ffa8-974ee359e925_material_1",
+                "heightScale": 0.023000000044703484,
+                "heightTexture": "47c97a5d-56b4-ba26-0d4e-dcd949913c39",
+                "metallic": 0.05000000074505806,
+                "metallicTexture": "8b6bbbc7-fdb4-d3ae-63fb-af69e234e0e2",
+                "name": "Carpaint Pearl 001 Lavender_1_material_1",
+                "normalTexture": "de329bf1-0e4d-3be5-5448-d9a036e24e52",
+                "roughness": 0.949999988079071,
+                "roughnessTexture": "3b517506-4a07-a18b-c0aa-a5b5a6dce3f8"
+            },
+            {
+                "ao": 1.0,
+                "aoTexture": "4cfcc967-7541-e517-0138-8c57920ae77a",
+                "color": [
+                    1.0,
+                    1.0,
+                    1.0
+                ],
+                "diffuseTexture": "01fa63e1-6497-844c-5756-2c4aff162edc",
+                "guid": "fed24940-8b0c-ab16-9028-b59f902fe893",
+                "heightScale": 0.02199999988079071,
+                "heightTexture": "47c97a5d-56b4-ba26-0d4e-dcd949913c39",
+                "metallic": 0.0,
+                "metallicTexture": "8b6bbbc7-fdb4-d3ae-63fb-af69e234e0e2",
+                "name": "CubeMaterial_1",
+                "normalTexture": "de329bf1-0e4d-3be5-5448-d9a036e24e52",
+                "roughness": 0.949999988079071,
+                "roughnessTexture": "3b517506-4a07-a18b-c0aa-a5b5a6dce3f8"
+            }
+        ],
+        "meshes": [
+            {
+                "guid": "c544fcda-d331-ebc6-ffa8-974ee359e925",
+                "name": "sphere.obj",
+                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/models/sphere/sphere.obj"
+            },
+            {
+                "guid": "CUBE",
+                "name": "CUBE",
+                "path": "CUBE"
+            }
+        ],
+        "name": "height.json",
+        "textures": [
+            {
+                "guid": "47c97a5d-56b4-ba26-0d4e-dcd949913c39",
+                "name": "patched-brickwork_height.png",
+                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_height.png"
+            },
+            {
+                "guid": "4cfcc967-7541-e517-0138-8c57920ae77a",
+                "name": "patched-brickwork_ao.png",
+                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_ao.png"
+            },
+            {
+                "guid": "3b517506-4a07-a18b-c0aa-a5b5a6dce3f8",
+                "name": "patched-brickwork_roughness.png",
+                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_roughness.png"
+            },
+            {
+                "guid": "8b6bbbc7-fdb4-d3ae-63fb-af69e234e0e2",
+                "name": "patched-brickwork_metallic.png",
+                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_metallic.png"
+            },
+            {
+                "guid": "de329bf1-0e4d-3be5-5448-d9a036e24e52",
+                "name": "patched-brickwork_normal-dx.png",
+                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_normal-dx.png"
+            },
+            {
+                "guid": "01fa63e1-6497-844c-5756-2c4aff162edc",
+                "name": "patched-brickwork_albedo.png",
+                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_albedo.png"
+            }
+        ]
+    }
+}
