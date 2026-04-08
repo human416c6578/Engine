@@ -20,40 +20,40 @@
                 0.0
             ],
             "rotation": [
-                -0.2611703872680664,
-                0.19269828498363495,
+                -0.6091996431350708,
+                0.08284136652946472,
                 0.0
             ],
             "translation": [
-                -0.6506145596504211,
-                -0.4998207986354828,
-                -1.5659539699554443
+                -0.3624836504459381,
+                -0.742013692855835,
+                -1.7584197521209717
             ],
             "view": [
-                0.9814910888671875,
-                -0.04944953694939613,
-                0.18501359224319458,
+                0.9965705871582031,
+                -0.04734856262803078,
+                0.06786104291677475,
                 0.0,
                 0.0,
-                0.9660884141921997,
-                0.2582114338874817,
+                0.8201062679290771,
+                0.5722112655639648,
                 0.0,
-                -0.19150793552398682,
-                -0.2534322142601013,
-                0.9482071399688721,
+                -0.08274664729833603,
+                -0.5702489018440247,
+                0.8172937631607056,
                 0.0,
-                0.33867979049682617,
-                0.05383530259132385,
-                1.7342807054519653,
+                0.21573719382286072,
+                -0.4113699197769165,
+                1.8863325119018555,
                 1.0
             ]
         },
         "gameObjects": [
             {
                 "id": 4,
-                "material": "fed24940-8b0c-ab16-9028-b59f902fe893",
-                "mesh": "CUBE",
-                "name": "Cube",
+                "material": "54608a4b-b4a6-4aed-c53b-46fc66127b91",
+                "mesh": "PLANE",
+                "name": "Plane",
                 "transform": {
                     "position": [
                         0.0,
@@ -76,37 +76,39 @@
                 "id": 5,
                 "light": {
                     "color": [
-                        0.1921432763338089,
-                        0.9411764740943909,
-                        0.09227219969034195
+                        0.970588207244873,
+                        0.7321392297744751,
+                        0.2949827015399933
                     ],
-                    "intensity": 1.0,
+                    "intensity": 10.0,
                     "type": 1
                 },
+                "material": "4ec00750-5ff9-1f1c-f3dd-996edcdb8a93",
+                "mesh": "SPHERE",
                 "name": "Light",
                 "transform": {
                     "position": [
-                        0.10000000149011612,
-                        -0.8999999761581421,
-                        -0.20000000298023224
-                    ],
-                    "rotation": [
-                        0.0,
-                        0.0,
+                        0.8999999761581421,
+                        -0.5,
                         0.0
                     ],
+                    "rotation": [
+                        7.300000190734863,
+                        6.099999904632568,
+                        5.199999809265137
+                    ],
                     "scale": [
-                        1.0,
-                        1.0,
-                        1.0
+                        0.10000000149011612,
+                        0.10000000149011612,
+                        0.10000000149011612
                     ]
                 }
             },
             {
-                "id": 6,
-                "material": "c544fcda-d331-ebc6-ffa8-974ee359e925_material_1",
-                "mesh": "c544fcda-d331-ebc6-ffa8-974ee359e925",
-                "name": "Sphere",
+                "id": 7,
+                "material": "54608a4b-b4a6-4aed-c53b-46fc66127b91",
+                "mesh": "CUBE",
+                "name": "Cube",
                 "transform": {
                     "position": [
                         -1.399999976158142,
@@ -119,9 +121,9 @@
                         0.0
                     ],
                     "scale": [
-                        0.009999999776482582,
-                        0.009999999776482582,
-                        0.009999999776482582
+                        1.0,
+                        1.0,
+                        1.0
                     ]
                 }
             }
@@ -129,86 +131,96 @@
         "materials": [
             {
                 "ao": 1.0,
-                "aoTexture": "4cfcc967-7541-e517-0138-8c57920ae77a",
+                "aoTexture": "GUID_DUMMY",
                 "color": [
-                    1.0,
-                    1.0,
-                    1.0
+                    0.9754902124404907,
+                    0.009563658386468887,
+                    0.009563658386468887
                 ],
-                "diffuseTexture": "01fa63e1-6497-844c-5756-2c4aff162edc",
-                "guid": "c544fcda-d331-ebc6-ffa8-974ee359e925_material_1",
-                "heightScale": 0.023000000044703484,
-                "heightTexture": "47c97a5d-56b4-ba26-0d4e-dcd949913c39",
-                "metallic": 0.05000000074505806,
-                "metallicTexture": "8b6bbbc7-fdb4-d3ae-63fb-af69e234e0e2",
-                "name": "Carpaint Pearl 001 Lavender_1_material_1",
-                "normalTexture": "de329bf1-0e4d-3be5-5448-d9a036e24e52",
+                "diffuseTexture": "GUID_DUMMY",
+                "guid": "4ec00750-5ff9-1f1c-f3dd-996edcdb8a93",
+                "heightScale": 0.0,
+                "heightTexture": "GUID_DUMMY",
+                "metallic": 0.0,
+                "metallicTexture": "GUID_DUMMY",
+                "name": "SphereMaterial_1",
+                "normalTexture": "GUID_DUMMY",
                 "roughness": 0.949999988079071,
-                "roughnessTexture": "3b517506-4a07-a18b-c0aa-a5b5a6dce3f8"
+                "roughnessTexture": "GUID_DUMMY"
             },
             {
                 "ao": 1.0,
-                "aoTexture": "4cfcc967-7541-e517-0138-8c57920ae77a",
+                "aoTexture": "ad6ab649-79c0-8540-fda4-c1c0538f196c",
                 "color": [
                     1.0,
                     1.0,
                     1.0
                 ],
-                "diffuseTexture": "01fa63e1-6497-844c-5756-2c4aff162edc",
-                "guid": "fed24940-8b0c-ab16-9028-b59f902fe893",
-                "heightScale": 0.02199999988079071,
-                "heightTexture": "47c97a5d-56b4-ba26-0d4e-dcd949913c39",
+                "diffuseTexture": "c01fbebe-987f-608b-596e-6047ec166ff9",
+                "guid": "54608a4b-b4a6-4aed-c53b-46fc66127b91",
+                "heightScale": 0.04500000178813934,
+                "heightTexture": "4b822aff-fe95-67c6-4fed-5551eb054b09",
                 "metallic": 0.0,
-                "metallicTexture": "8b6bbbc7-fdb4-d3ae-63fb-af69e234e0e2",
-                "name": "CubeMaterial_1",
-                "normalTexture": "de329bf1-0e4d-3be5-5448-d9a036e24e52",
+                "metallicTexture": "785d0356-19e2-bc61-8966-2e9c179f7990",
+                "name": "PlaneMaterial_1",
+                "normalTexture": "c84e3e5a-dd71-f1d5-a55c-126793ff052f",
                 "roughness": 0.949999988079071,
-                "roughnessTexture": "3b517506-4a07-a18b-c0aa-a5b5a6dce3f8"
+                "roughnessTexture": "24a6514c-b18f-6b11-01a5-e7aaded1affc"
             }
         ],
         "meshes": [
             {
-                "guid": "c544fcda-d331-ebc6-ffa8-974ee359e925",
-                "name": "sphere.obj",
-                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/models/sphere/sphere.obj"
-            },
-            {
                 "guid": "CUBE",
                 "name": "CUBE",
                 "path": "CUBE"
+            },
+            {
+                "guid": "SPHERE",
+                "name": "SPHERE",
+                "path": "SPHERE"
+            },
+            {
+                "guid": "PLANE",
+                "name": "PLANE",
+                "path": "PLANE"
             }
         ],
-        "name": "height.json",
+        "name": "MainScene",
         "textures": [
             {
-                "guid": "47c97a5d-56b4-ba26-0d4e-dcd949913c39",
+                "guid": "4b822aff-fe95-67c6-4fed-5551eb054b09",
                 "name": "patched-brickwork_height.png",
-                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_height.png"
+                "path": "assets/textures/Bricks/patched-brickwork_height.png"
             },
             {
-                "guid": "4cfcc967-7541-e517-0138-8c57920ae77a",
-                "name": "patched-brickwork_ao.png",
-                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_ao.png"
-            },
-            {
-                "guid": "3b517506-4a07-a18b-c0aa-a5b5a6dce3f8",
+                "guid": "24a6514c-b18f-6b11-01a5-e7aaded1affc",
                 "name": "patched-brickwork_roughness.png",
-                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_roughness.png"
+                "path": "assets/textures/Bricks/patched-brickwork_roughness.png"
             },
             {
-                "guid": "8b6bbbc7-fdb4-d3ae-63fb-af69e234e0e2",
-                "name": "patched-brickwork_metallic.png",
-                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_metallic.png"
-            },
-            {
-                "guid": "de329bf1-0e4d-3be5-5448-d9a036e24e52",
+                "guid": "c84e3e5a-dd71-f1d5-a55c-126793ff052f",
                 "name": "patched-brickwork_normal-dx.png",
-                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_normal-dx.png"
+                "path": "assets/textures/Bricks/patched-brickwork_normal-dx.png"
             },
             {
-                "guid": "01fa63e1-6497-844c-5756-2c4aff162edc",
+                "guid": "ad6ab649-79c0-8540-fda4-c1c0538f196c",
+                "name": "patched-brickwork_ao.png",
+                "path": "assets/textures/Bricks/patched-brickwork_ao.png"
+            },
+            {
+                "guid": "c01fbebe-987f-608b-596e-6047ec166ff9",
                 "name": "patched-brickwork_albedo.png",
-                "path": "/home/mrshark45/data/Workspace/programing/cpp/EngineMaster/assets/textures/patched-brickwork_albedo.png"
+                "path": "assets/textures/Bricks/patched-brickwork_albedo.png"
+            },
+            {
+                "guid": "785d0356-19e2-bc61-8966-2e9c179f7990",
+                "name": "patched-brickwork_metallic.png",
+                "path": "assets/textures/Bricks/patched-brickwork_metallic.png"
+            },
+            {
+                "guid": "GUID_DUMMY",
+                "name": "DUMMY",
+                "path": ""
             }
         ]
     }

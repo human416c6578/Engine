@@ -63,6 +63,11 @@ void se::ImGuiManager::renderSceneHierarchy()
             scene->createGameObjectRef("Empty");
 
         }
+        if (ImGui::MenuItem("Create Plane")) {
+            auto& go = scene->createGameObjectRef("Plane");
+            go.setMesh(resourceManager->createPlane("PlaneMesh_" + std::to_string(++cubeCount)));
+            go.setMaterial(resourceManager->createMaterial("PlaneMaterial_" + std::to_string(cubeCount)));
+        }
         if (ImGui::MenuItem("Create Cube")) {
             auto& go = scene->createGameObjectRef("Cube");
             go.setMesh(resourceManager->createCube("CubeMesh_" + std::to_string(++cubeCount)));

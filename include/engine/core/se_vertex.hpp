@@ -18,7 +18,7 @@ namespace se
 
 		static std::vector<VkVertexInputBindingDescription> getBindingDescriptions();
 		static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
-		
+
 
 		bool operator==(const Vertex &other) const
 		{

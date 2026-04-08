@@ -7,30 +7,29 @@ layout(set = 1, binding = 0) uniform UBO {
 } ubo;
 
 layout(push_constant) uniform PushConstants {
-    mat4 transform;  // Model matrix
+    mat4 transform; // Model matrix
 } pushConstants;
 
-layout(location = 0) in vec3 inPosition;   // Vertex position
-layout(location = 1) in vec3 inNormal;     // Vertex normal
-layout(location = 2) in vec2 inTexCoord;   // Vertex texture coordinates
+layout(location = 0) in vec3 inPosition;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec2 inTexCoord;
 
-layout(location = 0) out vec3 fragPosition;  // Fragment position (world space)
-layout(location = 1) out vec2 fragTexCoord;  // Texture coordinates
-layout(location = 2) out vec3 fragNormal;    // Normal (world space)
-layout(location = 3) out vec3 viewDir;       // View direction (world space)
+layout(location = 0) out vec3 fragPosition; // world-space
+layout(location = 1) out vec3 fragNormal; // world-space
+layout(location = 2) out vec2 fragTexCoord;
 
 void main() {
     // World space position
-    vec4 worldPosition = pushConstants.transform * vec4(inPosition, 1.0);
-    fragPosition = worldPosition.xyz;
+    vec3 worldPos = (pushConstants.transform * vec4(inPosition, 1.0)).xyz;
+    fragPosition = worldPos;
 
-    // Texture coordinates passthrough
+    // Pass texture coordinates
     fragTexCoord = inTexCoord;
 
-    // Normal in world space
-    mat3 normalMatrix = transpose(inverse(mat3(pushConstants.transform)));
-    fragNormal = normalize(normalMatrix * inNormal);
+    vec3 N = normalize(mat3(pushConstants.transform) * inNormal);
 
-    // Final position in clip space
-    gl_Position = ubo.proj * ubo.view * worldPosition;
+    fragNormal = N;
+
+    // Clip-space position
+    gl_Position = ubo.proj * ubo.view * vec4(worldPos, 1.0);
 }

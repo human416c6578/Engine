@@ -61,28 +61,39 @@ layout(std140, set = 0, binding = 3) uniform LIGHTS {
 } uboL;
 
 layout(location = 0) in vec3 WorldPos;
-layout(location = 1) in vec2 TexCoords;
-layout(location = 2) in vec3 Normal;
+layout(location = 1) in vec3 Normal;
+layout(location = 2) in vec2 TexCoords;
 
 layout(location = 0) out vec4 outColor;
 
 const float PI = 3.14159265359;
 
+mat3 computeTBN() {
+    // Compute derivatives
+    vec3 dp1 = dFdx(WorldPos);
+    vec3 dp2 = dFdy(WorldPos);
+    vec2 duv1 = dFdx(TexCoords);
+    vec2 duv2 = dFdy(TexCoords);
+
+    // Solve linear system to get tangent and bitangent
+    float r = 1.0 / (duv1.x * duv2.y - duv1.y * duv2.x);
+    vec3 tangent = normalize((dp1 * duv2.y - dp2 * duv1.y) * r);
+    vec3 bitangent = normalize((-dp1 * duv2.x + dp2 * duv1.x) * r);
+
+    // Orthonormalize tangent with normal
+    vec3 N = normalize(Normal);
+    tangent = normalize(tangent - N * dot(N, tangent));
+    bitangent = cross(N, tangent);
+
+    return mat3(tangent, bitangent, N);
+}
+
 vec3 getNormalFromMap(vec2 texCoords)
 {
     vec3 tangentNormal = texture(normalMap, texCoords).xyz * 2.0 - 1.0;
 
-    vec3 Q1 = dFdx(WorldPos);
-    vec3 Q2 = dFdy(WorldPos);
-    vec2 st1 = dFdx(texCoords);
-    vec2 st2 = dFdy(texCoords);
-
-    vec3 N = normalize(Normal);
-    vec3 T = normalize(Q1 * st2.t - Q2 * st1.t);
-    vec3 B = -normalize(cross(N, T));
-    mat3 TBN = mat3(T, B, N);
-
-    return normalize(TBN * tangentNormal);
+    
+        return normalize(computeTBN() * tangentNormal);
 }
 
 // ----------------------------------------------------------------------------
@@ -193,34 +204,17 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
     return finalTexCoords;
 }
 
-mat3 computeTBN()
-{
-    vec3 Q1 = dFdx(WorldPos);
-    vec3 Q2 = dFdy(WorldPos);
-    vec2 st1 = dFdx(TexCoords);
-    vec2 st2 = dFdy(TexCoords);
-
-    vec3 N = normalize(Normal);
-    vec3 T = normalize(Q1 * st2.t - Q2 * st1.t);
-    vec3 B = -normalize(cross(N, T));
-
-    return mat3(T, B, N);
-}
-
 void main()
 {
     vec2 texCoords = TexCoords;
 
-    if (flags.hasHeightMap != 0)
+    if (flags.hasHeightMap != 0) 
     {
         mat3 TBN = computeTBN();
         vec3 viewDir = normalize(ubo.camPos - WorldPos);
         vec3 viewDirTangent = normalize(transpose(TBN) * viewDir);
 
-        texCoords = ParallaxMapping(texCoords, viewDirTangent);
-
-        if (texCoords.x > 1.0 || texCoords.y > 1.0 || texCoords.x < 0.0 || texCoords.y < 0.0)
-            discard;
+        texCoords = ParallaxMapping(TexCoords, viewDirTangent);
     }
 
     vec3 albedo = flags.color.xyz;

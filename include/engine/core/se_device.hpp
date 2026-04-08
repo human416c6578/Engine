@@ -72,7 +72,7 @@ namespace se
         SEDevice &operator=(const SEDevice &) = delete;
         SEDevice(SEDevice &&) = delete;
         SEDevice &operator=(SEDevice &&) = delete;
-        
+
         VkCommandPool getCommandPool() { return commandPool; }
         VkDescriptorPool getDescriptorPool() { return descriptorPool; }
         std::vector<VkBuffer> getUniformBuffers() { return uniformBuffers; }
@@ -126,17 +126,17 @@ namespace se
         VkDevice device_;
         VkSurfaceKHR surface_;
         VkQueue graphicsQueue_;
-        VkQueue presentQueue_; 
+        VkQueue presentQueue_;
 
         VkDescriptorPool descriptorPool;
         std::vector<VkDescriptorSet> descriptorSets;
-        
+
 		VkDescriptorSetLayout imGuiDescriptorSetLayout;
 
         std::vector<VkBuffer> uniformBuffers;
         std::vector<VkDeviceMemory> uniformBuffersMemory;
         std::vector<void *> uniformBuffersMapped;
-        
+
 
         VkCommandPool commandPool;
 

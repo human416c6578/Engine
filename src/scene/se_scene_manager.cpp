@@ -206,6 +206,9 @@ bool se::SceneManager::loadScene(const std::string& filePath, const std::string&
             else if (path == "SPHERE") {
                 mesh = resourceManager->createSphere(name);
             }
+            else if (path == "PLANE") {
+                mesh = resourceManager->createPlane(name);
+            }
             else if (!path.empty()) {
                 mesh = resourceManager->loadMesh(guid, path);
             }

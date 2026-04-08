@@ -1,23 +1,23 @@
-#pragma once  
+#pragma once
 
-#include "engine/renderer/se_pbr_material.hpp"  
-#include "engine/renderer/se_material_system.hpp"  
-#include "engine/renderer/se_texture_system.hpp"  
+#include "engine/renderer/se_pbr_material.hpp"
+#include "engine/renderer/se_material_system.hpp"
+#include "engine/renderer/se_texture_system.hpp"
 #include "engine/renderer/se_mesh_system.hpp"
 
 #include <random>
 #include <sstream>
 #include <iomanip>
 
-namespace se  
-{  
-class ResourceManager  
-{  
-public:  
-	ResourceManager();  
-	~ResourceManager();  
+namespace se
+{
+class ResourceManager
+{
+public:
+	ResourceManager();
+	~ResourceManager();
 
-	ResourceManager(const ResourceManager&) = delete;  
+	ResourceManager(const ResourceManager&) = delete;
 	ResourceManager& operator=(const ResourceManager&) = delete;
 
 	std::shared_ptr<se::SEMesh> getMesh(const std::string& guid)
@@ -80,44 +80,44 @@ public:
 		return textureSystem->getTextures();
 	}
 
-	void setMaterialSystem(std::shared_ptr<se::MaterialSystem> materialSystem)  
-	{  
+	void setMaterialSystem(std::shared_ptr<se::MaterialSystem> materialSystem)
+	{
 		if (textureSystem == nullptr)
 		{
 			throw std::runtime_error("Texture system must be set before setting mesh system.");
 		}
 		materialSystem->setTextureSystem(textureSystem.get());
-		this->materialSystem = materialSystem;  
-	}  
+		this->materialSystem = materialSystem;
+	}
 
-	void setTextureSystem(std::shared_ptr<se::TextureSystem> textureSystem)  
-	{  
-		this->textureSystem = textureSystem;  
-	}  
+	void setTextureSystem(std::shared_ptr<se::TextureSystem> textureSystem)
+	{
+		this->textureSystem = textureSystem;
+	}
 
-	void setMeshSystem(std::shared_ptr<se::MeshSystem> meshSystem)  
-	{  
-		if (materialSystem == nullptr)  
-		{  
-			throw std::runtime_error("Material system must be set before setting mesh system.");  
-		}  
+	void setMeshSystem(std::shared_ptr<se::MeshSystem> meshSystem)
+	{
+		if (materialSystem == nullptr)
+		{
+			throw std::runtime_error("Material system must be set before setting mesh system.");
+		}
 
-		if (textureSystem == nullptr)  
-		{  
-			throw std::runtime_error("Texture system must be set before setting mesh system.");  
-		} 
+		if (textureSystem == nullptr)
+		{
+			throw std::runtime_error("Texture system must be set before setting mesh system.");
+		}
 
 		meshSystem->setMaterialSystem(this->materialSystem.get());
 		meshSystem->setTextureSystem(this->textureSystem.get());
-		this->meshSystem = meshSystem;  
-	}  
+		this->meshSystem = meshSystem;
+	}
 
-	std::shared_ptr<se::SEMaterial> createMaterial(const std::string& name)  
-	{  
-		std::string guid = GenerateGUID();  
-		auto material = materialSystem->CreatePBRMaterial(guid, name);  
+	std::shared_ptr<se::SEMaterial> createMaterial(const std::string& name)
+	{
+		std::string guid = GenerateGUID();
+		auto material = materialSystem->CreatePBRMaterial(guid, name);
 
-		return material;  
+		return material;
 	}
 
 	std::shared_ptr<se::SEMaterial> createMaterial(const std::string& guid, const std::string& name)
@@ -135,13 +135,13 @@ public:
 		return texture;
 	}
 
-	std::shared_ptr<se::SETexture> loadTexture(const std::string& path)  
-	{  
-		std::string guid = GenerateGUID();  
-		auto texture = textureSystem->loadTexture(guid, getFileName(path), path);  
+	std::shared_ptr<se::SETexture> loadTexture(const std::string& path)
+	{
+		std::string guid = GenerateGUID();
+		auto texture = textureSystem->loadTexture(guid, getFileName(path), path);
 		registerResourcePath(guid, path);
 
-		return texture;  
+		return texture;
 	}
 
 	std::shared_ptr<se::SEMesh> loadMesh(const std::string& guid, const std::string& path)
@@ -158,6 +158,17 @@ public:
 		auto mesh = meshSystem->loadMesh(guid, getFileName(path), path);
 		registerResourcePath(guid, path);
 
+		return mesh;
+	}
+
+	std::shared_ptr<se::SEMesh> createPlane(const std::string& name)
+	{
+		auto mesh = getMesh("PLANE");
+		if (!mesh)
+		{
+			mesh = meshSystem->createPlane("PLANE", "PLANE");
+			registerResourcePath("PLANE", "PLANE");
+		}
 		return mesh;
 	}
 
@@ -196,7 +207,7 @@ public:
 		return {};
 	}
 
-private:  
+private:
 
 	const std::string GenerateGUID()
 	{
@@ -222,10 +233,10 @@ private:
 		return std::filesystem::path(path).filename().string();
 	}
 
-	std::shared_ptr<se::MaterialSystem> materialSystem;  
-	std::shared_ptr<se::TextureSystem> textureSystem;  
+	std::shared_ptr<se::MaterialSystem> materialSystem;
+	std::shared_ptr<se::TextureSystem> textureSystem;
 	std::shared_ptr<se::MeshSystem> meshSystem;
 
 	std::unordered_map<std::string, std::string> resourcePaths;
-};  
+};
 } // namespace se
