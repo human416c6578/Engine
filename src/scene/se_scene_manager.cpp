@@ -12,7 +12,7 @@ bool se::SceneManager::saveScene(const std::string& sceneName, const std::string
 
     json jscene;
     jscene["scene"]["name"] = scene->getName();
-    
+
     auto& camera = scene->getCamera();
 
     // Save translation
@@ -81,6 +81,7 @@ bool se::SceneManager::saveScene(const std::string& sceneName, const std::string
         if (auto tex = mat->getMetallicTexture()) usedTextures.insert(tex);
         if (auto tex = mat->getRoughnessTexture()) usedTextures.insert(tex);
         if (auto tex = mat->getAOTexture()) usedTextures.insert(tex);
+        if (auto tex = mat->getHeightTexture()) usedTextures.insert(tex);
     }
 
     json jmaterials = json::array();
@@ -92,11 +93,13 @@ bool se::SceneManager::saveScene(const std::string& sceneName, const std::string
         jmat["metallic"] = mat->getMetallic();
         jmat["roughness"] = mat->getRoughness();
         jmat["ao"] = mat->getAO();
+        jmat["heightScale"] = mat->getHeightScale();
         if (auto tex = mat->getDiffuseTexture()) jmat["diffuseTexture"] = tex->getGUID();
         if (auto tex = mat->getNormalTexture()) jmat["normalTexture"] = tex->getGUID();
         if (auto tex = mat->getMetallicTexture()) jmat["metallicTexture"] = tex->getGUID();
         if (auto tex = mat->getRoughnessTexture()) jmat["roughnessTexture"] = tex->getGUID();
         if (auto tex = mat->getAOTexture()) jmat["aoTexture"] = tex->getGUID();
+        if (auto tex = mat->getHeightTexture()) jmat["heightTexture"] = tex->getGUID();
         jmaterials.push_back(jmat);
     }
     jscene["scene"]["materials"] = jmaterials;
@@ -156,7 +159,7 @@ bool se::SceneManager::loadScene(const std::string& filePath, const std::string&
             auto t = jcamera["translation"];
             glm::vec3 translation(t[0].get<float>(), t[1].get<float>(), t[2].get<float>());
             transform.translation = translation;
-            
+
         }
 
         // Load rotation
@@ -235,6 +238,8 @@ bool se::SceneManager::loadScene(const std::string& filePath, const std::string&
             mat->setMetallic(jmat["metallic"]);
             mat->setRoughness(jmat["roughness"]);
             mat->setAO(jmat["ao"]);
+            if(jmat.contains("heightScale"))
+                mat->setHeightScale(jmat["heightScale"]);
             // Set textures by GUID
             if (jmat.contains("diffuseTexture")) {
                 std::string texGuid = jmat["diffuseTexture"];
@@ -260,6 +265,11 @@ bool se::SceneManager::loadScene(const std::string& filePath, const std::string&
                 std::string texGuid = jmat["aoTexture"];
                 auto texture = resourceManager->getTexture(texGuid);
                 if (texture) mat->setAOTexture(texture);
+            }
+            if (jmat.contains("heightTexture")) {
+                std::string texGuid = jmat["heightTexture"];
+                auto texture = resourceManager->getTexture(texGuid);
+                if (texture) mat->setHeightTexture(texture);
             }
         }
     }
@@ -316,4 +326,3 @@ bool se::SceneManager::loadScene(const std::string& filePath, const std::string&
 
     return true;
 }
-

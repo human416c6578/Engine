@@ -41,9 +41,9 @@ namespace se {
 
         void onUpdate(float dt) override {
             if (!owner) return;
-            
+
             handleInput();
-            
+
 
             if (gameOver) return;
 
@@ -106,7 +106,7 @@ namespace se {
 
 
         void checkAppleCollision() {
-            
+
             if (!apple) return;
 
             auto headPos = owner->getTransform().translation;

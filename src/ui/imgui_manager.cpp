@@ -61,7 +61,7 @@ void se::ImGuiManager::renderSceneHierarchy()
     if (!itemHovered && ImGui::BeginPopupContextWindow()) {
         if (ImGui::MenuItem("Create Empty")) {
             scene->createGameObjectRef("Empty");
-            
+
         }
         if (ImGui::MenuItem("Create Cube")) {
             auto& go = scene->createGameObjectRef("Cube");
@@ -168,7 +168,7 @@ void se::ImGuiManager::renderAssetContextMenu()
         ImGui::EndPopup();
     }
 
-    
+
 
     if (ImGuiFileDialog::Instance()->Display("ChooseModel", ImGuiWindowFlags_NoCollapse, ImVec2(400.0f, 200.0f))) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
@@ -623,7 +623,7 @@ void se::ImGuiManager::renderMaterialProperties()
 
         ImGui::Text("Material: ", material->getName().c_str());
 		ImGui::SameLine();
-		
+
         if (ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer))) {
             material->setName(nameBuffer);
         }
@@ -645,7 +645,7 @@ void se::ImGuiManager::renderTextureProperties()
     if (it != textures->end())
     {
         auto texture = it->second;
-    
+
         std::strncpy(nameBuffer, texture->getName().c_str(), sizeof(nameBuffer));
         nameBuffer[sizeof(nameBuffer) - 1] = '\0';
 
@@ -706,7 +706,7 @@ void se::ImGuiManager::renderMaterialEditor(std::shared_ptr<se::SEMaterial> mate
         material->setAO(ao);
     }
 
-    if (ImGui::SliderFloat("Height Scale", &heightScale, 0.0f, 1.0f))
+    if (ImGui::SliderFloat("Height Scale", &heightScale, 0.0f, 0.1f))
     {
         material->setHeightScale(heightScale);
     }
@@ -1058,7 +1058,7 @@ void se::ImGuiManager::renderScriptSelector(
 }
 
 
-void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, se::ResourceManager* resourceManager) 
+void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, se::ResourceManager* resourceManager)
 {
     sceneManager = &se::SceneManager::getInstance();
 
