@@ -15,6 +15,12 @@ namespace se
 
         bool shouldClose() { return glfwWindowShouldClose(m_window); }
         VkExtent2D getExtent() { return {static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height)}; }
+        VkExtent2D getFramebufferExtent() const
+        {
+            int width, height;
+            glfwGetFramebufferSize(m_window, &width, &height);
+            return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
+        }
         bool wasWindowResized() { return m_framebufferResized; }
         void resetWindowResizedFlag() { m_framebufferResized = false; }
         void setTitle(std::string title) { glfwSetWindowTitle(m_window, title.c_str());}

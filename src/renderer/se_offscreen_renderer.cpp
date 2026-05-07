@@ -6,17 +6,28 @@
 namespace se 
 {
 
-    SEOffscreenRenderer::~SEOffscreenRenderer() {
-        vkDestroyFramebuffer(seDevice.device(), framebuffer, nullptr);
+    SEOffscreenRenderer::~SEOffscreenRenderer()
+    {
+        for (size_t i = 0; i < framebuffers.size(); i++)
+        {
+            vkDestroyFramebuffer(seDevice.device(), framebuffers[i], nullptr);
+        }
+
         vkDestroyRenderPass(seDevice.device(), renderPass, nullptr);
 
-        vkDestroyImageView(seDevice.device(), colorImageView, nullptr);
-        vkDestroyImage(seDevice.device(), colorImage, nullptr);
-        vkFreeMemory(seDevice.device(), colorImageMemory, nullptr);
+        for (size_t i = 0; i < colorImageViews.size(); i++)
+        {
+            vkDestroyImageView(seDevice.device(), colorImageViews[i], nullptr);
+            vkDestroyImage(seDevice.device(), colorImages[i], nullptr);
+            vkFreeMemory(seDevice.device(), colorImageMemory[i], nullptr);
+        }
 
-        vkDestroyImageView(seDevice.device(), depthImageView, nullptr);
-        vkDestroyImage(seDevice.device(), depthImage, nullptr);
-        vkFreeMemory(seDevice.device(), depthImageMemory, nullptr);
+        for (size_t i = 0; i < depthImageViews.size(); i++)
+        {
+            vkDestroyImageView(seDevice.device(), depthImageViews[i], nullptr);
+            vkDestroyImage(seDevice.device(), depthImages[i], nullptr);
+            vkFreeMemory(seDevice.device(), depthImageMemory[i], nullptr);
+        }
 
         vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
         vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
@@ -26,53 +37,80 @@ namespace se
 
     void SEOffscreenRenderer::resize(uint32_t newWidth, uint32_t newHeight)
     {
-        // Avoid unnecessary work
         if (width == newWidth && height == newHeight) return;
+
+        vkDeviceWaitIdle(seDevice.device());
 
         width = newWidth;
         height = newHeight;
 
-        vkDestroyFramebuffer(seDevice.device(), framebuffer, nullptr);
+        for (size_t i = 0; i < framebuffers.size(); i++)
+        {
+            vkDestroyFramebuffer(seDevice.device(), framebuffers[i], nullptr);
+        }
+        framebuffers.clear();
+
         vkDestroyRenderPass(seDevice.device(), renderPass, nullptr);
 
-        vkDestroyImageView(seDevice.device(), colorImageView, nullptr);
-        vkDestroyImage(seDevice.device(), colorImage, nullptr);
-        vkFreeMemory(seDevice.device(), colorImageMemory, nullptr);
+        for (size_t i = 0; i < colorImageViews.size(); i++)
+        {
+            vkDestroyImageView(seDevice.device(), colorImageViews[i], nullptr);
+            vkDestroyImage(seDevice.device(), colorImages[i], nullptr);
+            vkFreeMemory(seDevice.device(), colorImageMemory[i], nullptr);
+        }
 
-        vkDestroyImageView(seDevice.device(), depthImageView, nullptr);
-        vkDestroyImage(seDevice.device(), depthImage, nullptr);
-        vkFreeMemory(seDevice.device(), depthImageMemory, nullptr);
+        for (size_t i = 0; i < depthImageViews.size(); i++)
+        {
+            vkDestroyImageView(seDevice.device(), depthImageViews[i], nullptr);
+            vkDestroyImage(seDevice.device(), depthImages[i], nullptr);
+            vkFreeMemory(seDevice.device(), depthImageMemory[i], nullptr);
+        }
+
+        colorImageViews.clear();
+        colorImages.clear();
+        colorImageMemory.clear();
+
+        depthImageViews.clear();
+        depthImages.clear();
+        depthImageMemory.clear();
 
         vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
         vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
 
         freeCommandBuffers();
 
-        createRenderPass();
         createOffscreenImageDepth();
-        createOffscreenImageColor();
-        createFramebuffer();
-        createCommandBuffers();
-        createStagingBuffer();
+		createOffscreenImageColor();
+		createRenderPass();
+		createFramebuffers();
+		createCommandBuffers();
+		createStagingBuffer();
     }
 
     void SEOffscreenRenderer::setImageFormat(VkFormat format)
     {
-        // Avoid unnecessary work
         if (colorFormat == format) return;
 
         colorFormat = format;
 
-        vkDestroyFramebuffer(seDevice.device(), framebuffer, nullptr);
+        for (size_t i = 0; i < framebuffers.size(); i++)
+            vkDestroyFramebuffer(seDevice.device(), framebuffers[i], nullptr);
+
         vkDestroyRenderPass(seDevice.device(), renderPass, nullptr);
 
-        vkDestroyImageView(seDevice.device(), colorImageView, nullptr);
-        vkDestroyImage(seDevice.device(), colorImage, nullptr);
-        vkFreeMemory(seDevice.device(), colorImageMemory, nullptr);
+        for (size_t i = 0; i < colorImages.size(); i++)
+        {
+            vkDestroyImageView(seDevice.device(), colorImageViews[i], nullptr);
+            vkDestroyImage(seDevice.device(), colorImages[i], nullptr);
+            vkFreeMemory(seDevice.device(), colorImageMemory[i], nullptr);
+        }
 
-        vkDestroyImageView(seDevice.device(), depthImageView, nullptr);
-        vkDestroyImage(seDevice.device(), depthImage, nullptr);
-        vkFreeMemory(seDevice.device(), depthImageMemory, nullptr);
+        for (size_t i = 0; i < colorImages.size(); i++)
+        {
+            vkDestroyImageView(seDevice.device(), depthImageViews[i], nullptr);
+            vkDestroyImage(seDevice.device(), depthImages[i], nullptr);
+            vkFreeMemory(seDevice.device(), depthImageMemory[i], nullptr);
+        }
 
         vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
         vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
@@ -82,14 +120,20 @@ namespace se
         createRenderPass();
         createOffscreenImageDepth();
         createOffscreenImageColor();
-        createFramebuffer();
+        createFramebuffers();
         createCommandBuffers();
         createStagingBuffer();
     }
 
     void SEOffscreenRenderer::createOffscreenImageDepth() {
-        VkFormat depthFormat = seDevice.findDepthFormat();
-        
+    VkFormat depthFormat = seDevice.findDepthFormat();
+
+    depthImages.resize(MAX_FRAMES_IN_FLIGHT);
+    depthImageMemory.resize(MAX_FRAMES_IN_FLIGHT);
+    depthImageViews.resize(MAX_FRAMES_IN_FLIGHT);
+
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -101,36 +145,38 @@ namespace se
         imageInfo.format = depthFormat;
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;;
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        imageInfo.flags = 0;
 
         seDevice.createImageWithInfo(
             imageInfo,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            depthImage,
-            depthImageMemory);
+            depthImages[i],
+            depthImageMemory[i]);
 
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewInfo.image = depthImage;
+        viewInfo.image = depthImages[i];
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         viewInfo.format = depthFormat;
         viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        viewInfo.subresourceRange.baseMipLevel = 0;
         viewInfo.subresourceRange.levelCount = 1;
-        viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &depthImageView) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create texture image view!");
+        if (vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &depthImageViews[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create depth image view!");
         }
     }
+}
 
     void SEOffscreenRenderer::createOffscreenImageColor() {
-        // Create image
+    colorImages.resize(MAX_FRAMES_IN_FLIGHT);
+    colorImageMemory.resize(MAX_FRAMES_IN_FLIGHT);
+    colorImageViews.resize(MAX_FRAMES_IN_FLIGHT);
+
+    for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+
         VkImageCreateInfo imageInfo{};
         imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -142,33 +188,33 @@ namespace se
         imageInfo.format = colorFormat;
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageInfo.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        imageInfo.usage =
+            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
+            VK_IMAGE_USAGE_SAMPLED_BIT |
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        imageInfo.flags = 0;
 
         seDevice.createImageWithInfo(
             imageInfo,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-            colorImage,
-            colorImageMemory);
-        
-        // Create image view
+            colorImages[i],
+            colorImageMemory[i]);
+
         VkImageViewCreateInfo viewInfo{};
         viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewInfo.image = colorImage;
+        viewInfo.image = colorImages[i];
         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
         viewInfo.format = colorFormat;
-        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT; // Correct aspect mask for color image
-        viewInfo.subresourceRange.baseMipLevel = 0;
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         viewInfo.subresourceRange.levelCount = 1;
-        viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &colorImageView) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create texture image view!");
+        if (vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &colorImageViews[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create color image view!");
         }
     }
+}
 
 
     void SEOffscreenRenderer::createRenderPass() {
@@ -176,11 +222,11 @@ namespace se
         depthAttachment.format = seDevice.findDepthFormat();
         depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
         depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
         VkAttachmentReference depthAttachmentRef{};
         depthAttachmentRef.attachment = 1;
@@ -195,7 +241,7 @@ namespace se
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         VkAttachmentReference colorAttachmentRef = {};
         colorAttachmentRef.attachment = 0;
@@ -207,16 +253,23 @@ namespace se
         subpass.pColorAttachments = &colorAttachmentRef;
         subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-        VkSubpassDependency dependency = {};
-        dependency.dstSubpass = 0;
-        dependency.dstAccessMask =
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-        dependency.dstStageMask =
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.srcAccessMask = 0;
+        VkSubpassDependency dependency{};
+        dependency.srcSubpass = 0;
+        dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+
         dependency.srcStageMask =
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+
+        dependency.srcAccessMask =
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        dependency.dstStageMask =
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
+        dependency.dstAccessMask =
+            VK_ACCESS_SHADER_READ_BIT;
 
         std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
         VkRenderPassCreateInfo renderPassInfo = {};
@@ -234,20 +287,30 @@ namespace se
         }
     }
 
-    void SEOffscreenRenderer::createFramebuffer() {
-        std::array<VkImageView, 2> attachments = { colorImageView, depthImageView };
+    void SEOffscreenRenderer::createFramebuffers()
+    {
+        framebuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
-        VkFramebufferCreateInfo framebufferInfo{};
-        framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        framebufferInfo.renderPass = renderPass;
-        framebufferInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        framebufferInfo.pAttachments = attachments.data();
-        framebufferInfo.width = width;
-        framebufferInfo.height = height;
-        framebufferInfo.layers = 1;
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        {
+            std::array<VkImageView, 2> attachments = {
+                colorImageViews[i],
+                depthImageViews[i]
+            };
 
-        if (vkCreateFramebuffer(seDevice.device(), &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create offscreen framebuffer!");
+            VkFramebufferCreateInfo framebufferInfo{};
+            framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+            framebufferInfo.renderPass = renderPass;
+            framebufferInfo.attachmentCount = 2;
+            framebufferInfo.pAttachments = attachments.data();
+            framebufferInfo.width = width;
+            framebufferInfo.height = height;
+            framebufferInfo.layers = 1;
+
+            if (vkCreateFramebuffer(seDevice.device(), &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS)
+            {
+                throw std::runtime_error("Failed to create offscreen framebuffer!");
+            }
         }
     }
 
@@ -283,26 +346,119 @@ namespace se
 
     void SEOffscreenRenderer::createCommandBuffers()
     {
+        commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandPool = seDevice.getCommandPool();
         allocInfo.commandBufferCount = 1;
 
-        commandBuffers.resize(1);
-        if (vkAllocateCommandBuffers(seDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS)
+        for (auto& commandBuffer : commandBuffers)
         {
-            throw std::runtime_error("failed to allocate command buffers!");
+            if (vkAllocateCommandBuffers(seDevice.device(), &allocInfo, &commandBuffer) != VK_SUCCESS)
+            {
+                throw std::runtime_error("failed to allocate offscreen command buffer!");
+            }
         }
     }
 
     void SEOffscreenRenderer::freeCommandBuffers()
     {
-        vkFreeCommandBuffers(
-            seDevice.device(),
-            seDevice.getCommandPool(),
-            static_cast<uint32_t>(commandBuffers.size()),
-            commandBuffers.data());
+        for (auto& commandBuffer : commandBuffers)
+        {
+            vkFreeCommandBuffers(
+                seDevice.device(),
+                seDevice.getCommandPool(),
+                1,
+                &commandBuffer);
+        }
+
+        commandBuffers.clear();
+    }
+
+    VkCommandBuffer SEOffscreenRenderer::beginFrame() {
+        assert(!frameStarted && "Can't call beginOffscreenFrame while already in progress");
+        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+        // Get the current offscreen command buffer
+        auto commandBuffer = getCommandBuffer();
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+            throw std::runtime_error("failed to begin recording offscreen command buffer!");
+        }
+
+        frameStarted = true;
+        
+        return commandBuffer;
+    }
+    
+    void SEOffscreenRenderer::endFrame() {
+        assert(frameStarted && "Can't call endOffscreenFrame while frame is not in progress");
+        auto commandBuffer = getCommandBuffer();
+        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to record offscreen command buffer!");
+        }
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
+
+
+        VkResult result = vkQueueSubmit(seDevice.presentQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+        if (result != VK_SUCCESS) {
+            throw std::runtime_error("failed to submit offscreen command buffer!");
+        }
+
+        frameStarted = false;
+    }
+
+
+    void SEOffscreenRenderer::beginRenderPass(VkCommandBuffer commandBuffer)
+    {
+        assert(frameStarted && "Can't call beginOffscreenRenderPass if frame is not in progress");
+
+        // Begin the offscreen render pass (this is similar to beginSwapChainRenderPass)
+        VkRenderPassBeginInfo renderPassBeginInfo{};
+        renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        renderPassBeginInfo.renderPass = renderPass;
+        renderPassBeginInfo.framebuffer = getFramebuffer(currentFrame);
+        renderPassBeginInfo.renderArea.offset = { 0, 0 };
+        renderPassBeginInfo.renderArea.extent = { width, height };
+
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color = { 0.0f, 0.0f, 0.0f, 1.0f }; // Clear color for offscreen
+        clearValues[1].depthStencil = { 1.0f, 0 };
+        renderPassBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        renderPassBeginInfo.pClearValues = clearValues.data();
+
+        vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+        // Set up viewport and scissor
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = static_cast<float>(width);
+        viewport.height = static_cast<float>(height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
+        VkRect2D scissor{ {0, 0}, {width, height} };
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+    }
+
+    void SEOffscreenRenderer::endRenderPass(VkCommandBuffer commandBuffer)
+    {
+        assert(frameStarted && "Can't call endSwapChainRenderPass if frame is not in progress");
+        assert(
+            commandBuffer == getCommandBuffer() &&
+            "Can't end render pass on command buffer from a different frame");
+        vkCmdEndRenderPass(commandBuffer);
     }
 
 

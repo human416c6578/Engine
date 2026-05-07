@@ -92,8 +92,7 @@ vec3 getNormalFromMap(vec2 texCoords)
 {
     vec3 tangentNormal = texture(normalMap, texCoords).xyz * 2.0 - 1.0;
 
-    
-        return normalize(computeTBN() * tangentNormal);
+    return normalize(computeTBN() * tangentNormal);
 }
 
 // ----------------------------------------------------------------------------
@@ -208,7 +207,7 @@ void main()
 {
     vec2 texCoords = TexCoords;
 
-    if (flags.hasHeightMap != 0) 
+    if (flags.hasHeightMap != 0)
     {
         mat3 TBN = computeTBN();
         vec3 viewDir = normalize(ubo.camPos - WorldPos);

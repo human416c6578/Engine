@@ -4,6 +4,7 @@
 #include "engine/scene/se_gameobject.hpp"
 #include "engine/core/se_camera.hpp"
 #include "engine/renderer/se_pbr.hpp"
+#include "engine/renderer/se_postprocess.hpp"
 #include "engine/renderer/se_material_system.hpp"
 #include "engine/renderer/se_texture_system.hpp"
 #include "engine/renderer/se_mesh_system.hpp"
@@ -29,6 +30,7 @@ public:
         se::SEInputSystem::initialize(seWindow.getGLFWwindow());
 
 		PBR = std::make_unique<se::PBR>(seDevice, seRenderer.getSwapChainRenderPass(), seCubemap);
+        PostProcess = std::make_shared<se::SEPostProcess>(seDevice, seRenderer.getSwapChainRenderPass());
         MaterialSystem = std::make_shared<se::MaterialSystem>(seDevice, PBR->getPipelineLayout(), PBR->getPipeline(), PBR->getMaterialDescriptorSetLayout());
 		TextureSystem = std::make_shared<se::TextureSystem>(seDevice);
 		MeshSystem = std::make_shared<se::MeshSystem>(seDevice);
@@ -44,7 +46,7 @@ public:
         auto& mainScene = sceneManager->createScene("MainScene");
         sceneManager->setActiveScene("MainScene");
 
-		imguiManager.init(seDevice, seRenderer.getSwapChainRenderPass(), seWindow.getGLFWwindow(), ResourceManager.get());
+		imguiManager.init(seDevice, seRenderer.getSwapChainRenderPass(), seWindow.getGLFWwindow(), ResourceManager.get(), PostProcess.get());
     }
 
     ~App() {
@@ -69,6 +71,7 @@ private:
 
     std::unique_ptr<se::ResourceManager> ResourceManager;
     std::unique_ptr<se::PBR> PBR;
+    std::shared_ptr<se::SEPostProcess> PostProcess;
     std::shared_ptr<se::TextureSystem> TextureSystem;
     std::shared_ptr<se::MaterialSystem> MaterialSystem;
     std::shared_ptr<se::MeshSystem> MeshSystem;

@@ -44,12 +44,6 @@ namespace se
     void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
     void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
 
-    VkCommandBuffer beginOffscreenFrame();
-    void endOffscreenFrame();
-
-    void beginOffscreenRenderPass(VkCommandBuffer commandBuffer);
-    void endOffscreenRenderPass(VkCommandBuffer commandBuffer);
-
   private:
     void createCommandBuffers();
     void freeCommandBuffers();
@@ -64,6 +58,5 @@ namespace se
 
     uint32_t currentImageIndex;
     bool isFrameStarted{ false };
-    bool isOffscreenFrameStarted{ false };
   };
 }

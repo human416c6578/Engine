@@ -414,6 +414,74 @@ void se::ImGuiManager::renderPropertiesPanel()
 
 void se::ImGuiManager::renderGameObjectProperties()
 {
+    ImGui::Text("Depth of Field");
+
+    auto pp = postprocess->getSettings();
+
+    float focus      = pp.focusDistance;
+    float focusRange = pp.focusRange;
+    float blurScale  = pp.blurScale;
+    float maxBlur    = pp.maxBlur;
+
+    bool dofChanged = false;
+
+    dofChanged |= ImGui::SliderFloat("Focus Distance", &focus, 0.1f, 5.0f);
+    dofChanged |= ImGui::SliderFloat("Focus Range", &focusRange, 0.1f, 10.0f);
+    dofChanged |= ImGui::SliderFloat("Blur Scale", &blurScale, 0.5f, 5.0f);
+    dofChanged |= ImGui::SliderFloat("Max Blur", &maxBlur, 0.0f, 1.0f);
+
+    if (dofChanged)
+    {
+        pp.focusDistance = focus;
+        pp.focusRange    = focusRange;
+        pp.blurScale     = blurScale;
+        pp.maxBlur       = maxBlur;
+
+        postprocess->updateSettings(pp);
+    }
+
+    ImGui::Separator();
+
+    ImGui::Text("Fog");
+
+    bool fogChanged = false;
+
+    bool fogEnabled = (pp.enableFog != 0);
+
+    fogChanged |= ImGui::Checkbox("Enable Fog", &fogEnabled);
+    fogChanged |= ImGui::SliderFloat("Fog Start", &pp.fogStart, 0.1f, 20.0f);
+    fogChanged |= ImGui::SliderFloat("Fog End", &pp.fogEnd, 10.0f, 100.0f);
+    fogChanged |= ImGui::SliderFloat("Fog Intensity", &pp.fogIntensity, 0.0f, 2.0f);
+    fogChanged |= ImGui::ColorEdit3("Fog Color", pp.fogColor);
+
+    pp.enableFog = fogEnabled ? 1 : 0;
+
+    if (fogChanged)
+    {
+        postprocess->updateSettings(pp);
+    }
+
+    ImGui::Separator();
+
+    ImGui::Text("Tone Mapping");
+
+    bool toneChanged = false;
+
+    bool tonemapEnabled = (pp.enableTonemap != 0);
+
+    toneChanged |= ImGui::Checkbox("Enable Tonemap", &tonemapEnabled);
+    toneChanged |= ImGui::SliderFloat("Exposure", &pp.exposure, 0.1f, 3.0f);
+
+    pp.enableTonemap = tonemapEnabled ? 1 : 0;
+
+    if (toneChanged)
+    {
+        postprocess->updateSettings(pp);
+    }
+
+
+    ImGui::Separator();
+
     auto scene = sceneManager->getActiveScene();
     std::list<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
 
@@ -1063,13 +1131,14 @@ void se::ImGuiManager::renderScriptSelector(
 }
 
 
-void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, se::ResourceManager* resourceManager)
+void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, se::ResourceManager* resourceManager, se::SEPostProcess* postprocess)
 {
     sceneManager = &se::SceneManager::getInstance();
 
     this->window = window;
     this->renderPass = renderPass;
     this->resourceManager = resourceManager;
+    this->postprocess = postprocess;
     // Create ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

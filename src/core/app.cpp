@@ -18,6 +18,8 @@ void App::mainLoop()
 
     glfwSetInputMode(seWindow.getGLFWwindow(), GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
+    se::SEOffscreenRenderer* offscreenRenderer = seRenderer.getOffscreenRenderer();
+
     while (!seWindow.shouldClose())
     {
         glfwPollEvents();
@@ -60,13 +62,36 @@ void App::mainLoop()
         auto& gameObjects = scene->getGameObjects();
         scene->onUpdate(frameTime);
 
+        if(seWindow.wasWindowResized())
+        {
+            auto extent = seWindow.getFramebufferExtent();
+            offscreenRenderer->resize(extent.width, extent.height);
+        }
+
+        if (auto commandBuffer = offscreenRenderer->beginFrame())
+        {
+            offscreenRenderer->beginRenderPass(commandBuffer);
+
+            PBR->renderCubeMap(commandBuffer);
+
+            PBR->renderGameObjects(commandBuffer, gameObjects, offscreenRenderer->getCurrentFrame());
+
+            offscreenRenderer->endRenderPass(commandBuffer);
+            offscreenRenderer->endFrame();
+        }
+
         if (auto commandBuffer = seRenderer.beginFrame())
         {
             seRenderer.beginSwapChainRenderPass(commandBuffer);
 
-            PBR->renderGameObjects(commandBuffer, gameObjects, seRenderer.getFrameIndex());
-            PBR->renderCubeMap(commandBuffer);
+            //PBR->renderGameObjects(commandBuffer, gameObjects, seRenderer.getFrameIndex());
 
+            PostProcess->setInput(
+                offscreenRenderer->getColorImageView(offscreenRenderer->getCurrentFrame()),
+                offscreenRenderer->getDepthImageView(offscreenRenderer->getCurrentFrame())
+            );
+            PostProcess->render(commandBuffer);
+            
             imguiManager.newFrame();
             imguiManager.render(commandBuffer);
 

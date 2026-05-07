@@ -2,6 +2,7 @@
 #include "engine/core/se_device.hpp"
 #include "engine/core/se_window.hpp"
 #include "engine/renderer/se_renderer.hpp"
+#include "engine/renderer/se_postprocess.hpp"
 #include "engine/scene/se_gameobject.hpp"
 #include "engine/resources/se_resource_manager.hpp"
 #include "engine/scene/se_scene_manager.hpp"
@@ -19,7 +20,7 @@ namespace se
         ImGuiManager() = default;
         ~ImGuiManager() = default;
 
-        void init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, se::ResourceManager* resourceManager);
+        void init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, se::ResourceManager* resourceManager, se::SEPostProcess* postprocess);
 
         void newFrame();
         void render(VkCommandBuffer commandBuffer);
@@ -71,6 +72,7 @@ namespace se
         // Data references
         se::ResourceManager* resourceManager{ nullptr };
         se::SceneManager* sceneManager{ nullptr };
+        se::SEPostProcess* postprocess{ nullptr };
 
         // Selection state
         int selectedGameObjectIndex = -1;

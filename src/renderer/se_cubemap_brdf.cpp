@@ -175,14 +175,14 @@ namespace se
 		ubo.cameraPos = viewerObject.getTransform().translation;
 
 		seDevice.updateUniformBuffers(ubo);
-		if (auto commandBuffer = seRenderer.beginOffscreenFrame())
+		if (auto commandBuffer = offscreenRenderer->beginFrame())
 		{
-			seRenderer.beginOffscreenRenderPass(commandBuffer);
+			offscreenRenderer->beginRenderPass(commandBuffer);
 
 			draw(commandBuffer);
 
-			seRenderer.endOffscreenRenderPass(commandBuffer);
-			seRenderer.endOffscreenFrame();
+			offscreenRenderer->endRenderPass(commandBuffer);
+			offscreenRenderer->endFrame();
 
 			// Copy from offscreen render target to cube map image
 			VkCommandBuffer cmdBuffer = seDevice.beginSingleTimeCommands();
@@ -193,7 +193,7 @@ namespace se
 			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.image = offscreenRenderer->getColorImage();
+			barrier.image = offscreenRenderer->getColorImage(offscreenRenderer->getCurrentFrame());
 			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			barrier.subresourceRange.baseMipLevel = 0;
 			barrier.subresourceRange.levelCount = 1;
@@ -253,7 +253,7 @@ namespace se
 
 			vkCmdCopyImage(
 				cmdBuffer,
-				offscreenRenderer->getColorImage(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				offscreenRenderer->getColorImage(offscreenRenderer->getCurrentFrame()), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				BRDFImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				1, &region
 			);

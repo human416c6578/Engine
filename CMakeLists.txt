@@ -46,6 +46,7 @@ file(GLOB_RECURSE ENGINE_SOURCES
 add_executable(EngineApp
     ${ENGINE_SOURCES}
     ${IMGUI_SOURCES}
+    src/renderer/se_postprocess.cpp
 )
 
 # GLSL → SPIR-V compilation
