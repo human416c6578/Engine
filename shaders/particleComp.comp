@@ -1,0 +1,384 @@
+// particle.comp
+#version 450
+
+layout(local_size_x = 256) in;
+
+#define MAX_FORCES_PER_EMITTER 8
+
+const uint FORCE_DIRECTIONAL = 0;
+const uint FORCE_POINT = 1;
+const uint FORCE_VORTEX = 2;
+const uint FORCE_TURBULENCE = 3;
+const uint FORCE_DRAG = 4;
+
+const uint VOLUME_POINT = 0;
+const uint VOLUME_SPHERE = 1;
+const uint VOLUME_BOX = 2;
+const uint VOLUME_CONE = 3;
+const uint VOLUME_RING = 4;
+
+struct SpawnVolume
+{
+    vec4 position;
+    vec4 extents;
+    vec4 direction;
+    uint type;
+    float _pad0;
+    float _pad1;
+    float _pad2;
+};
+
+struct Force
+{
+    vec4 position;
+    vec4 direction;
+
+    float strength;
+    float radius;
+    float falloff;
+    uint type;
+
+    uint force_active;
+    float _pad0;
+    float _pad1;
+    float _pad2;
+};
+
+struct Emitter
+{
+    uint id;
+    uint emitter_active;
+    float _pad0;
+    float _pad1;
+
+    SpawnVolume volume;
+
+    vec4 direction;
+
+    float speedMin;
+    float speedMax;
+
+    float lifetimeMin;
+    float lifetimeMax;
+
+    vec4 colorStart;
+    vec4 colorEnd;
+
+    float sizeStart;
+    float sizeEnd;
+    float emitRate;
+
+    uint forceIndices[MAX_FORCES_PER_EMITTER];
+    uint forceCount;
+
+    float _pad2;
+    float _pad3;
+    float _pad4;
+};
+
+struct Particle
+{
+    vec4 position; // xyz pos, w remaining lifetime
+    vec4 velocity; // xyz vel, w total lifetime
+
+    vec4 colorStart;
+    vec4 colorEnd;
+
+    float sizeStart;
+    float sizeEnd;
+
+    uint emitterID;
+    float _pad;
+};
+
+struct ParticleFrameUBO
+{
+    float deltaTime;
+    float totalTime;
+
+    uint particleCount;
+    uint emitterCount;
+    uint forceCount;
+
+    float _pad0;
+    float _pad1;
+    float _pad2;
+};
+
+layout(std430, binding = 0) buffer ParticleBuffer
+{
+    Particle particles[];
+};
+
+layout(std430, binding = 1) readonly buffer EmitterBuffer
+{
+    Emitter emitters[];
+};
+
+layout(std430, binding = 2) readonly buffer ForceBuffer
+{
+    Force forces[];
+};
+
+layout(std140, binding = 3) uniform FrameUBO
+{
+    ParticleFrameUBO frame;
+};
+
+uint wangHash(uint seed)
+{
+    seed = (seed ^ 61u) ^ (seed >> 16u);
+    seed *= 9u;
+    seed = seed ^ (seed >> 4u);
+    seed *= 0x27d4eb2du;
+    seed = seed ^ (seed >> 15u);
+    return seed;
+}
+
+float rand(inout uint seed)
+{
+    seed = wangHash(seed);
+    return float(seed) / float(0xffffffffu);
+}
+
+vec3 randomUnitVector(inout uint seed)
+{
+    float z = rand(seed) * 2.0 - 1.0;
+    float a = rand(seed) * 6.2831853;
+
+    float r = sqrt(1.0 - z * z);
+
+    return vec3(r * cos(a), r * sin(a), z);
+}
+
+vec3 spawnPosition(SpawnVolume volume, inout uint seed)
+{
+    vec3 center = volume.position.xyz;
+
+    switch (volume.type)
+    {
+        case VOLUME_POINT:
+        {
+            return center;
+        }
+
+        case VOLUME_SPHERE:
+        {
+            vec3 dir = randomUnitVector(seed);
+            float r = pow(rand(seed), 1.0 / 3.0) * volume.extents.x;
+            return center + dir * r;
+        }
+
+        case VOLUME_BOX:
+        {
+            vec3 e = volume.extents.xyz;
+
+            return center + vec3(
+                    (rand(seed) * 2.0 - 1.0) * e.x,
+                    (rand(seed) * 2.0 - 1.0) * e.y,
+                    (rand(seed) * 2.0 - 1.0) * e.z
+                );
+        }
+
+        case VOLUME_CONE:
+        {
+            vec3 axis = normalize(volume.direction.xyz);
+
+            float h = rand(seed) * volume.extents.y;
+            float r = rand(seed) * volume.extents.x;
+
+            vec3 tangent =
+                abs(axis.y) < 0.99
+                ? normalize(cross(axis, vec3(0, 1, 0))) : normalize(cross(axis, vec3(1, 0, 0)));
+
+            vec3 bitangent = cross(axis, tangent);
+
+            float angle = rand(seed) * 6.2831853;
+
+            vec2 circle = vec2(cos(angle), sin(angle)) * r;
+
+            return center
+                + axis * h
+                + tangent * circle.x
+                + bitangent * circle.y;
+        }
+
+        case VOLUME_RING:
+        {
+            float innerR = volume.extents.x;
+            float outerR = volume.extents.y;
+
+            float r = mix(innerR, outerR, rand(seed));
+            float a = rand(seed) * 6.2831853;
+
+            return center + vec3(cos(a) * r, 0.0, sin(a) * r);
+        }
+    }
+
+    return center;
+}
+
+vec3 spawnVelocity(Emitter emitter, inout uint seed)
+{
+    vec3 baseDir = normalize(emitter.direction.xyz);
+
+    vec3 randDir = randomUnitVector(seed);
+
+    float spread = emitter.direction.w;
+
+    vec3 dir = normalize(mix(baseDir, randDir, spread));
+
+    float speed = mix(
+            emitter.speedMin,
+            emitter.speedMax,
+            rand(seed));
+
+    return dir * speed;
+}
+
+vec3 evaluateForce(Force force, vec3 position, vec3 velocity)
+{
+    if (force.force_active == 0)
+        return vec3(0.0);
+
+    vec3 result = vec3(0.0);
+
+    switch (force.type)
+    {
+        case FORCE_DIRECTIONAL:
+        {
+            result = normalize(force.direction.xyz) * force.strength;
+            break;
+        }
+
+        case FORCE_POINT:
+        {
+            vec3 toCenter = force.position.xyz - position;
+
+            float dist = length(toCenter);
+
+            if (force.radius <= 0.0 || dist < force.radius)
+            {
+                float attenuation = 1.0;
+
+                if (force.radius > 0.0)
+                {
+                    float t = clamp(dist / force.radius, 0.0, 1.0);
+
+                    attenuation =
+                        (force.falloff == 0.0) ? 1.0 :
+                        (force.falloff == 1.0) ? (1.0 - t) :
+                        (1.0 - t * t);
+                }
+
+                result = normalize(toCenter)
+                        * force.strength
+                        * attenuation;
+            }
+
+            break;
+        }
+
+        case FORCE_VORTEX:
+        {
+            vec3 axis = normalize(force.direction.xyz);
+
+            vec3 rel = position - force.position.xyz;
+
+            vec3 tangent = cross(axis, rel);
+
+            result = normalize(tangent) * force.strength;
+            break;
+        }
+
+        case FORCE_TURBULENCE:
+        {
+            float n =
+                sin(position.x * 12.1 + frame.totalTime) *
+                    cos(position.y * 9.3 + frame.totalTime) *
+                    sin(position.z * 7.7);
+
+            result = normalize(vec3(n, n * 0.5, -n))
+                    * force.strength;
+
+            break;
+        }
+
+        case FORCE_DRAG:
+        {
+            result = -velocity * force.strength;
+            break;
+        }
+    }
+
+    return result;
+}
+
+void main()
+{
+    uint index = gl_GlobalInvocationID.x;
+
+    if (index >= frame.particleCount)
+        return;
+
+    Particle p = particles[index];
+
+    uint halfcount = frame.particleCount / 2;
+    uint emitterIndex = (index < halfcount) ? 0u : 1u;
+
+    Emitter emitter = emitters[emitterIndex];
+
+    if (p.position.w <= 0.0)
+    {
+        if (emitter.emitter_active == 0)
+            return;
+
+        uint seed =
+            uint(frame.totalTime * 1000.0)
+                + index * 9781u;
+
+        vec3 pos = spawnPosition(emitter.volume, seed);
+        vec3 vel = spawnVelocity(emitter, seed);
+
+        float lifetime = mix(
+                emitter.lifetimeMin,
+                emitter.lifetimeMax,
+                rand(seed));
+
+        p.position = vec4(pos, lifetime);
+        p.velocity = vec4(vel, lifetime);
+
+        p.colorStart = emitter.colorStart;
+        p.colorEnd = emitter.colorEnd;
+
+        p.sizeStart = emitter.sizeStart;
+        p.sizeEnd = emitter.sizeEnd;
+
+        p.emitterID = emitterIndex;
+
+        particles[index] = p;
+        return;
+    }
+
+    vec3 acceleration = vec3(0.0);
+
+    for (uint i = 0; i < emitter.forceCount; ++i)
+    {
+        uint forceIndex = emitter.forceIndices[i];
+
+        if (forceIndex == 0xffffffffu)
+            continue;
+
+        acceleration += evaluateForce(
+                forces[forceIndex],
+                p.position.xyz,
+                p.velocity.xyz);
+    }
+
+    p.velocity.xyz += acceleration * frame.deltaTime;
+    p.position.xyz += p.velocity.xyz * frame.deltaTime;
+
+    p.position.w -= frame.deltaTime;
+
+    particles[index] = p;
+}
