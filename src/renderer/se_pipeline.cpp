@@ -14,16 +14,37 @@ namespace se
         createGraphicsPipeline(vertFilepath, fragFilepath, configInfo);
     }
 
+    SEPipeline::SEPipeline(
+        SEDevice& device,
+        const std::string& compFilepath,
+        VkPipelineLayout computePipelineLayout)
+        : seDevice{ device }
+    {
+        createComputePipeline(compFilepath, computePipelineLayout);
+    }
+
     SEPipeline::~SEPipeline()
     {
-        vkDestroyShaderModule(seDevice.device(), vertShaderModule, nullptr);
-        vkDestroyShaderModule(seDevice.device(), fragShaderModule, nullptr);
-        vkDestroyPipeline(seDevice.device(), graphicsPipeline, nullptr);
+        if (vertShaderModule != VK_NULL_HANDLE)
+            vkDestroyShaderModule(seDevice.device(), vertShaderModule, nullptr);
+        if (fragShaderModule != VK_NULL_HANDLE)
+            vkDestroyShaderModule(seDevice.device(), fragShaderModule, nullptr);
+        if (compShaderModule != VK_NULL_HANDLE)
+            vkDestroyShaderModule(seDevice.device(), compShaderModule, nullptr);
+        if (graphicsPipeline != VK_NULL_HANDLE)
+            vkDestroyPipeline(seDevice.device(), graphicsPipeline, nullptr);
+        if (computePipeline != VK_NULL_HANDLE)
+            vkDestroyPipeline(seDevice.device(), computePipeline, nullptr);
     }
 
     void SEPipeline::bind(VkCommandBuffer commandBuffer)
     {
         vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+    }
+
+    void SEPipeline::bindCompute(VkCommandBuffer commandBuffer)
+    {
+        vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computePipeline);
     }
 
     void SEPipeline::defaultPipelineConfigInfo(PipelineConfigInfo &configInfo)
@@ -97,6 +118,38 @@ namespace se
         configInfo.dynamicStateInfo.dynamicStateCount =
             static_cast<uint32_t>(configInfo.dynamicStateEnables.size());
         configInfo.dynamicStateInfo.flags = 0;
+
+        configInfo.bindingDescriptions   = Vertex::getBindingDescriptions();
+        configInfo.attributeDescriptions = Vertex::getAttributeDescriptions();
+    }
+
+    void SEPipeline::particlePipelineConfigInfo(PipelineConfigInfo& configInfo)
+    {
+        defaultPipelineConfigInfo(configInfo);
+
+        configInfo.inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+
+        configInfo.bindingDescriptions.clear();
+        configInfo.attributeDescriptions.clear();
+
+        configInfo.colorBlendAttachment.blendEnable         = VK_TRUE;
+        configInfo.colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        configInfo.colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;         // additive
+        configInfo.colorBlendAttachment.colorBlendOp        = VK_BLEND_OP_ADD;
+        configInfo.colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        configInfo.colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        configInfo.colorBlendAttachment.alphaBlendOp        = VK_BLEND_OP_ADD;
+
+        configInfo.depthStencilInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        configInfo.depthStencilInfo.depthTestEnable = VK_TRUE;
+        configInfo.depthStencilInfo.depthWriteEnable = VK_FALSE;
+        configInfo.depthStencilInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+        configInfo.depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
+        configInfo.depthStencilInfo.minDepthBounds = 0.0f; // Optional
+        configInfo.depthStencilInfo.maxDepthBounds = 1.0f; // Optional
+        configInfo.depthStencilInfo.stencilTestEnable = VK_FALSE;
+        configInfo.depthStencilInfo.front = {}; // Optional
+        configInfo.depthStencilInfo.back = {};  // Optional
     }
 
     static std::vector<char> readFile(const std::string &filepath)
@@ -173,6 +226,11 @@ namespace se
         const std::string &fragFilepath,
         const PipelineConfigInfo &configInfo)
     {
+        printf("[Pipeline] creating: %s | bindings: %zu | attribs: %zu | topology: %d\n",
+            vertFilepath.c_str(),
+            configInfo.bindingDescriptions.size(),
+            configInfo.attributeDescriptions.size(),
+            configInfo.inputAssemblyInfo.topology);
         assert(
             configInfo.pipelineLayout != VK_NULL_HANDLE &&
             "Cannot create graphics pipeline: no pipelineLayout provided in configInfo");
@@ -202,15 +260,12 @@ namespace se
         shaderStages[1].pNext = nullptr;
         shaderStages[1].pSpecializationInfo = nullptr;
 
-        auto bindingDescriptions = Vertex::getBindingDescriptions();
-        auto attributeDescriptions = Vertex::getAttributeDescriptions();
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-        vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexAttributeDescriptionCount =
-            static_cast<uint32_t>(attributeDescriptions.size());
-        vertexInputInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(bindingDescriptions.size());
-        vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-        vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data();
+        vertexInputInfo.sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+        vertexInputInfo.vertexBindingDescriptionCount   = static_cast<uint32_t>(configInfo.bindingDescriptions.size());
+        vertexInputInfo.pVertexBindingDescriptions      = configInfo.bindingDescriptions.data();
+        vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(configInfo.attributeDescriptions.size());
+        vertexInputInfo.pVertexAttributeDescriptions    = configInfo.attributeDescriptions.data();
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -242,6 +297,36 @@ namespace se
         {
             throw std::runtime_error("failed to create graphics pipeline");
         }
+    }
+
+    void SEPipeline::createComputePipeline(
+        const std::string& compFilepath,
+        VkPipelineLayout layout)
+    {
+        assert(layout != VK_NULL_HANDLE &&
+            "Cannot create compute pipeline: no pipelineLayout provided");
+
+        auto compCode = readFile(compFilepath);
+        createShaderModule(compCode, &compShaderModule);
+
+        VkPipelineShaderStageCreateInfo stageInfo{};
+        stageInfo.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stageInfo.stage  = VK_SHADER_STAGE_COMPUTE_BIT;
+        stageInfo.module = compShaderModule;
+        stageInfo.pName  = "main";
+
+        VkComputePipelineCreateInfo pipelineInfo{};
+        pipelineInfo.sType  = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+        pipelineInfo.stage  = stageInfo;
+        pipelineInfo.layout = layout;
+
+        if (vkCreateComputePipelines(
+                seDevice.device(),
+                VK_NULL_HANDLE,
+                1, &pipelineInfo,
+                nullptr,
+                &computePipeline) != VK_SUCCESS)
+            throw std::runtime_error("Failed to create compute pipeline!");
     }
 
     void SEPipeline::createShaderModule(const std::vector<char> &code, VkShaderModule *shaderModule)

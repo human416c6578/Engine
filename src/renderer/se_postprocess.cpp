@@ -48,6 +48,9 @@ namespace se
 		config.depthStencilInfo.depthTestEnable = VK_FALSE;
 		config.depthStencilInfo.depthWriteEnable = VK_FALSE;
 
+		config.bindingDescriptions.clear();
+		config.attributeDescriptions.clear();
+
 		pipeline = std::make_unique<SEPipeline>(
 			seDevice,
 			"shaders/postprocessVert.spv",

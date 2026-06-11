@@ -107,9 +107,20 @@ void main()
 	{
 		float fogFactor = computeFogFactor(linearDepth);
 
+		float skyMask = smoothstep(0.995, 1.0, linearDepth);
+
+		if (pp.enableFog != 0)
+		{
+			float fogFactor = computeFogFactor(linearDepth);
+
+			vec3 fogColor = pp.fogColor;
+
+			finalColor = mix(finalColor, fogColor, fogFactor);
+		}
+
 		vec3 fogColor = pp.fogColor;
 
-		finalColor = mix(finalColor, fogColor, fogFactor);
+		finalColor = mix(finalColor, pp.fogColor, fogFactor);
 	}
 
 	if(pp.enableTonemap != 0)

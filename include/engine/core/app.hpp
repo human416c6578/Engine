@@ -4,6 +4,7 @@
 #include "engine/scene/se_gameobject.hpp"
 #include "engine/core/se_camera.hpp"
 #include "engine/renderer/se_pbr.hpp"
+#include "engine/renderer/se_particle_system.hpp"
 #include "engine/renderer/se_postprocess.hpp"
 #include "engine/renderer/se_material_system.hpp"
 #include "engine/renderer/se_texture_system.hpp"
@@ -29,7 +30,8 @@ public:
     {
         se::SEInputSystem::initialize(seWindow.getGLFWwindow());
 
-		PBR = std::make_unique<se::PBR>(seDevice, seRenderer.getSwapChainRenderPass(), seCubemap);
+		PBR = std::make_unique<se::PBR>(seDevice, seRenderer.getOffscreenRenderer()->getRenderPass(), seCubemap);
+        ParticleSystem = std::make_unique<se::ParticleSystem>(seDevice, seRenderer.getOffscreenRenderer()->getRenderPass());
         PostProcess = std::make_shared<se::SEPostProcess>(seDevice, seRenderer.getSwapChainRenderPass());
         MaterialSystem = std::make_shared<se::MaterialSystem>(seDevice, PBR->getPipelineLayout(), PBR->getPipeline(), PBR->getMaterialDescriptorSetLayout());
 		TextureSystem = std::make_shared<se::TextureSystem>(seDevice);
@@ -67,10 +69,11 @@ private:
     se::SEWindow seWindow{ WIDTH, HEIGHT, "Vulkan" };
     se::SEDevice seDevice{ seWindow };
     se::SERenderer seRenderer{ seWindow, seDevice };
-    se::SECubemap seCubemap{ seDevice, seRenderer, "assets/hdr/rostock_laage_airport_2k.hdr" };
+    se::SECubemap seCubemap{ seDevice, seRenderer, "assets/hdr/snowy_forest_4k.hdr" };
 
     std::unique_ptr<se::ResourceManager> ResourceManager;
     std::unique_ptr<se::PBR> PBR;
+    std::unique_ptr<se::ParticleSystem> ParticleSystem;
     std::shared_ptr<se::SEPostProcess> PostProcess;
     std::shared_ptr<se::TextureSystem> TextureSystem;
     std::shared_ptr<se::MaterialSystem> MaterialSystem;

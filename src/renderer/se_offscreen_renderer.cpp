@@ -253,23 +253,28 @@ namespace se
         subpass.pColorAttachments = &colorAttachmentRef;
         subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-        VkSubpassDependency dependency{};
-        dependency.srcSubpass = 0;
-        dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
+        VkSubpassDependency dependencyEnd{};
+        dependencyEnd.srcSubpass    = 0;
+        dependencyEnd.dstSubpass    = VK_SUBPASS_EXTERNAL;
+        dependencyEnd.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                                    VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        dependencyEnd.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                                    VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        dependencyEnd.dstStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependencyEnd.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-        dependency.srcStageMask =
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-            VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        VkSubpassDependency dependencyStart{};
+        dependencyStart.srcSubpass    = VK_SUBPASS_EXTERNAL;
+        dependencyStart.dstSubpass    = 0;
+        dependencyStart.srcStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        dependencyStart.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        dependencyStart.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependencyStart.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-        dependency.srcAccessMask =
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-        dependency.dstStageMask =
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        std::array<VkSubpassDependency, 2> dependencies = { dependencyStart, dependencyEnd };
 
-        dependency.dstAccessMask =
-            VK_ACCESS_SHADER_READ_BIT;
 
         std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
         VkRenderPassCreateInfo renderPassInfo = {};
@@ -278,8 +283,8 @@ namespace se
         renderPassInfo.pAttachments = attachments.data();
         renderPassInfo.subpassCount = 1;
         renderPassInfo.pSubpasses = &subpass;
-        renderPassInfo.dependencyCount = 1;
-        renderPassInfo.pDependencies = &dependency;
+        renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+        renderPassInfo.pDependencies   = dependencies.data();
 
         if (vkCreateRenderPass(seDevice.device(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
         {

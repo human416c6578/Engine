@@ -14,11 +14,17 @@ void App::mainLoop()
     static auto currentTime = std::chrono::high_resolution_clock::now();
 
     static auto lastTime = std::chrono::high_resolution_clock::now();
+    static float totalTime = 0.f;
     static int fps = 0;
 
     glfwSetInputMode(seWindow.getGLFWwindow(), GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
     se::SEOffscreenRenderer* offscreenRenderer = seRenderer.getOffscreenRenderer();
+
+    //auto snow = ParticleSystem->makeSnow(glm::vec3(0.0f, -5.0f, 0.0f), glm::vec3(20.0f, 2.0f, 20.0f));
+    auto rain = ParticleSystem->makeRain(glm::vec3(0.0f, -5.0f, 0.0f), glm::vec3(5.0f, 2.0f, 5.0f));
+    //auto& emitter = ParticleSystem->getEmitter(rain.emitter);
+    //auto blackhole = ParticleSystem->makeBlackHole(glm::vec3(0.0f, 0.0f, 0.0f), 10.0f);
 
     while (!seWindow.shouldClose())
     {
@@ -35,8 +41,9 @@ void App::mainLoop()
         }
 
         auto newTime = std::chrono::high_resolution_clock::now();
-        float frameTime =
-            std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
+        float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
+
+        totalTime += frameTime;
         currentTime = newTime;
         se::TransformComponent transform = sceneManager->getCamera().getTransform();
         cameraController.moveInPlaneXZ(seWindow.getGLFWwindow(), frameTime, transform);
@@ -67,14 +74,25 @@ void App::mainLoop()
             auto extent = seWindow.getFramebufferExtent();
             offscreenRenderer->resize(extent.width, extent.height);
         }
-
+        int frame = 0;
         if (auto commandBuffer = offscreenRenderer->beginFrame())
         {
             offscreenRenderer->beginRenderPass(commandBuffer);
 
+            frame = offscreenRenderer->getCurrentFrame();
+
+            ParticleSystem->update(commandBuffer, frame, frameTime, totalTime);
+
             PBR->renderCubeMap(commandBuffer);
 
-            PBR->renderGameObjects(commandBuffer, gameObjects, offscreenRenderer->getCurrentFrame());
+            PBR->renderGameObjects(commandBuffer, gameObjects, frame);
+
+            ParticleSystem->render(
+                commandBuffer,
+                frame,
+                sceneManager->getCamera().getProjection() *
+                sceneManager->getCamera().getView()
+            );
 
             offscreenRenderer->endRenderPass(commandBuffer);
             offscreenRenderer->endFrame();
@@ -87,11 +105,11 @@ void App::mainLoop()
             //PBR->renderGameObjects(commandBuffer, gameObjects, seRenderer.getFrameIndex());
 
             PostProcess->setInput(
-                offscreenRenderer->getColorImageView(offscreenRenderer->getCurrentFrame()),
-                offscreenRenderer->getDepthImageView(offscreenRenderer->getCurrentFrame())
+                 offscreenRenderer->getColorImageView(frame),
+                 offscreenRenderer->getDepthImageView(frame)
             );
             PostProcess->render(commandBuffer);
-            
+
             imguiManager.newFrame();
             imguiManager.render(commandBuffer);
 

@@ -10,7 +10,6 @@ namespace se
 		se::SESubMesh::Builder builder = createCubeModel({ 0, 0, 0 });
 		cubeMesh = std::make_unique<se::SESubMesh>(seDevice, builder);
 
-
 		createDescriptorSetLayout();
 		createDescriptorSets();
 		createPipelineLayout();
@@ -178,6 +177,37 @@ namespace se
 		if (vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &irradianceImageView) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to create cubemap image view!");
 		}
+
+		VkCommandBuffer cmd = seDevice.beginSingleTimeCommands();
+
+		VkImageMemoryBarrier initBarrier{};
+		initBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		initBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		initBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		initBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		initBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		initBarrier.image = irradianceImage;
+
+		initBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		initBarrier.subresourceRange.baseMipLevel = 0;
+		initBarrier.subresourceRange.levelCount = maxMipLevels;
+		initBarrier.subresourceRange.baseArrayLayer = 0;
+		initBarrier.subresourceRange.layerCount = 6;
+
+		initBarrier.srcAccessMask = 0;
+		initBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+		vkCmdPipelineBarrier(
+			cmd,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &initBarrier
+		);
+
+		seDevice.endSingleTimeCommands(cmd);
 	}
 
 	void SECubemapSpecular::draw(VkCommandBuffer commandBuffer)
@@ -241,10 +271,10 @@ namespace se
 
 					draw(commandBuffer);
 
+					int frame = offscreenRenderer->getCurrentFrame();
+
 					offscreenRenderer->endRenderPass(commandBuffer);
 					offscreenRenderer->endFrame();
-
-		
 
 					// Copy from offscreen render target to cube map image
 					VkCommandBuffer cmdBuffer = seDevice.beginSingleTimeCommands();
@@ -255,14 +285,14 @@ namespace se
 					barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 					barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 					barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-					barrier.image = offscreenRenderer->getColorImage(offscreenRenderer->getCurrentFrame());
+					barrier.image = offscreenRenderer->getColorImage(frame);
 					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 					barrier.subresourceRange.baseMipLevel = 0;
 					barrier.subresourceRange.levelCount = 1;
 					barrier.subresourceRange.baseArrayLayer = 0;
 					barrier.subresourceRange.layerCount = 1;
 					barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-					barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+					barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
 					vkCmdPipelineBarrier(
 						cmdBuffer,
@@ -272,31 +302,6 @@ namespace se
 						0, nullptr,
 						0, nullptr,
 						1, &barrier
-					);
-
-					VkImageMemoryBarrier dstBarrier{};
-					dstBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-					dstBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-					dstBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					dstBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-					dstBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-					dstBarrier.image = irradianceImage;
-					dstBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					dstBarrier.subresourceRange.baseMipLevel = mip;
-					dstBarrier.subresourceRange.levelCount = 1;
-					dstBarrier.subresourceRange.baseArrayLayer = i;
-					dstBarrier.subresourceRange.layerCount = 1;
-					dstBarrier.srcAccessMask = 0; // No previous access
-					dstBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; // Preparing for transfer write
-
-					vkCmdPipelineBarrier(
-						cmdBuffer,
-						VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, // No previous stages
-						VK_PIPELINE_STAGE_TRANSFER_BIT,    // Transfer stage
-						0,
-						0, nullptr,
-						0, nullptr,
-						1, &dstBarrier
 					);
 
 					VkImageCopy region{};
@@ -315,45 +320,74 @@ namespace se
 
 					vkCmdCopyImage(
 						cmdBuffer,
-						offscreenRenderer->getColorImage(offscreenRenderer->getCurrentFrame()), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+						offscreenRenderer->getColorImage(frame), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 						irradianceImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 						1, &region
 					);
 
+					VkImageMemoryBarrier restoreBarrier{};
+					restoreBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+					restoreBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+					restoreBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+					restoreBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+					restoreBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+					restoreBarrier.image = offscreenRenderer->getColorImage(frame);
 
-					// Transition the cubemap face to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-					VkImageMemoryBarrier cubemapBarrier{};
-					cubemapBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-					cubemapBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-					cubemapBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-					cubemapBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-					cubemapBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-					cubemapBarrier.image = irradianceImage;
-					cubemapBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					cubemapBarrier.subresourceRange.baseMipLevel = mip;
-					cubemapBarrier.subresourceRange.levelCount = 1;
-					cubemapBarrier.subresourceRange.baseArrayLayer = i;
-					cubemapBarrier.subresourceRange.layerCount = 1;
-					cubemapBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-					cubemapBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+					restoreBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+					restoreBarrier.subresourceRange.baseMipLevel = 0;
+					restoreBarrier.subresourceRange.levelCount = 1;
+					restoreBarrier.subresourceRange.baseArrayLayer = 0;
+					restoreBarrier.subresourceRange.layerCount = 1;
+
+					restoreBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+					restoreBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
 					vkCmdPipelineBarrier(
 						cmdBuffer,
 						VK_PIPELINE_STAGE_TRANSFER_BIT,
-						VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 						0,
 						0, nullptr,
 						0, nullptr,
-						1, &cubemapBarrier
+						1, &restoreBarrier
 					);
-
 
 					seDevice.endSingleTimeCommands(cmdBuffer);
 				}
-
 			}
 
 		}
+
+		VkCommandBuffer finalCmd = seDevice.beginSingleTimeCommands();
+
+		VkImageMemoryBarrier finalBarrier{};
+		finalBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		finalBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		finalBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		finalBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		finalBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		finalBarrier.image = irradianceImage;
+
+		finalBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		finalBarrier.subresourceRange.baseMipLevel = 0;
+		finalBarrier.subresourceRange.levelCount = maxMipLevels;
+		finalBarrier.subresourceRange.baseArrayLayer = 0;
+		finalBarrier.subresourceRange.layerCount = 6;
+
+		finalBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		finalBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		vkCmdPipelineBarrier(
+			finalCmd,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &finalBarrier
+		);
+
+		seDevice.endSingleTimeCommands(finalCmd);
 
 		createSampler();
 
