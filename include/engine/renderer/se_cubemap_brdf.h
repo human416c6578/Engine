@@ -12,9 +12,12 @@ namespace se
 	public:
 		SECubemapBRDF(SEDevice& device, SERenderer& renderer);
 
-		~SECubemapBRDF()
-		{
-		}
+		~SECubemapBRDF();
+
+		SECubemapBRDF(const SECubemapBRDF &) = delete;
+		SECubemapBRDF &operator=(const SECubemapBRDF &) = delete;
+		SECubemapBRDF(SECubemapBRDF &&) = delete;
+		SECubemapBRDF &operator=(SECubemapBRDF &&) = delete;
 
 		VkSampler getSampler() { return BRDFSampler; }
 		VkImage getImage() { return BRDFImage; }
@@ -51,21 +54,22 @@ namespace se
 
 		void createSampler();
 		void cleanup();
+		void destroyOwnedHandles() noexcept;
 
 		se::SESubMesh::Builder createCubeModel(glm::vec3 offset);
 
 		SEDevice& seDevice;
 		SERenderer& seRenderer;
 
-		VkDescriptorSet descriptorSet;
-		VkDescriptorSetLayout descriptorSetLayout;
+		VkDescriptorSet descriptorSet{VK_NULL_HANDLE};
+		VkDescriptorSetLayout descriptorSetLayout{VK_NULL_HANDLE};
 		std::unique_ptr<SEPipeline> sePipeline;
-		VkPipelineLayout pipelineLayout;
+		VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
 
-		VkImage BRDFImage;
-		VkImageView BRDFImageView;
-		VkDeviceMemory BRDFImageMemory;
-		VkSampler BRDFSampler;
+		VkImage BRDFImage{VK_NULL_HANDLE};
+		VkImageView BRDFImageView{VK_NULL_HANDLE};
+		VkDeviceMemory BRDFImageMemory{VK_NULL_HANDLE};
+		VkSampler BRDFSampler{VK_NULL_HANDLE};
 
 		std::unique_ptr<se::SESubMesh> cubeMesh;
 	};

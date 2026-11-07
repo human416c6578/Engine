@@ -1,9 +1,9 @@
 #pragma once
 #include "engine/scene/se_gameobject.hpp"
 #include "engine/scripting/se_script_component.hpp"
-#include "engine/scripting/se_script_manager.hpp"
 #include "engine/platform/se_input_system.hpp"
-#include "engine/scene/se_scene_manager.hpp"
+#include <GLFW/glfw3.h>
+#include "engine/scene/se_scene.hpp"
 
 namespace se {
 
@@ -11,36 +11,30 @@ namespace se {
     public:
         float speed = 10.0f;
 
-        void onCreate() override {
-            sceneManager = &se::SceneManager::getInstance();
-            scene = sceneManager->getActiveScene();
-            resourceManager = sceneManager->getResourceManager();
-        }
-
-        void onUpdate(float dt) override {
+        void onUpdate(float dt, ScriptContext &context) override {
             if (owner) {
                 auto& transform = owner->getTransform();
 
-                if (se::SEInputSystem::isKeyPressed(GLFW_KEY_LEFT))
+                if (context.input.isKeyPressed(GLFW_KEY_LEFT))
                 {
                     transform.translation.x += dt * speed;
                 }
-                if (se::SEInputSystem::isKeyPressed(GLFW_KEY_RIGHT))
+                if (context.input.isKeyPressed(GLFW_KEY_RIGHT))
                 {
                     transform.translation.x -= dt * speed;
                 }
-                if (se::SEInputSystem::isKeyPressed(GLFW_KEY_UP))
+                if (context.input.isKeyPressed(GLFW_KEY_UP))
                 {
                     transform.translation.z -= dt * speed;
                 }
-                if (se::SEInputSystem::isKeyPressed(GLFW_KEY_DOWN))
+                if (context.input.isKeyPressed(GLFW_KEY_DOWN))
                 {
                     transform.translation.z += dt * speed;
                 }
 
-                if (se::SEInputSystem::isKeyPressed(GLFW_KEY_F) && !created)
+                if (context.input.isKeyPressed(GLFW_KEY_F) && !created)
                 {
-                    scene->createGameObject("Test");
+                    context.scene.createGameObject("Test");
                     created = true;
                 }
             }
@@ -48,16 +42,8 @@ namespace se {
 
         std::string getName() const override { return "TestScript"; }
     private:
-        se::SceneManager* sceneManager{ nullptr };
-        se::Scene* scene{ nullptr };
-        se::ResourceManager* resourceManager{ nullptr };
         bool created{ false };
     };
 
 
-}
-
-// Auto-register the script at load time
-namespace {
-    const bool registered_TestScript = se::registerScript<se::TestScript>("TestScript");
 }

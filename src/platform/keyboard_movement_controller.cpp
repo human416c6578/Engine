@@ -1,15 +1,15 @@
 #include "engine/platform/keyboard_movement_controller.hpp"
 
 #include <limits>
+#include <cmath>
 #include <imgui/imgui.h>
 
 namespace se
 {
 
     void KeyboardMovementController::moveInPlaneXZ(
-        GLFWwindow* window, float dt, TransformComponent& transform)
+        SEInputSystem &input, float dt, TransformComponent& transform)
     {
-        static bool captured = false;
         glm::vec3 rotate{ 0 };
         double posX, posY;
         double diffX, diffY;
@@ -26,14 +26,14 @@ namespace se
 
         ImGuiIO& io = ImGui::GetIO();
 
-        if (!io.WantCaptureMouse && glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_1) == GLFW_PRESS) {
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+        if (!io.WantCaptureMouse && input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_1)) {
+            input.setCursorCaptured(true);
             captured = true;
         }
 
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        if (input.isKeyPressed(GLFW_KEY_ESCAPE))
         {
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            input.setCursorCaptured(false);
             captured = false;
         }
         if (!captured)
@@ -41,14 +41,14 @@ namespace se
             return;
         }
 
-        glfwGetCursorPos(window, &posY, &posX);
+        input.getMousePosition(posY, posX);
         if (oldX == 0.f || oldY == 0.f)
         {
             oldX -= posX;
             oldY = posY;
         }
-        diffX = abs(posX - oldX);
-        diffY = abs(posY - oldY);
+        diffX = std::abs(posX - oldX);
+        diffY = std::abs(posY - oldY);
 
         if (diffX < 50.f && diffY < 50.f)
         {
@@ -79,20 +79,20 @@ namespace se
         const glm::vec3 upDir{ 0.f, -1.f, 0.f };
 
         glm::vec3 moveDir{ 0.f };
-        if (glfwGetKey(window, keys.moveForward) == GLFW_PRESS)
+        if (input.isKeyPressed(keys.moveForward))
             moveDir += forwardDir;
-        if (glfwGetKey(window, keys.moveBackward) == GLFW_PRESS)
+        if (input.isKeyPressed(keys.moveBackward))
             moveDir -= forwardDir;
-        if (glfwGetKey(window, keys.moveRight) == GLFW_PRESS)
+        if (input.isKeyPressed(keys.moveRight))
             moveDir += rightDir;
-        if (glfwGetKey(window, keys.moveLeft) == GLFW_PRESS)
+        if (input.isKeyPressed(keys.moveLeft))
             moveDir -= rightDir;
-        if (glfwGetKey(window, keys.moveUp) == GLFW_PRESS)
+        if (input.isKeyPressed(keys.moveUp))
             moveDir += upDir;
-        if (glfwGetKey(window, keys.moveDown) == GLFW_PRESS)
+        if (input.isKeyPressed(keys.moveDown))
             moveDir -= upDir;
 
-        if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
+        if (input.isKeyPressed(GLFW_KEY_LEFT_CONTROL))
             moveSpeed = 6.f;
         else
             moveSpeed = 3.0f;

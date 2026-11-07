@@ -1,4 +1,5 @@
 #include "engine/renderer/se_particle_system.hpp"
+#include "engine/vulkan/se_vk_result.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -11,51 +12,123 @@
 
 namespace se
 {
+    void ParticleEmitterComponent::syncTransform(const glm::vec3& worldPos)
+    {
+        if (!isValid()) return;
+        auto& emitter = system->getEmitter(handle);
+        emitter.volume.position = glm::vec4(worldPos, 1.0f);
+    }
+
+    void ParticleEmitterComponent::setActive(bool active)
+    {
+        if (!isValid()) return;
+        system->setEmitterActive(handle, active);
+    }
+
+    namespace
+    {
+        struct ScopedStagingBuffer
+        {
+            explicit ScopedStagingBuffer(SEDevice& owner) : device{owner} {}
+            ~ScopedStagingBuffer()
+            {
+                if (buffer != VK_NULL_HANDLE)
+                    vkDestroyBuffer(device.device(), buffer, nullptr);
+                if (memory != VK_NULL_HANDLE)
+                    vkFreeMemory(device.device(), memory, nullptr);
+            }
+
+            SEDevice& device;
+            VkBuffer buffer{VK_NULL_HANDLE};
+            VkDeviceMemory memory{VK_NULL_HANDLE};
+        };
+    }
     ParticleSystem::ParticleSystem(SEDevice& device, VkRenderPass renderPass)
         : seDevice{ device }
     {
-        // Pre-allocate slot arrays
-        emitters.resize(MAX_EMITTERS);
-        forces.resize(MAX_FORCES);
-        emitterSlotFree.resize(MAX_EMITTERS, true);
-        forceSlotFree.resize(MAX_FORCES, true);
+        try
+        {
+            // Pre-allocate slot arrays
+            emitters.resize(MAX_EMITTERS);
+            forces.resize(MAX_FORCES);
+            emitterSlotFree.resize(MAX_EMITTERS, true);
+            forceSlotFree.resize(MAX_FORCES, true);
 
-        createParticleSSBO();
-        createEmitterSSBOs();
-        createForceSSBOs();
-        createFrameUBOs();
+            createParticleSSBO();
+            createEmitterSSBOs();
+            createForceSSBOs();
+            createFrameUBOs();
 
-        createDescriptorSetLayouts();
-        createDescriptorSets();
+            createDescriptorSetLayouts();
+            createDescriptorSets();
 
-        createComputePipelineLayout();
-        createGraphicsPipelineLayout();
-        createComputePipeline();
-        createGraphicsPipeline(renderPass);
+            createComputePipelineLayout();
+            createGraphicsPipelineLayout();
+            createComputePipeline();
+            createGraphicsPipeline(renderPass);
+        }
+        catch (...)
+        {
+            destroyOwnedHandles();
+            throw;
+        }
     }
 
     ParticleSystem::~ParticleSystem()
     {
+        destroyOwnedHandles();
+    }
+
+    void ParticleSystem::destroyOwnedHandles() noexcept
+    {
         seComputePipeline.reset();
         seGraphicsPipeline.reset();
-
-        vkDestroyPipelineLayout(seDevice.device(), computePipelineLayout,  nullptr);
-        vkDestroyPipelineLayout(seDevice.device(), graphicsPipelineLayout, nullptr);
-
-        vkDestroyDescriptorSetLayout(seDevice.device(), computeDescriptorSetLayout,  nullptr);
-        vkDestroyDescriptorSetLayout(seDevice.device(), graphicsDescriptorSetLayout, nullptr);
-
-        auto destroyBuffer = [&](ParticleBuffer& b)
+        for (VkDescriptorSet& set : computeDescriptorSets)
         {
-            if (b.mapped)   vkUnmapMemory(seDevice.device(), b.memory);
-            if (b.buffer)   vkDestroyBuffer(seDevice.device(), b.buffer, nullptr);
-            if (b.memory)   vkFreeMemory(seDevice.device(), b.memory, nullptr);
-        };
+            if (set != VK_NULL_HANDLE)
+                logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &set),
+                    "vkFreeDescriptorSets(particle compute)");
+            set = VK_NULL_HANDLE;
+        }
+        computeDescriptorSets.clear();
+        for (VkDescriptorSet& set : graphicsDescriptorSets)
+        {
+            if (set != VK_NULL_HANDLE)
+                logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &set),
+                    "vkFreeDescriptorSets(particle graphics)");
+            set = VK_NULL_HANDLE;
+        }
+        graphicsDescriptorSets.clear();
 
+        if (computePipelineLayout != VK_NULL_HANDLE)
+            vkDestroyPipelineLayout(seDevice.device(), computePipelineLayout, nullptr);
+        computePipelineLayout = VK_NULL_HANDLE;
+        if (graphicsPipelineLayout != VK_NULL_HANDLE)
+            vkDestroyPipelineLayout(seDevice.device(), graphicsPipelineLayout, nullptr);
+        graphicsPipelineLayout = VK_NULL_HANDLE;
+        if (computeDescriptorSetLayout != VK_NULL_HANDLE)
+            vkDestroyDescriptorSetLayout(seDevice.device(), computeDescriptorSetLayout, nullptr);
+        computeDescriptorSetLayout = VK_NULL_HANDLE;
+        if (graphicsDescriptorSetLayout != VK_NULL_HANDLE)
+            vkDestroyDescriptorSetLayout(seDevice.device(), graphicsDescriptorSetLayout, nullptr);
+        graphicsDescriptorSetLayout = VK_NULL_HANDLE;
+
+        auto destroyBuffer = [&](ParticleBuffer& buffer)
+        {
+            if (buffer.mapped != nullptr && buffer.memory != VK_NULL_HANDLE)
+                vkUnmapMemory(seDevice.device(), buffer.memory);
+            buffer.mapped = nullptr;
+            if (buffer.buffer != VK_NULL_HANDLE)
+                vkDestroyBuffer(seDevice.device(), buffer.buffer, nullptr);
+            buffer.buffer = VK_NULL_HANDLE;
+            if (buffer.memory != VK_NULL_HANDLE)
+                vkFreeMemory(seDevice.device(), buffer.memory, nullptr);
+            buffer.memory = VK_NULL_HANDLE;
+        };
         destroyBuffer(particleSSBO);
-        for (auto& b : emitterSSBOs) destroyBuffer(b);
-        for (auto& b : forceSSBOs)   destroyBuffer(b);
-        for (auto& b : frameUBOs)    destroyBuffer(b);
+        for (ParticleBuffer& buffer : emitterSSBOs) destroyBuffer(buffer);
+        for (ParticleBuffer& buffer : forceSSBOs) destroyBuffer(buffer);
+        for (ParticleBuffer& buffer : frameUBOs) destroyBuffer(buffer);
     }
 
     EmitterHandle ParticleSystem::addEmitter(const Emitter& emitter)
@@ -403,15 +476,16 @@ namespace se
             particles[i].emitterID  = -1;
         }
 
-        ParticleBuffer staging{};
+        ScopedStagingBuffer staging{seDevice};
         seDevice.createBuffer(bufferSize,
             VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             staging.buffer, staging.memory);
 
-        void* data;
-        vkMapMemory(seDevice.device(), staging.memory, 0, bufferSize, 0, &data);
-        std::memcpy(data, particles.data(), bufferSize);
+        void* data = nullptr;
+        checkVkResult(vkMapMemory(seDevice.device(), staging.memory, 0, bufferSize, 0, &data),
+            "vkMapMemory(particle staging buffer)");
+        std::memcpy(data, particles.data(), static_cast<std::size_t>(bufferSize));
         vkUnmapMemory(seDevice.device(), staging.memory);
 
         seDevice.createBuffer(bufferSize,
@@ -422,8 +496,6 @@ namespace se
             particleSSBO.buffer, particleSSBO.memory);
 
         seDevice.copyBuffer(staging.buffer, particleSSBO.buffer, bufferSize);
-        vkDestroyBuffer(seDevice.device(), staging.buffer, nullptr);
-        vkFreeMemory(seDevice.device(), staging.memory, nullptr);
     }
 
     void ParticleSystem::createEmitterSSBOs()
@@ -439,9 +511,9 @@ namespace se
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                 emitterSSBOs[i].buffer, emitterSSBOs[i].memory);
 
-            if (vkMapMemory(seDevice.device(), emitterSSBOs[i].memory,
-                            0, bufferSize, 0, &emitterSSBOs[i].mapped) != VK_SUCCESS)
-                throw std::runtime_error("Failed to map emitter SSBO memory!");
+            checkVkResult(vkMapMemory(seDevice.device(), emitterSSBOs[i].memory,
+                            0, bufferSize, 0, &emitterSSBOs[i].mapped),
+                "vkMapMemory(particle emitter buffer)");
         }
     }
 
@@ -458,9 +530,9 @@ namespace se
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                 forceSSBOs[i].buffer, forceSSBOs[i].memory);
 
-            if (vkMapMemory(seDevice.device(), forceSSBOs[i].memory,
-                            0, bufferSize, 0, &forceSSBOs[i].mapped) != VK_SUCCESS)
-                throw std::runtime_error("Failed to map force SSBO memory!");
+            checkVkResult(vkMapMemory(seDevice.device(), forceSSBOs[i].memory,
+                            0, bufferSize, 0, &forceSSBOs[i].mapped),
+                "vkMapMemory(particle force buffer)");
         }
     }
 
@@ -477,9 +549,9 @@ namespace se
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                 frameUBOs[i].buffer, frameUBOs[i].memory);
 
-            if (vkMapMemory(seDevice.device(), frameUBOs[i].memory,
-                            0, bufferSize, 0, &frameUBOs[i].mapped) != VK_SUCCESS)
-                throw std::runtime_error("Failed to map frame UBO memory!");
+            checkVkResult(vkMapMemory(seDevice.device(), frameUBOs[i].memory,
+                            0, bufferSize, 0, &frameUBOs[i].mapped),
+                "vkMapMemory(particle frame UBO)");
         }
     }
 
@@ -516,9 +588,9 @@ namespace se
         computeLayout.bindingCount = static_cast<uint32_t>(computeBindings.size());
         computeLayout.pBindings    = computeBindings.data();
 
-        if (vkCreateDescriptorSetLayout(seDevice.device(), &computeLayout,
-                                        nullptr, &computeDescriptorSetLayout) != VK_SUCCESS)
-            throw std::runtime_error("Failed to create compute descriptor set layout!");
+        checkVkResult(vkCreateDescriptorSetLayout(seDevice.device(), &computeLayout,
+                                        nullptr, &computeDescriptorSetLayout),
+            "vkCreateDescriptorSetLayout(particle compute)");
 
         // binding 0 — particle SSBO (r) — vertex shader reads pos/color/size
         VkDescriptorSetLayoutBinding graphicsBinding{};
@@ -532,9 +604,9 @@ namespace se
         graphicsLayout.bindingCount = 1;
         graphicsLayout.pBindings    = &graphicsBinding;
 
-        if (vkCreateDescriptorSetLayout(seDevice.device(), &graphicsLayout,
-                                        nullptr, &graphicsDescriptorSetLayout) != VK_SUCCESS)
-            throw std::runtime_error("Failed to create graphics descriptor set layout!");
+        checkVkResult(vkCreateDescriptorSetLayout(seDevice.device(), &graphicsLayout,
+                                        nullptr, &graphicsDescriptorSetLayout),
+            "vkCreateDescriptorSetLayout(particle graphics)");
     }
 
     void ParticleSystem::createDescriptorSets()
@@ -551,9 +623,9 @@ namespace se
             allocInfo.descriptorSetCount = 1;
             allocInfo.pSetLayouts        = &computeDescriptorSetLayout;
 
-            if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo,
-                                         &computeDescriptorSets[i]) != VK_SUCCESS)
-                throw std::runtime_error("Failed to allocate compute descriptor sets!");
+            checkVkResult(vkAllocateDescriptorSets(seDevice.device(), &allocInfo,
+                                         &computeDescriptorSets[i]),
+                "vkAllocateDescriptorSets(particle compute)");
 
             VkDescriptorBufferInfo particleInfo{};
             particleInfo.buffer = particleSSBO.buffer;
@@ -607,9 +679,9 @@ namespace se
             vkUpdateDescriptorSets(seDevice.device(), 4, writes.data(), 0, nullptr);
 
             allocInfo.pSetLayouts = &graphicsDescriptorSetLayout;
-            if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo,
-                                         &graphicsDescriptorSets[i]) != VK_SUCCESS)
-                throw std::runtime_error("Failed to allocate graphics descriptor sets!");
+            checkVkResult(vkAllocateDescriptorSets(seDevice.device(), &allocInfo,
+                                         &graphicsDescriptorSets[i]),
+                "vkAllocateDescriptorSets(particle graphics)");
 
             VkWriteDescriptorSet graphicsWrite{ VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
             graphicsWrite.dstSet          = graphicsDescriptorSets[i];
@@ -629,9 +701,9 @@ namespace se
         layoutInfo.setLayoutCount = 1;
         layoutInfo.pSetLayouts    = &computeDescriptorSetLayout;
 
-        if (vkCreatePipelineLayout(seDevice.device(), &layoutInfo,
-                                   nullptr, &computePipelineLayout) != VK_SUCCESS)
-            throw std::runtime_error("Failed to create compute pipeline layout!");
+        checkVkResult(vkCreatePipelineLayout(seDevice.device(), &layoutInfo,
+                                   nullptr, &computePipelineLayout),
+            "vkCreatePipelineLayout(particle compute)");
     }
 
     void ParticleSystem::createGraphicsPipelineLayout()
@@ -648,9 +720,9 @@ namespace se
         layoutInfo.pushConstantRangeCount = 1;
         layoutInfo.pPushConstantRanges    = &pushConstant;
 
-        if (vkCreatePipelineLayout(seDevice.device(), &layoutInfo,
-                                   nullptr, &graphicsPipelineLayout) != VK_SUCCESS)
-            throw std::runtime_error("Failed to create graphics pipeline layout!");
+        checkVkResult(vkCreatePipelineLayout(seDevice.device(), &layoutInfo,
+                                   nullptr, &graphicsPipelineLayout),
+            "vkCreatePipelineLayout(particle graphics)");
     }
 
     void ParticleSystem::createComputePipeline()

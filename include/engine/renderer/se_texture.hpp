@@ -1,20 +1,27 @@
 #pragma once
 
-#include <third_party/stb/stb_image.h>
-
-#include "engine/vulkan/se_device.hpp"
 #include "engine/resources/se_resource.hpp"
 
-// std
-#include <math.h>
+#include <vulkan/vulkan.h>
+
+#include <memory>
+#include <string>
 
 namespace se
 {
+    class SEDevice;
 	class SETexture : public Resource
 	{
 	public:
-		SETexture(SEDevice& device, const std::string guid, const std::string name, stbi_uc* pixels, int width, int height);
+		using ImagePixels = std::unique_ptr<unsigned char, void(*)(void*)>;
+
+		SETexture(SEDevice& device, const std::string guid, const std::string name, ImagePixels pixels, int width, int height);
 		~SETexture();
+
+		SETexture(const SETexture &) = delete;
+		SETexture &operator=(const SETexture &) = delete;
+		SETexture(SETexture &&) = delete;
+		SETexture &operator=(SETexture &&) = delete;
 
 		VkSampler getTextureSampler() { return textureSampler; }
 		VkImageView getTextureImageView() { return textureImageView; }
@@ -25,16 +32,17 @@ namespace se
 		SEDevice &seDevice;
 		std::string path;
 
-		uint32_t mipLevels;
-		VkImage textureImage;
-		VkDeviceMemory textureImageMemory;
-		VkImageView textureImageView;
+		uint32_t mipLevels{0};
+		VkImage textureImage{VK_NULL_HANDLE};
+		VkDeviceMemory textureImageMemory{VK_NULL_HANDLE};
+		VkImageView textureImageView{VK_NULL_HANDLE};
 		VkImageLayout textureImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		VkSampler textureSampler;
+		VkSampler textureSampler{VK_NULL_HANDLE};
 
-		VkDescriptorSet textureDescriptorSet;
+		VkDescriptorSet textureDescriptorSet{VK_NULL_HANDLE};
+		void destroyOwnedHandles() noexcept;
 
-		void createTextureImage(stbi_uc* pixels, int width, int height);
+		void createTextureImage(ImagePixels pixels, int width, int height);
 		void generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels);
 		VkSampleCountFlagBits getMaxUsableSampleCount();
 		void createTextureImageView();

@@ -1,30 +1,40 @@
 #pragma once
 
-#include "engine/vulkan/se_device.hpp"
-#include "engine/core/se_frame_config.hpp"
+#include <vulkan/vulkan.h>
 
 #include <cstddef>
 #include <vector>
 
 namespace se
 {
+    class SEDevice;
     class SEOffscreenRenderer
     {
     public:
         explicit SEOffscreenRenderer(SEDevice& device)
             : seDevice(device)
         {
-            createOffscreenImageDepth();
-            createOffscreenImageColor();
-            createRenderPass();
-            createFramebuffers();
-            createStagingBuffer();
+            try
+            {
+                createOffscreenImageDepth();
+                createOffscreenImageColor();
+                createRenderPass();
+                createFramebuffers();
+                createStagingBuffer();
+            }
+            catch (...)
+            {
+                destroyOwnedHandles();
+                throw;
+            }
         }
 
         ~SEOffscreenRenderer();
 
         SEOffscreenRenderer(const SEOffscreenRenderer&) = delete;
         SEOffscreenRenderer& operator=(const SEOffscreenRenderer&) = delete;
+        SEOffscreenRenderer(SEOffscreenRenderer&&) = delete;
+        SEOffscreenRenderer& operator=(SEOffscreenRenderer&&) = delete;
 
         void resize(uint32_t newWidth, uint32_t newHeight);
         void setImageFormat(VkFormat format);
@@ -56,6 +66,7 @@ namespace se
         void createRenderPass();
         void createFramebuffers();
         void createStagingBuffer();
+        void destroyOwnedHandles() noexcept;
 
         SEDevice& seDevice;
 

@@ -1,4 +1,6 @@
 #include "engine/renderer/se_cubemap_brdf.h"
+#include "engine/renderer/se_offscreen_renderer.hpp"
+#include "engine/vulkan/se_vk_result.hpp"
 #include "engine/scene/se_gameobject.hpp"
 #include "engine/core/se_camera.hpp"
 
@@ -10,6 +12,36 @@ namespace se
 		cubeMesh = std::make_unique<se::SESubMesh>(seDevice, builder);
 	}
 
+	SECubemapBRDF::~SECubemapBRDF()
+	{
+		destroyOwnedHandles();
+	}
+
+	void SECubemapBRDF::destroyOwnedHandles() noexcept
+	{
+		cleanup();
+		if (BRDFSampler != VK_NULL_HANDLE)
+		{
+			vkDestroySampler(seDevice.device(), BRDFSampler, nullptr);
+			BRDFSampler = VK_NULL_HANDLE;
+		}
+		if (BRDFImageView != VK_NULL_HANDLE)
+		{
+			vkDestroyImageView(seDevice.device(), BRDFImageView, nullptr);
+			BRDFImageView = VK_NULL_HANDLE;
+		}
+		if (BRDFImage != VK_NULL_HANDLE)
+		{
+			vkDestroyImage(seDevice.device(), BRDFImage, nullptr);
+			BRDFImage = VK_NULL_HANDLE;
+		}
+		if (BRDFImageMemory != VK_NULL_HANDLE)
+		{
+			vkFreeMemory(seDevice.device(), BRDFImageMemory, nullptr);
+			BRDFImageMemory = VK_NULL_HANDLE;
+		}
+	}
+
 
 	void SECubemapBRDF::createPipelineLayout()
 	{
@@ -18,11 +50,7 @@ namespace se
 		pipelineLayoutInfo.setLayoutCount = 1;
 		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 		pipelineLayoutInfo.pushConstantRangeCount = 0;
-		if (vkCreatePipelineLayout(seDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) !=
-			VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create pipeline layout!");
-		}
+		checkVkResult(vkCreatePipelineLayout(seDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout), "vkCreatePipelineLayout");
 	}
 
 	void SECubemapBRDF::createPipeline(VkRenderPass renderPass, const std::string vertPath, const std::string fragPath)
@@ -49,10 +77,7 @@ namespace se
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &descriptorSetLayout;
 
-		if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSet) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to allocate descriptor sets!");
-		}
+		checkVkResult(vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSet), "vkAllocateDescriptorSets");
 
 		// Descriptor writes array
 		std::vector<VkWriteDescriptorSet> descriptorWrites(1);
@@ -100,10 +125,7 @@ namespace se
 		layoutInfo.pBindings = bindings.data();
 
 		// Create the descriptor set layout
-		if (vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create descriptor set layout!");
-		}
+		checkVkResult(vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &descriptorSetLayout), "vkCreateDescriptorSetLayout");
 	}
 
 	void SECubemapBRDF::createBRDFImage()
@@ -136,9 +158,7 @@ namespace se
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 1;
 
-		if (vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &BRDFImageView) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create cubemap image view!");
-		}
+		checkVkResult(vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &BRDFImageView), "vkCreateImageView");
 	}
 
 	void SECubemapBRDF::draw(VkCommandBuffer commandBuffer)
@@ -314,14 +334,28 @@ namespace se
 		samplerInfo.maxLod = static_cast<float>(0.0f);
 		samplerInfo.mipLodBias = 0.0f;
 
-		if (vkCreateSampler(seDevice.device(), &samplerInfo, nullptr, &BRDFSampler) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create texture sampler!");
-		}
+		checkVkResult(vkCreateSampler(seDevice.device(), &samplerInfo, nullptr, &BRDFSampler), "vkCreateSampler");
 	}
 
 	void SECubemapBRDF::cleanup()
 	{
+		if (descriptorSet != VK_NULL_HANDLE)
+		{
+			logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
+				"vkFreeDescriptorSets(SECubemapBRDF)");
+			descriptorSet = VK_NULL_HANDLE;
+		}
+		sePipeline.reset();
+		if (pipelineLayout != VK_NULL_HANDLE)
+		{
+			vkDestroyPipelineLayout(seDevice.device(), pipelineLayout, nullptr);
+			pipelineLayout = VK_NULL_HANDLE;
+		}
+		if (descriptorSetLayout != VK_NULL_HANDLE)
+		{
+			vkDestroyDescriptorSetLayout(seDevice.device(), descriptorSetLayout, nullptr);
+			descriptorSetLayout = VK_NULL_HANDLE;
+		}
 	}
 
 	se::SESubMesh::Builder SECubemapBRDF::createCubeModel(glm::vec3 offset)

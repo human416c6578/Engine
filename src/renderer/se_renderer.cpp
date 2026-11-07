@@ -1,4 +1,9 @@
 #include "engine/renderer/se_renderer.hpp"
+#include <GLFW/glfw3.h>
+#include "engine/vulkan/se_device.hpp"
+#include "engine/platform/se_window.hpp"
+#include "engine/renderer/se_offscreen_renderer.hpp"
+#include "engine/vulkan/se_vk_result.hpp"
 
 #include <array>
 #include <cassert>
@@ -27,7 +32,7 @@ namespace se
             extent = seWindow.getExtent();
             glfwWaitEvents();
         }
-        vkDeviceWaitIdle(seDevice.device());
+        checkVkResult(vkDeviceWaitIdle(seDevice.device()), "vkDeviceWaitIdle(swapchain recreation)");
 
         if (seSwapChain == nullptr)
         {
@@ -55,10 +60,8 @@ namespace se
         allocInfo.commandPool = seDevice.getCommandPool();
         allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 
-        if (vkAllocateCommandBuffers(seDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to allocate command buffers!");
-        }
+        checkVkResult(vkAllocateCommandBuffers(seDevice.device(), &allocInfo, commandBuffers.data()),
+            "vkAllocateCommandBuffers(renderer)");
     }
 
     void SERenderer::freeCommandBuffers()
@@ -89,19 +92,14 @@ namespace se
         }
 
         if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
-        {
-            throw std::runtime_error("failed to acquire swap chain image!");
-        }
+            checkVkResult(result, "vkAcquireNextImageKHR");
 
         const auto frameIndex = static_cast<uint32_t>(seSwapChain->getCurrentFrame());
         const auto commandBuffer = commandBuffers[frameIndex];
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to begin recording command buffer!");
-        }
+        checkVkResult(vkBeginCommandBuffer(commandBuffer, &beginInfo), "vkBeginCommandBuffer(renderer)");
 
         activeFrame = FrameContext{ frameIndex, imageIndex, commandBuffer };
         isFrameStarted = true;
@@ -115,10 +113,7 @@ namespace se
         assert(frame.swapchainImageIndex == activeFrame.swapchainImageIndex);
         assert(frame.commandBuffer == activeFrame.commandBuffer);
 
-        if (vkEndCommandBuffer(frame.commandBuffer) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to record command buffer!");
-        }
+        checkVkResult(vkEndCommandBuffer(frame.commandBuffer), "vkEndCommandBuffer(renderer)");
 
         auto imageIndex = frame.swapchainImageIndex;
         const auto result = seSwapChain->submitCommandBuffers(&frame.commandBuffer, &imageIndex);
@@ -132,7 +127,8 @@ namespace se
         else if (result != VK_SUCCESS)
         {
             isFrameStarted = false;
-            throw std::runtime_error("failed to present swap chain image!");
+            activeFrame = {};
+            checkVkResult(result, "vkQueuePresentKHR");
         }
 
         isFrameStarted = false;

@@ -1,28 +1,32 @@
 #pragma once  
-#include <string>  
-#include <vector>  
+#include <vulkan/vulkan.h>
+
+#include <string>
 #include <unordered_map>  
 #include <memory>  
 
-#include "se_pbr_material.hpp" 
-#include "se_texture_system.hpp"
-
 namespace se
 {
+	class SEDevice;
+	class TextureSystem;
+	class SEMaterial;
+
 	class MaterialSystem
 	{
 	public:
-		MaterialSystem(se::SEDevice& device, VkPipelineLayout pbrPipelineLayout, VkPipeline pbrPipeline, VkDescriptorSetLayout pbrDescriptorSetLayout);
+		MaterialSystem(se::SEDevice& device, se::TextureSystem& textures,
+			VkPipelineLayout pbrPipelineLayout, VkPipeline pbrPipeline,
+			VkDescriptorSetLayout pbrDescriptorSetLayout);
 		~MaterialSystem();
+
+		MaterialSystem(const MaterialSystem&) = delete;
+		MaterialSystem& operator=(const MaterialSystem&) = delete;
+		MaterialSystem(MaterialSystem&&) = delete;
+		MaterialSystem& operator=(MaterialSystem&&) = delete;
 
 		std::unordered_map<std::string, std::shared_ptr<se::SEMaterial>>* getMaterials()
 		{
 			return &materials;
-		}
-
-		void setTextureSystem(se::TextureSystem* textureSystem)
-		{
-			this->textureSystem = textureSystem;
 		}
 
 		std::shared_ptr<se::SEMaterial> CreatePBRMaterial(const std::string guid, const std::string name);
@@ -31,13 +35,13 @@ namespace se
 
 	private:
 		se::SEDevice& seDevice;
-		se::TextureSystem* textureSystem = nullptr;
+		se::TextureSystem& textureSystem;
 
 		std::unordered_map<std::string, std::shared_ptr<se::SEMaterial>> materials;
 
-		VkPipelineLayout pbrPipelineLayout;
-		VkPipeline pbrPipeline;
-		VkDescriptorSetLayout pbrDescriptorSetLayout;
+		VkPipelineLayout pbrPipelineLayout{VK_NULL_HANDLE};
+		VkPipeline pbrPipeline{VK_NULL_HANDLE};
+		VkDescriptorSetLayout pbrDescriptorSetLayout{VK_NULL_HANDLE};
 		//Add more descriptor sets for more material types  
 	};
 } // namespace se

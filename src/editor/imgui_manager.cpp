@@ -1,17 +1,35 @@
 #include "engine/editor/imgui_manager.hpp"
 #include "engine/renderer/se_particle_system.hpp"
 #include "engine/renderer/se_pbr.hpp"
+#include "engine/renderer/se_postprocess.hpp"
+#include "engine/renderer/se_material_system.hpp"
+#include "engine/renderer/se_mesh_system.hpp"
+#include "engine/renderer/se_texture_system.hpp"
+#include "engine/renderer/se_pbr_material.hpp"
+#include "engine/renderer/se_mesh.hpp"
+#include "engine/renderer/se_texture.hpp"
+#include "engine/resources/se_resource_manager.hpp"
+#include "engine/scene/se_scene_manager.hpp"
+#include "engine/scene/se_scene.hpp"
+#include "engine/scene/se_gameobject.hpp"
+#include "engine/scripting/se_script_component.hpp"
+#include "engine/scripting/se_script_manager.hpp"
+#include "engine/platform/se_input_system.hpp"
 #include "engine/core/se_frame_config.hpp"
 
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_vulkan.h>
+#include <imgui_filedialog/ImGuiFileDialog.h>
+
+#include <GLFW/glfw3.h>
 #include <algorithm>
+#include <cstring>
 
 void se::ImGuiManager::renderSceneHierarchy()
 {
-	static int cubeCount = 0;
-    static int sphereCount = 0;
-    static int lightCount = 0;
     bool itemHovered = false;
-    auto scene = sceneManager->getActiveScene();
+    auto scene = sceneManager.getActiveScene();
     std::list<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
 
     if (!showSceneHierarchy) return;
@@ -56,7 +74,7 @@ void se::ImGuiManager::renderSceneHierarchy()
                 std::advance(it, i);
                 if (it->get()->getParticleEmitter().isValid())
                 {
-                    particleSystem->removeEmitter(it->get()->getParticleEmitter().handle);
+                    particleSystem.removeEmitter(it->get()->getParticleEmitter().handle);
                 }
                 gameobjects.erase(it);
                 if (selectedGameObjectIndex == i) selectedGameObjectIndex = -1;
@@ -73,18 +91,18 @@ void se::ImGuiManager::renderSceneHierarchy()
         }
         if (ImGui::MenuItem("Create Plane")) {
             auto& go = scene->createGameObjectRef("Plane");
-            go.setMesh(resourceManager->createPlane("PlaneMesh_" + std::to_string(++cubeCount)));
-            go.setMaterial(resourceManager->createMaterial("PlaneMaterial_" + std::to_string(cubeCount)));
+            go.setMesh(resourceManager.createPlane("PlaneMesh_" + std::to_string(++cubeCount)));
+            go.setMaterial(resourceManager.createMaterial("PlaneMaterial_" + std::to_string(cubeCount)));
         }
         if (ImGui::MenuItem("Create Cube")) {
             auto& go = scene->createGameObjectRef("Cube");
-            go.setMesh(resourceManager->createCube("CubeMesh_" + std::to_string(++cubeCount)));
-            go.setMaterial(resourceManager->createMaterial("CubeMaterial_" + std::to_string(cubeCount)));
+            go.setMesh(resourceManager.createCube("CubeMesh_" + std::to_string(++cubeCount)));
+            go.setMaterial(resourceManager.createMaterial("CubeMaterial_" + std::to_string(cubeCount)));
         }
         if (ImGui::MenuItem("Create Sphere")) {
             auto& go = scene->createGameObjectRef("Sphere");
-            go.setMesh(resourceManager->createSphere("SphereMesh_" + std::to_string(++sphereCount)));
-            go.setMaterial(resourceManager->createMaterial("SphereMaterial_" + std::to_string(sphereCount)));
+            go.setMesh(resourceManager.createSphere("SphereMesh_" + std::to_string(++sphereCount)));
+            go.setMaterial(resourceManager.createMaterial("SphereMaterial_" + std::to_string(sphereCount)));
 
         }
         if (ImGui::MenuItem("Create Light")) {
@@ -141,8 +159,8 @@ void se::ImGuiManager::renderAssetContextMenu()
     if (ImGui::BeginPopupContextWindow())
     {
         if (ImGui::MenuItem("Create Material")) {
-            std::string name = "New Material " + std::to_string(resourceManager->getMaterials()->size());
-            resourceManager->createMaterial(name);
+            std::string name = "New Material " + std::to_string(resourceManager.getMaterials()->size());
+            resourceManager.createMaterial(name);
         }
         if (ImGui::MenuItem("Load Mesh"))
         {
@@ -188,7 +206,7 @@ void se::ImGuiManager::renderAssetContextMenu()
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
             std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
 
-            resourceManager->loadMesh(filePathName);
+            resourceManager.loadMesh(filePathName);
         }
         ImGuiFileDialog::Instance()->Close();
     }
@@ -200,7 +218,7 @@ void se::ImGuiManager::renderAssetContextMenu()
             for (const auto& [filename, filepathname] : selection)
             {
 
-                resourceManager->loadTexture(filepathname);
+                resourceManager.loadTexture(filepathname);
             }
         }
         ImGuiFileDialog::Instance()->Close();
@@ -211,8 +229,8 @@ void se::ImGuiManager::renderAssetContextMenu()
             auto selection = ImGuiFileDialog::Instance()->GetSelection();
             if (!selection.empty()) {
                 const auto& [filename, filepathname] = *selection.begin();
-                sceneManager->loadScene(filepathname, filename);
-                sceneManager->setActiveScene(filename);
+                sceneManager.loadScene(filepathname, filename);
+                sceneManager.setActiveScene(filename);
             }
         }
         ImGuiFileDialog::Instance()->Close();
@@ -221,7 +239,7 @@ void se::ImGuiManager::renderAssetContextMenu()
     if (ImGuiFileDialog::Instance()->Display("SaveScene", ImGuiWindowFlags_NoCollapse, ImVec2(400.0f, 200.0f))) {
         if (ImGuiFileDialog::Instance()->IsOk()) {
             std::string filePathName = ImGuiFileDialog::Instance()->GetFilePathName();
-            sceneManager->saveActiveScene(filePathName);
+            sceneManager.saveActiveScene(filePathName);
         }
         ImGuiFileDialog::Instance()->Close();
     }
@@ -251,7 +269,7 @@ void se::ImGuiManager::renderAssetViewer()
 
     if (selectedAssetCategory == "Meshes")
     {
-        auto meshes = resourceManager->getMeshes();
+        auto meshes = resourceManager.getMeshes();
         for (const auto& [key, mesh] : *meshes)
         {
             std::string name = mesh->getName().empty() ? key : mesh->getName();
@@ -268,7 +286,7 @@ void se::ImGuiManager::renderAssetViewer()
     }
     else if (selectedAssetCategory == "Materials")
     {
-        auto materials = resourceManager->getMaterials();
+        auto materials = resourceManager.getMaterials();
         for (const auto& [key, material] : *materials)
         {
             std::string name = material->getName().empty() ? key : material->getName();
@@ -284,8 +302,8 @@ void se::ImGuiManager::renderAssetViewer()
     }
     else if (selectedAssetCategory == "Textures")
     {
-        static char searchBuf[128] = "";
-        ImGui::InputTextWithHint("##Search", "Search textures...", searchBuf, IM_ARRAYSIZE(searchBuf));
+        ImGui::InputTextWithHint("##Search", "Search textures...",
+            assetBrowserTextureSearch.data(), assetBrowserTextureSearch.size());
 
         ImGui::Separator();
 
@@ -298,11 +316,12 @@ void se::ImGuiManager::renderAssetViewer()
 
         ImGui::Columns(columnCount, nullptr, false);
 
-        auto textures = resourceManager->getTextures();
+        auto textures = resourceManager.getTextures();
         for (const auto& [key, texture] : *textures)
         {
             const std::string& name = texture->getName().empty() ? key : texture->getName();
-            if (strlen(searchBuf) > 0 && name.find(searchBuf) == std::string::npos)
+            if (assetBrowserTextureSearch[0] != '\0' &&
+                name.find(assetBrowserTextureSearch.data()) == std::string::npos)
                 continue;
 
             ImGui::PushID(texture.get());
@@ -353,7 +372,7 @@ void se::ImGuiManager::renderAssetViewer()
     }
     else if (selectedAssetCategory == "Scripts")
     {
-        for (auto& [name, factory] : se::getScriptRegistry()) {
+        for (const auto& [name, factory] : scriptManager.getRegistry()) {
             if (ImGui::Selectable(name.c_str())) {
                 auto script = factory();
 
@@ -378,7 +397,7 @@ void se::ImGuiManager::renderPropertiesPanel()
 {
     if (!showProperties) return;
 
-    auto scene = sceneManager->getActiveScene();
+    auto scene = sceneManager.getActiveScene();
     std::list<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
 
     auto* viewport = ImGui::GetMainViewport();
@@ -439,7 +458,7 @@ void se::ImGuiManager::renderPostProcessProperties()
 {
     ImGui::Text("Depth of Field");
 
-    auto pp = postprocess->getSettings();
+    auto pp = postprocess.getSettings();
 
     float focus      = pp.focusDistance;
     float focusRange = pp.focusRange;
@@ -460,7 +479,7 @@ void se::ImGuiManager::renderPostProcessProperties()
         pp.blurScale     = blurScale;
         pp.maxBlur       = maxBlur;
 
-        postprocess->updateSettings(pp);
+        postprocess.updateSettings(pp);
     }
 
     ImGui::Separator();
@@ -481,7 +500,7 @@ void se::ImGuiManager::renderPostProcessProperties()
 
     if (fogChanged)
     {
-        postprocess->updateSettings(pp);
+        postprocess.updateSettings(pp);
     }
 
     ImGui::Separator();
@@ -499,14 +518,14 @@ void se::ImGuiManager::renderPostProcessProperties()
 
     if (toneChanged)
     {
-        postprocess->updateSettings(pp);
+        postprocess.updateSettings(pp);
     }
 }
 
 void se::ImGuiManager::renderGameObjectProperties()
 {
 
-    auto scene = sceneManager->getActiveScene();
+    auto scene = sceneManager.getActiveScene();
     std::list<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
 
     auto it = gameobjects.begin();
@@ -514,16 +533,14 @@ void se::ImGuiManager::renderGameObjectProperties()
 
     auto& gameObject = *it;
 
-    static char nameBuffer[128] = { 0 };
-
-    std::strncpy(nameBuffer, gameObject->getName().c_str(), sizeof(nameBuffer));
-    nameBuffer[sizeof(nameBuffer) - 1] = '\0';
+    std::strncpy(gameObjectNameBuffer.data(), gameObject->getName().c_str(), gameObjectNameBuffer.size());
+    gameObjectNameBuffer.back() = '\0';
 
     ImGui::Text("GameObject: %s", gameObject->getName().c_str());
     ImGui::SameLine();
 
-    if (ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer))) {
-        gameObject->setName(nameBuffer);
+    if (ImGui::InputText("##Name", gameObjectNameBuffer.data(), gameObjectNameBuffer.size())) {
+        gameObject->setName(gameObjectNameBuffer.data());
     }
 
     std::string name = gameObject->getName().empty() ?
@@ -668,8 +685,13 @@ void se::ImGuiManager::renderScriptComponent(std::unique_ptr<se::SEGameObject>& 
         auto& script = gameObject->getScript();
 
         renderScriptSelector(script,
-            [&gameObject](std::unique_ptr<se::ScriptComponent> selectedScript) {
-                gameObject->setScript(std::move(selectedScript));
+            [this, &gameObject](std::unique_ptr<se::ScriptComponent> selectedScript) {
+                auto *scene = sceneManager.getActiveScene();
+                if (scene != nullptr)
+                {
+                    ScriptContext context{*scene, resourceManager, inputSystem};
+                    gameObject->setScript(std::move(selectedScript), context);
+                }
             });
     }
 
@@ -680,13 +702,6 @@ void se::ImGuiManager::renderParticleEmitterComponent(std::unique_ptr<se::SEGame
     if (!ImGui::CollapsingHeader("Particle Emitter", ImGuiTreeNodeFlags_DefaultOpen))
         return;
 
-    if (!particleSystem)
-    {
-        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f),
-            "ParticleSystem not bound to ImGuiManager");
-        return;
-    }
-
     if (!gameObject->hasParticleEmitter())
     {
         ImGui::Text("No emitter attached");
@@ -696,27 +711,27 @@ void se::ImGuiManager::renderParticleEmitterComponent(std::unique_ptr<se::SEGame
         glm::vec3 pos = gameObject->getTransform().translation;
 
         if (ImGui::Button("Fire")) {
-            auto setup = particleSystem->makeFire(pos, 1.0f);
-            gameObject->getParticleEmitter() = { setup.emitter, particleSystem };
+            auto setup = particleSystem.makeFire(pos, 1.0f);
+            gameObject->getParticleEmitter() = { setup.emitter, &particleSystem };
         }
         ImGui::SameLine();
         if (ImGui::Button("Rain")) {
-            auto setup = particleSystem->makeRain(pos, glm::vec3(10.0f, 0.0f, 10.0f));
-            gameObject->getParticleEmitter() = { setup.emitter, particleSystem };
+            auto setup = particleSystem.makeRain(pos, glm::vec3(10.0f, 0.0f, 10.0f));
+            gameObject->getParticleEmitter() = { setup.emitter, &particleSystem };
         }
         ImGui::SameLine();
         if (ImGui::Button("Snow")) {
-            auto setup = particleSystem->makeSnow(pos, glm::vec3(10.0f, 0.0f, 10.0f));
-            gameObject->getParticleEmitter() = { setup.emitter, particleSystem };
+            auto setup = particleSystem.makeSnow(pos, glm::vec3(10.0f, 0.0f, 10.0f));
+            gameObject->getParticleEmitter() = { setup.emitter, &particleSystem };
         }
         ImGui::SameLine();
         if (ImGui::Button("Vortex")) {
-            auto setup = particleSystem->makeVortex(pos, glm::vec3(0.0f, 1.0f, 0.0f), 5.0f);
-            gameObject->getParticleEmitter() = { setup.emitter, particleSystem };
+            auto setup = particleSystem.makeVortex(pos, glm::vec3(0.0f, 1.0f, 0.0f), 5.0f);
+            gameObject->getParticleEmitter() = { setup.emitter, &particleSystem };
         }
         if (ImGui::Button("Black Hole")) {
-            auto setup = particleSystem->makeBlackHole(pos, 10.0f);
-            gameObject->getParticleEmitter() = { setup.emitter, particleSystem };
+            auto setup = particleSystem.makeBlackHole(pos, 10.0f);
+            gameObject->getParticleEmitter() = { setup.emitter, &particleSystem };
         }
 
         ImGui::Separator();
@@ -725,8 +740,8 @@ void se::ImGuiManager::renderParticleEmitterComponent(std::unique_ptr<se::SEGame
             se::Emitter em{};
             em.volume.position = glm::vec4(pos, 1.0f);
             em.volume.type     = se::VolumeType::Point;
-            auto handle = particleSystem->addEmitter(em);
-            gameObject->getParticleEmitter() = { handle, particleSystem };
+            auto handle = particleSystem.addEmitter(em);
+            gameObject->getParticleEmitter() = { handle, &particleSystem };
         }
         return;
     }
@@ -738,12 +753,12 @@ void se::ImGuiManager::renderParticleEmitterComponent(std::unique_ptr<se::SEGame
         return;
     }
 
-    auto& emitter = particleSystem->getEmitter(comp.handle);
+    auto& emitter = particleSystem.getEmitter(comp.handle);
 
     // Header controls
     if (ImGui::Button("Remove Emitter", ImVec2(120, 0)))
     {
-        particleSystem->removeEmitter(comp.handle);
+        particleSystem.removeEmitter(comp.handle);
         comp.handle = se::INVALID_HANDLE;
         comp.system = nullptr;
         return;
@@ -795,22 +810,20 @@ void se::ImGuiManager::renderParticleEmitterComponent(std::unique_ptr<se::SEGame
 
 void se::ImGuiManager::renderMeshProperties()
 {
-    static char nameBuffer[128] = { 0 };
-
-    auto meshes = resourceManager->getMeshes();
+    auto meshes = resourceManager.getMeshes();
     auto it = meshes->find(selectedAssetName);
     if (it != meshes->end())
     {
         auto mesh = it->second;
 
-        std::strncpy(nameBuffer, mesh->getName().c_str(), sizeof(nameBuffer));
-        nameBuffer[sizeof(nameBuffer) - 1] = '\0';
+        std::strncpy(meshNameBuffer.data(), mesh->getName().c_str(), meshNameBuffer.size());
+        meshNameBuffer.back() = '\0';
 
         ImGui::Text("Mesh: %s", mesh->getName().c_str());
         ImGui::SameLine();
 
-        if (ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer))) {
-            mesh->setName(nameBuffer);
+        if (ImGui::InputText("##Name", meshNameBuffer.data(), meshNameBuffer.size())) {
+            mesh->setName(meshNameBuffer.data());
         }
 
         ImGui::Text("GUID: %s", mesh->getGUID().c_str());
@@ -825,22 +838,20 @@ void se::ImGuiManager::renderMeshProperties()
 
 void se::ImGuiManager::renderMaterialProperties()
 {
-    static char nameBuffer[128] = { 0 };
-
-    auto materials = resourceManager->getMaterials();
+    auto materials = resourceManager.getMaterials();
     auto it = materials->find(selectedAssetName);
     if (it != materials->end())
     {
         auto material = it->second;
 
-        std::strncpy(nameBuffer, material->getName().c_str(), sizeof(nameBuffer));
-        nameBuffer[sizeof(nameBuffer) - 1] = '\0';
+        std::strncpy(materialNameBuffer.data(), material->getName().c_str(), materialNameBuffer.size());
+        materialNameBuffer.back() = '\0';
 
         ImGui::Text("Material: %s", material->getName().c_str());
 		ImGui::SameLine();
 
-        if (ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer))) {
-            material->setName(nameBuffer);
+        if (ImGui::InputText("##Name", materialNameBuffer.data(), materialNameBuffer.size())) {
+            material->setName(materialNameBuffer.data());
         }
 
         ImGui::Text("GUID: %s", material->getGUID().c_str());
@@ -853,22 +864,20 @@ void se::ImGuiManager::renderMaterialProperties()
 
 void se::ImGuiManager::renderTextureProperties()
 {
-    static char nameBuffer[128] = { 0 };
-
-    auto textures = resourceManager->getTextures();
+    auto textures = resourceManager.getTextures();
     auto it = textures->find(selectedAssetName);
     if (it != textures->end())
     {
         auto texture = it->second;
 
-        std::strncpy(nameBuffer, texture->getName().c_str(), sizeof(nameBuffer));
-        nameBuffer[sizeof(nameBuffer) - 1] = '\0';
+        std::strncpy(textureNameBuffer.data(), texture->getName().c_str(), textureNameBuffer.size());
+        textureNameBuffer.back() = '\0';
 
         ImGui::Text("Texture: %s", texture->getName().c_str());
         ImGui::SameLine();
 
-        if (ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer))) {
-            texture->setName(nameBuffer);
+        if (ImGui::InputText("##Name", textureNameBuffer.data(), textureNameBuffer.size())) {
+            texture->setName(textureNameBuffer.data());
         }
 
         ImGui::Text("GUID: %s", texture->getGUID().c_str());
@@ -1013,8 +1022,8 @@ void se::ImGuiManager::renderTextureSelector(const std::string& label,
     // Texture selection popup
     if (ImGui::BeginPopup("Select Texture"))
     {
-        static char searchBuf[128] = "";
-        ImGui::InputTextWithHint("##Search", "Search textures...", searchBuf, IM_ARRAYSIZE(searchBuf));
+        ImGui::InputTextWithHint("##Search", "Search textures...",
+            textureSelectorSearch.data(), textureSelectorSearch.size());
 
         ImGui::Separator();
         const float thumbnailSize = 64.0f;
@@ -1027,11 +1036,12 @@ void se::ImGuiManager::renderTextureSelector(const std::string& label,
         ImGui::BeginChild("TextureGrid", ImVec2(0, 300), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
         ImGui::Columns(columnCount, nullptr, false);
 
-        auto textures = resourceManager->getTextures();
+        auto textures = resourceManager.getTextures();
         for (const auto& [key, texture] : *textures)
         {
             const std::string& name = texture->getName().empty() ? key : texture->getName();
-            if (strlen(searchBuf) > 0 && name.find(searchBuf) == std::string::npos)
+            if (textureSelectorSearch[0] != '\0' &&
+                name.find(textureSelectorSearch.data()) == std::string::npos)
                 continue;
 
             ImGui::PushID(texture.get());
@@ -1103,8 +1113,8 @@ void se::ImGuiManager::renderMaterialSelector(
     // Texture selection popup
     if (ImGui::BeginPopup("Select Material"))
     {
-        static char searchBuf[128] = "";
-        ImGui::InputTextWithHint("##Search", "Search materials...", searchBuf, IM_ARRAYSIZE(searchBuf));
+        ImGui::InputTextWithHint("##Search", "Search materials...",
+            materialSelectorSearch.data(), materialSelectorSearch.size());
 
         ImGui::Separator();
 
@@ -1117,11 +1127,12 @@ void se::ImGuiManager::renderMaterialSelector(
             ImGui::CloseCurrentPopup();
         }
 
-        auto materials = resourceManager->getMaterials();
+        auto materials = resourceManager.getMaterials();
         for (const auto& [key, material] : *materials)
         {
             const std::string& name = material->getName().empty() ? key : material->getName();
-            if (strlen(searchBuf) > 0 && name.find(searchBuf) == std::string::npos)
+            if (materialSelectorSearch[0] != '\0' &&
+                name.find(materialSelectorSearch.data()) == std::string::npos)
                 continue;
 
             ImGui::PushID(material.get());
@@ -1171,19 +1182,20 @@ void se::ImGuiManager::renderMeshSelector(
     // Texture selection popup
     if (ImGui::BeginPopup("Select Mesh"))
     {
-        static char searchBuf[128] = "";
-        ImGui::InputTextWithHint("##Search", "Search meshes...", searchBuf, IM_ARRAYSIZE(searchBuf));
+        ImGui::InputTextWithHint("##Search", "Search meshes...",
+            meshSelectorSearch.data(), meshSelectorSearch.size());
 
         ImGui::Separator();
 
         ImGui::BeginChild("TextureGrid", ImVec2(0, 300), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
         ImGui::Columns(1, nullptr, false);
 
-        auto meshes = resourceManager->getMeshes();
+        auto meshes = resourceManager.getMeshes();
         for (const auto& [key, mesh] : *meshes)
         {
             const std::string& name = mesh->getName().empty() ? key : mesh->getName();
-            if (strlen(searchBuf) > 0 && name.find(searchBuf) == std::string::npos)
+            if (meshSelectorSearch[0] != '\0' &&
+                name.find(meshSelectorSearch.data()) == std::string::npos)
                 continue;
 
             ImGui::PushID(mesh.get());
@@ -1233,8 +1245,8 @@ void se::ImGuiManager::renderScriptSelector(
 
     if (ImGui::BeginPopup("Select Script"))
     {
-        static char searchBuf[128] = "";
-        ImGui::InputTextWithHint("##Search", "Search scripts...", searchBuf, IM_ARRAYSIZE(searchBuf));
+        ImGui::InputTextWithHint("##Search", "Search scripts...",
+            scriptSelectorSearch.data(), scriptSelectorSearch.size());
         ImGui::Separator();
 
         ImGui::BeginChild("ScriptList", ImVec2(0, 300), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
@@ -1247,9 +1259,10 @@ void se::ImGuiManager::renderScriptSelector(
         }
 
         // Iterate over all registered scripts
-        for (const auto& [name, factory] : se::getScriptRegistry())
+        for (const auto& [name, factory] : scriptManager.getRegistry())
         {
-            if (strlen(searchBuf) > 0 && name.find(searchBuf) == std::string::npos)
+            if (scriptSelectorSearch[0] != '\0' &&
+                name.find(scriptSelectorSearch.data()) == std::string::npos)
                 continue;
 
             ImGui::PushID(name.c_str());
@@ -1273,42 +1286,61 @@ void se::ImGuiManager::renderScriptSelector(
 }
 
 
-void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, uint32_t swapChainImageCount, se::ResourceManager* resourceManager, se::SEPostProcess* postprocess, se::ParticleSystem* particleSystem)
+se::ImGuiManager::ImGuiManager(SEDevice &seDevice, VkRenderPass renderPass, GLFWwindow &window,
+    uint32_t swapChainImageCount, ResourceManager &resources, SceneManager &scenes,
+    SEPostProcess &postProcess, ParticleSystem &particles, SEInputSystem &input,
+    ScriptManager& scripts)
+    : resourceManager{resources}, sceneManager{scenes}, postprocess{postProcess},
+      particleSystem{particles}, inputSystem{input}, scriptManager{scripts}
 {
-    sceneManager = &se::SceneManager::getInstance();
-
-    this->window = window;
-    this->renderPass = renderPass;
-    this->resourceManager = resourceManager;
-    this->postprocess = postprocess;
-    this->particleSystem = particleSystem;
     // Create ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    contextCreated = true;
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     // Setup Platform/Renderer bindings
-    ImGui_ImplGlfw_InitForVulkan(window, true);
+    try
+    {
+    if (!ImGui_ImplGlfw_InitForVulkan(&window, true))
+    {
+        throw std::runtime_error("ImGui GLFW backend initialization failed");
+    }
+    glfwBackendInitialized = true;
     ImGui_ImplVulkan_InitInfo initInfo{};
     initInfo.Instance = seDevice.getInstance();
     initInfo.PhysicalDevice = seDevice.physicaldevice();
     initInfo.Device = seDevice.device();
     initInfo.QueueFamily = seDevice.findPhysicalQueueFamilies().graphicsFamily.value();
-    initInfo.Queue = seDevice.graphicsQueue();;
+    initInfo.Queue = seDevice.graphicsQueue();
     initInfo.RenderPass = renderPass;
     initInfo.PipelineCache = VK_NULL_HANDLE;
     initInfo.DescriptorPool = seDevice.getDescriptorPool();
     initInfo.MinImageCount = 2;
     // ImGui owns a rotating vertex/index buffer pair per slot. Keep that ring
     // at least as large as the engine flight window to avoid reusing an in-use slot.
-    imageCount = std::max(swapChainImageCount, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
-    initInfo.ImageCount = imageCount;
+    initInfo.ImageCount = std::max(swapChainImageCount, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
     initInfo.Allocator = nullptr;
     initInfo.CheckVkResultFn = nullptr;
-    ImGui_ImplVulkan_Init(&initInfo);
+    if (!ImGui_ImplVulkan_Init(&initInfo))
+    {
+        throw std::runtime_error("ImGui Vulkan backend initialization failed");
+    }
+    vulkanBackendInitialized = true;
     // Load Fonts
     io.Fonts->AddFontDefault();
+    }
+    catch (...)
+    {
+        cleanup();
+        throw;
+    }
+}
+
+se::ImGuiManager::~ImGuiManager()
+{
+    cleanup();
 }
 
 void se::ImGuiManager::newFrame()
@@ -1332,7 +1364,19 @@ void se::ImGuiManager::render(VkCommandBuffer commandBuffer)
 
 void se::ImGuiManager::cleanup()
 {
-    ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    if (vulkanBackendInitialized)
+    {
+        ImGui_ImplVulkan_Shutdown();
+        vulkanBackendInitialized = false;
+    }
+    if (glfwBackendInitialized)
+    {
+        ImGui_ImplGlfw_Shutdown();
+        glfwBackendInitialized = false;
+    }
+    if (contextCreated)
+    {
+        ImGui::DestroyContext();
+        contextCreated = false;
+    }
 }

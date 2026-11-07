@@ -1,18 +1,15 @@
 #pragma once
 
-#include "engine/vulkan/se_device.hpp"
-#include "engine/renderer/se_renderer.hpp"
-#include "engine/renderer/se_pipeline.hpp"
+#include <vulkan/vulkan.h>
 
 #include <cstddef>
-
-
-// std
 #include <memory>
 #include <vector>
 
 namespace se
 {
+    class SEDevice;
+    class SEPipeline;
 	class SEPostProcess
 	{
 	public:
@@ -35,6 +32,11 @@ namespace se
     	};
 		SEPostProcess(SEDevice& device, VkRenderPass renderPass);
 		~SEPostProcess();
+
+		SEPostProcess(const SEPostProcess &) = delete;
+		SEPostProcess &operator=(const SEPostProcess &) = delete;
+		SEPostProcess(SEPostProcess &&) = delete;
+		SEPostProcess &operator=(SEPostProcess &&) = delete;
 
 		void render(VkCommandBuffer cmd, std::size_t frameIndex);
 
@@ -59,17 +61,18 @@ namespace se
 		void createTextureSampler();
 		void createPostProcessBuffer();
 		void updatePostProcessBuffer(std::size_t frameIndex);
+		void destroyOwnedHandles() noexcept;
 
 		SEDevice& seDevice;
-		VkRenderPass renderPass;
+		VkRenderPass renderPass{VK_NULL_HANDLE};
 
-		VkSampler textureSampler;
+		VkSampler textureSampler{VK_NULL_HANDLE};
 
 		std::vector<VkDescriptorSet> descriptorSets;
-		VkDescriptorSetLayout descriptorSetLayout;
+		VkDescriptorSetLayout descriptorSetLayout{VK_NULL_HANDLE};
 
 		std::unique_ptr<SEPipeline> pipeline;
-		VkPipelineLayout pipelineLayout;
+		VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
 
 		std::vector<VkBuffer> dofBuffers;
 		std::vector<VkDeviceMemory> dofBufferMemories;

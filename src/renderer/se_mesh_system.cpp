@@ -1,10 +1,28 @@
 ﻿#include "engine/renderer/se_mesh_system.hpp"
+#include "engine/renderer/se_material_system.hpp"
+#include "engine/renderer/se_mesh.hpp"
+#include "engine/renderer/se_submesh.hpp"
+#include "engine/renderer/se_texture_system.hpp"
+#include "engine/vulkan/se_device.hpp"
+
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
+
+#include <glm/glm.hpp>
 
 #include <filesystem>
+#include <iostream>
+#include <memory>
+#include <vector>
+
+#define ASSIMP_LOAD_FLAGS (aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices | aiProcess_GenSmoothNormals | aiProcess_OptimizeMeshes | aiProcess_ValidateDataStructure)
 
 namespace se
 {
-	MeshSystem::MeshSystem(se::SEDevice& device) : seDevice{ device }
+	MeshSystem::MeshSystem(se::SEDevice& device, se::MaterialSystem& materials,
+		se::TextureSystem& textures)
+		: seDevice{device}, materialSystem{materials}, textureSystem{textures}
 	{
 	}
 
@@ -38,7 +56,7 @@ namespace se
 					std::string name = material->GetName().C_Str();
                     std::string base_path = GetBaseDir(path) + "/";
 
-                    std::shared_ptr<se::SEMaterial> seMaterial = materialSystem->CreatePBRMaterial(guid + "_material_" + std::to_string(i), name + "_material_" + std::to_string(i));
+                    std::shared_ptr<se::SEMaterial> seMaterial = materialSystem.CreatePBRMaterial(guid + "_material_" + std::to_string(i), name + "_material_" + std::to_string(i));
 
                     float metallic = 0.05f;
                     float roughness = 0.95f;
@@ -58,39 +76,39 @@ namespace se
                     aiString diffuseTexturePath, normalTexturePath, specularTexturePath, roughnessTexturePath, aoTexturePath;
                     if (material->GetTexture(aiTextureType_DIFFUSE, 0, &diffuseTexturePath, nullptr, nullptr, nullptr, nullptr, nullptr) == aiReturn_SUCCESS)
                     {
-                        std::shared_ptr<se::SETexture> diffuseTexture = textureSystem->loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + diffuseTexturePath.C_Str());
+                        std::shared_ptr<se::SETexture> diffuseTexture = textureSystem.loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + diffuseTexturePath.C_Str());
                         seMaterial->setDiffuseTexture(diffuseTexture);
                     }
                     if (material->GetTexture(aiTextureType_NORMALS, 0, &normalTexturePath, nullptr, nullptr, nullptr, nullptr, nullptr) == aiReturn_SUCCESS)
                     {
-                        std::shared_ptr<se::SETexture> normalTexture = textureSystem->loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + normalTexturePath.C_Str());
+                        std::shared_ptr<se::SETexture> normalTexture = textureSystem.loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + normalTexturePath.C_Str());
                         seMaterial->setNormalTexture(normalTexture);
                     }
 
                     if (material->GetTexture(aiTextureType_METALNESS, 0, &specularTexturePath, nullptr, nullptr, nullptr, nullptr, nullptr) == aiReturn_SUCCESS)
                     {
-                        std::shared_ptr<se::SETexture> specularTexture = textureSystem->loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + specularTexturePath.C_Str());
+                        std::shared_ptr<se::SETexture> specularTexture = textureSystem.loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + specularTexturePath.C_Str());
 						seMaterial->setMetallicTexture(specularTexture);
                     }
                     else if(material->GetTexture(aiTextureType_SPECULAR, 0, &specularTexturePath, nullptr, nullptr, nullptr, nullptr, nullptr) == aiReturn_SUCCESS)
                     {
-                        std::shared_ptr<se::SETexture> specularTexture = textureSystem->loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + specularTexturePath.C_Str());
+                        std::shared_ptr<se::SETexture> specularTexture = textureSystem.loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + specularTexturePath.C_Str());
                         seMaterial->setMetallicTexture(specularTexture);
                     }
                     if (material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &roughnessTexturePath, nullptr, nullptr, nullptr, nullptr, nullptr) == aiReturn_SUCCESS)
                     {
-                        std::shared_ptr<se::SETexture> roughnessTexture = textureSystem->loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + roughnessTexturePath.C_Str());
+                        std::shared_ptr<se::SETexture> roughnessTexture = textureSystem.loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + roughnessTexturePath.C_Str());
                         seMaterial->setRoughnessTexture(roughnessTexture);
                     }
                     else if (material->GetTexture(aiTextureType_SHININESS, 0, &roughnessTexturePath, nullptr, nullptr, nullptr, nullptr, nullptr) == aiReturn_SUCCESS)
                     {
-                        std::shared_ptr<se::SETexture> roughnessTexture = textureSystem->loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + roughnessTexturePath.C_Str());
+                        std::shared_ptr<se::SETexture> roughnessTexture = textureSystem.loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + roughnessTexturePath.C_Str());
 						seMaterial->setRoughnessTexture(roughnessTexture);
                     }
 
                     if (material->GetTexture(aiTextureType_AMBIENT, 0, &aoTexturePath, nullptr, nullptr, nullptr, nullptr, nullptr) == aiReturn_SUCCESS)
                     {
-                        std::shared_ptr<se::SETexture> aoTexture = textureSystem->loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + aoTexturePath.C_Str());
+                        std::shared_ptr<se::SETexture> aoTexture = textureSystem.loadTexture(guid + "_texture_" + std::to_string(i), name + "_texture_" + std::to_string(i), base_path + aoTexturePath.C_Str());
 						seMaterial->setAOTexture(aoTexture);
                     }
 

@@ -1,4 +1,6 @@
 #include "engine/renderer/se_cubemap_specular.h"
+#include "engine/renderer/se_offscreen_renderer.hpp"
+#include "engine/vulkan/se_vk_result.hpp"
 #include "engine/scene/se_gameobject.hpp"
 #include "engine/core/se_camera.hpp"
 
@@ -6,6 +8,8 @@ namespace se
 {
 	SECubemapSpecular::SECubemapSpecular(SEDevice& device, SERenderer& renderer, VkImageView cubemapView, VkSampler cubemapSampler) : seDevice{ device }, seRenderer{ renderer }, cubeMapImageView{ cubemapView }, cubeMapSampler{ cubemapSampler }
 	{
+		try
+		{
 
 		se::SESubMesh::Builder builder = createCubeModel({ 0, 0, 0 });
 		cubeMesh = std::make_unique<se::SESubMesh>(seDevice, builder);
@@ -15,6 +19,42 @@ namespace se
 		createPipelineLayout();
 		createPipeline(renderer.getOffscreenRenderer()->getRenderPass(), "shaders/cubemapVert.spv", "shaders/irradianceSpecular.spv");
 		createCubemapImage();
+		}
+		catch (...)
+		{
+			destroyOwnedHandles();
+			throw;
+		}
+	}
+
+	SECubemapSpecular::~SECubemapSpecular()
+	{
+		destroyOwnedHandles();
+	}
+
+	void SECubemapSpecular::destroyOwnedHandles() noexcept
+	{
+		cleanup();
+		if (irradianceSampler != VK_NULL_HANDLE)
+		{
+			vkDestroySampler(seDevice.device(), irradianceSampler, nullptr);
+			irradianceSampler = VK_NULL_HANDLE;
+		}
+		if (irradianceImageView != VK_NULL_HANDLE)
+		{
+			vkDestroyImageView(seDevice.device(), irradianceImageView, nullptr);
+			irradianceImageView = VK_NULL_HANDLE;
+		}
+		if (irradianceImage != VK_NULL_HANDLE)
+		{
+			vkDestroyImage(seDevice.device(), irradianceImage, nullptr);
+			irradianceImage = VK_NULL_HANDLE;
+		}
+		if (irradianceImageMemory != VK_NULL_HANDLE)
+		{
+			vkFreeMemory(seDevice.device(), irradianceImageMemory, nullptr);
+			irradianceImageMemory = VK_NULL_HANDLE;
+		}
 	}
 
 
@@ -31,11 +71,7 @@ namespace se
 		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-		if (vkCreatePipelineLayout(seDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) !=
-			VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create pipeline layout!");
-		}
+		checkVkResult(vkCreatePipelineLayout(seDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout), "vkCreatePipelineLayout");
 	}
 
 	void SECubemapSpecular::createPipeline(VkRenderPass renderPass, const std::string vertPath, const std::string fragPath)
@@ -62,10 +98,7 @@ namespace se
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &descriptorSetLayout;
 
-		if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSet) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to allocate descriptor sets!");
-		}
+		checkVkResult(vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSet), "vkAllocateDescriptorSets");
 
 		// Descriptor writes array
 		std::vector<VkWriteDescriptorSet> descriptorWrites(2);
@@ -138,10 +171,7 @@ namespace se
 		layoutInfo.pBindings = bindings.data();
 
 		// Create the descriptor set layout
-		if (vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create descriptor set layout!");
-		}
+		checkVkResult(vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &descriptorSetLayout), "vkCreateDescriptorSetLayout");
 	}
 
 	void SECubemapSpecular::createCubemapImage()
@@ -174,9 +204,7 @@ namespace se
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 6;
 
-		if (vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &irradianceImageView) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create cubemap image view!");
-		}
+		checkVkResult(vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &irradianceImageView), "vkCreateImageView");
 
 		VkCommandBuffer cmd = seDevice.beginSingleTimeCommands();
 
@@ -414,14 +442,28 @@ namespace se
 		samplerInfo.maxLod = static_cast<float>(maxMipLevels);
 		samplerInfo.mipLodBias = 0.0f;
 
-		if (vkCreateSampler(seDevice.device(), &samplerInfo, nullptr, &irradianceSampler) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create texture sampler!");
-		}
+		checkVkResult(vkCreateSampler(seDevice.device(), &samplerInfo, nullptr, &irradianceSampler), "vkCreateSampler");
 	}
 
 	void SECubemapSpecular::cleanup()
 	{
+		if (descriptorSet != VK_NULL_HANDLE)
+		{
+			logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
+				"vkFreeDescriptorSets(SECubemapSpecular)");
+			descriptorSet = VK_NULL_HANDLE;
+		}
+		sePipeline.reset();
+		if (pipelineLayout != VK_NULL_HANDLE)
+		{
+			vkDestroyPipelineLayout(seDevice.device(), pipelineLayout, nullptr);
+			pipelineLayout = VK_NULL_HANDLE;
+		}
+		if (descriptorSetLayout != VK_NULL_HANDLE)
+		{
+			vkDestroyDescriptorSetLayout(seDevice.device(), descriptorSetLayout, nullptr);
+			descriptorSetLayout = VK_NULL_HANDLE;
+		}
 	}
 
 	se::SESubMesh::Builder SECubemapSpecular::createCubeModel(glm::vec3 offset)

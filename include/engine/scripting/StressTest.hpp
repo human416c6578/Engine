@@ -1,24 +1,18 @@
 #pragma once
 #include "engine/scene/se_gameobject.hpp"
 #include "engine/scripting/se_script_component.hpp"
-#include "engine/scripting/se_script_manager.hpp"
-#include "engine/platform/se_input_system.hpp"
-#include "engine/scene/se_scene_manager.hpp"
+#include "engine/scene/se_scene.hpp"
 
 namespace se {
 
     class StressScript : public ScriptComponent {
     public:
 
-        void onCreate() override {
-            sceneManager = &se::SceneManager::getInstance();
-            scene = sceneManager->getActiveScene();
-            resourceManager = sceneManager->getResourceManager();
-
-            spawnCubes();
+        void onCreate(ScriptContext &context) override {
+            spawnCubes(context);
         }
 
-        void spawnCubes()
+        void spawnCubes(ScriptContext &context)
         {
             int count = 30;
             auto mesh = owner->getMesh();
@@ -27,7 +21,7 @@ namespace se {
             for (int i = 0; i < count; ++i) {
                 for (int j = 0; j < count; ++j) {
 
-                    auto go = scene->createGameObject("Sphere_" + std::to_string(i) + "_" + std::to_string(j));
+                    auto go = context.scene.createGameObject("Sphere_" + std::to_string(i) + "_" + std::to_string(j));
 
                     go->setMesh(mesh);
                     go->setMaterial(mat);
@@ -39,23 +33,14 @@ namespace se {
             }
         }
 
-        void onUpdate(float dt) override {
+        void onUpdate(float, ScriptContext &) override {
             if (owner) {
 
             }
         }
 
         std::string getName() const override { return "StressScript"; }
-    private:
-        se::SceneManager* sceneManager{ nullptr };
-        se::Scene* scene{ nullptr };
-        se::ResourceManager* resourceManager{ nullptr };
     };
 
 
-}
-
-// Auto-register the script at load time
-namespace {
-    const bool registered_StressScript = se::registerScript<se::StressScript>("StressScript");
 }

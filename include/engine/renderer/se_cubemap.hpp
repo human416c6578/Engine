@@ -20,13 +20,12 @@ namespace se
 
 		SECubemap(SEDevice& device, SERenderer& renderPass, const std::string& textureFilepath);
 
-		~SECubemap()
-		{
-
-		}
+		~SECubemap();
 
 		SECubemap(const SECubemap&) = delete;
 		SECubemap& operator=(const SECubemap&) = delete;
+		SECubemap(SECubemap&&) = delete;
+		SECubemap& operator=(SECubemap&&) = delete;
 		
 		void render(VkCommandBuffer commandBuffer)
 		{
@@ -52,6 +51,7 @@ namespace se
 		void createPipeline(VkRenderPass renderPass, const std::string vertPath, const std::string fragPath);
 		void createDescriptorSets();
 		void createDescriptorSetLayout();
+		void destroyOwnedHandles() noexcept;
 
 		void bind(VkCommandBuffer commandBuffer)
 		{
@@ -74,11 +74,11 @@ namespace se
 
 		SEDevice& seDevice;
 		SERenderer& seRenderer;
-		VkDescriptorSet descriptorSet;
-		VkDescriptorSetLayout descriptorSetLayout;
+		VkDescriptorSet descriptorSet{VK_NULL_HANDLE};
+		VkDescriptorSetLayout descriptorSetLayout{VK_NULL_HANDLE};
 
 		std::unique_ptr<SEPipeline> sePipeline;
-		VkPipelineLayout pipelineLayout;
+		VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
 
 		std::unique_ptr<SEHdrToCubemap> seCubemapConverter;
 		std::unique_ptr<SECubemapSpecular> seSpecular;

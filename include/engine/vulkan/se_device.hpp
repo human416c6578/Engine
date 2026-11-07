@@ -1,31 +1,17 @@
 #pragma once
 
-#include "engine/platform/se_window.hpp"
 #include "engine/core/se_frame_config.hpp"
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <vulkan/vulkan.h>
 
-#include <string.h>
-#include <vector>
+#include <cstddef>
+#include <cstdint>
 #include <optional>
-#include <stdexcept>
-#include <set>
-#include <unordered_set>
-#include <iostream>
+#include <vector>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/hash.hpp>
-
-const std::vector<const char *> validationLayers = {
-    "VK_LAYER_KHRONOS_validation"};
-
-const std::vector<const char *> deviceExtensions = {
-    VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 #ifndef ENGINE_ENABLE_VALIDATION
 #define ENGINE_ENABLE_VALIDATION 0
@@ -53,9 +39,11 @@ struct UniformBufferObject
 
 namespace se
 {
+    class SEWindow;
+
     struct SwapChainSupportDetails
     {
-        VkSurfaceCapabilitiesKHR capabilities;
+        VkSurfaceCapabilitiesKHR capabilities{};
         std::vector<VkSurfaceFormatKHR> formats;
         std::vector<VkPresentModeKHR> presentModes;
     };
@@ -111,32 +99,32 @@ namespace se
             VkImage &image,
             VkDeviceMemory &imageMemory);
 
-        VkPhysicalDeviceProperties properties;
+        VkPhysicalDeviceProperties properties{};
 
     private:
 
         VkInstance instance = VK_NULL_HANDLE;
-        VkDebugUtilsMessengerEXT debugMessenger;
+        VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
         VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
 
-        VkDevice device_;
-        VkSurfaceKHR surface_;
-        VkQueue graphicsQueue_;
-        VkQueue presentQueue_;
+        VkDevice device_ = VK_NULL_HANDLE;
+        VkSurfaceKHR surface_ = VK_NULL_HANDLE;
+        VkQueue graphicsQueue_ = VK_NULL_HANDLE;
+        VkQueue presentQueue_ = VK_NULL_HANDLE;
 
-        VkDescriptorPool descriptorPool;
+        VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
         std::vector<VkDescriptorSet> descriptorSets;
 
-		VkDescriptorSetLayout imGuiDescriptorSetLayout;
+		VkDescriptorSetLayout imGuiDescriptorSetLayout = VK_NULL_HANDLE;
 
         std::vector<VkBuffer> uniformBuffers;
         std::vector<VkDeviceMemory> uniformBuffersMemory;
         std::vector<void *> uniformBuffersMapped;
 
 
-        VkCommandPool commandPool;
+        VkCommandPool commandPool = VK_NULL_HANDLE;
 
         SEWindow &window;
 
@@ -147,6 +135,7 @@ namespace se
         void createLogicalDevice();
         void createCommandPool();
         void createDescriptorPool();
+		void destroyOwnedHandles() noexcept;
 
 		void createUniformBuffers();
 
@@ -162,11 +151,10 @@ namespace se
 		VkSampleCountFlagBits getMaxUsableSampleCount();
 		SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
 
-        static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData, void *pUserData)
-        {
-            std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
-
-            return VK_FALSE;
-        }
+        static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+            VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+            VkDebugUtilsMessageTypeFlagsEXT messageType,
+            const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
+            void* userData);
     };
 }

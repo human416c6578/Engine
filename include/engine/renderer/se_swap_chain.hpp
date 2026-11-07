@@ -1,9 +1,5 @@
 #pragma once
 
-#include "engine/vulkan/se_device.hpp"
-#include "engine/core/se_frame_config.hpp"
-
-// vulkan headers
 #include <vulkan/vulkan.h>
 
 // std lib headers
@@ -13,6 +9,7 @@
 
 namespace se
 {
+  class SEDevice;
 
   class SESwapChain
   {
@@ -26,6 +23,8 @@ namespace se
 
     SESwapChain(const SESwapChain &) = delete;
     SESwapChain &operator=(const SESwapChain &) = delete;
+    SESwapChain(SESwapChain&&) = delete;
+    SESwapChain& operator=(SESwapChain&&) = delete;
 
 	size_t getCurrentFrame() const { return currentFrame; }
     VkFramebuffer getFrameBuffer(int index) { return swapChainFramebuffers[index]; }
@@ -62,6 +61,7 @@ namespace se
     void createDescriptorSetLayout();
     void createFramebuffers();
     void createSyncObjects();
+    void destroyOwnedHandles() noexcept;
 
     // Helper functions
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(
@@ -70,13 +70,13 @@ namespace se
         const std::vector<VkPresentModeKHR> &availablePresentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
 
-    VkFormat swapChainImageFormat;
-    VkFormat swapChainDepthFormat;
-    VkExtent2D swapChainExtent;
+    VkFormat swapChainImageFormat{VK_FORMAT_UNDEFINED};
+    VkFormat swapChainDepthFormat{VK_FORMAT_UNDEFINED};
+    VkExtent2D swapChainExtent{};
 
     std::vector<VkFramebuffer> swapChainFramebuffers;
-    VkRenderPass renderPass;
-    VkDescriptorSetLayout descriptorSetLayout;
+    VkRenderPass renderPass{VK_NULL_HANDLE};
+    VkDescriptorSetLayout descriptorSetLayout{VK_NULL_HANDLE};
 
     std::vector<VkImage> depthImages;
     std::vector<VkDeviceMemory> depthImageMemorys;
@@ -85,9 +85,9 @@ namespace se
     std::vector<VkImageView> swapChainImageViews;
 
     SEDevice &device;
-    VkExtent2D windowExtent;
+    VkExtent2D windowExtent{};
 
-    VkSwapchainKHR swapChain;
+    VkSwapchainKHR swapChain{VK_NULL_HANDLE};
     std::shared_ptr<SESwapChain> oldSwapChain;
 
     std::vector<VkSemaphore> imageAvailableSemaphores;

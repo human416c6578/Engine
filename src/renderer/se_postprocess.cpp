@@ -1,5 +1,9 @@
 #include "engine/renderer/se_postprocess.hpp"
 #include "engine/renderer/se_pipeline.hpp"
+#include "engine/vulkan/se_device.hpp"
+#include "engine/vulkan/se_vk_result.hpp"
+
+#include <cmath>
 
 #include <stdexcept>
 #include <array>
@@ -12,31 +16,70 @@ namespace se
 	SEPostProcess::SEPostProcess(SEDevice& device, VkRenderPass renderPass)
 		: seDevice{ device }, renderPass{ renderPass }
 	{
-		createPostProcessBuffer();
-		createDescriptorSetLayout();
-		createPipelineLayout();
-		createPipeline();
-		createDescriptorSets();
-		createTextureSampler();
+		try
+		{
+			createPostProcessBuffer();
+			createDescriptorSetLayout();
+			createPipelineLayout();
+			createPipeline();
+			createDescriptorSets();
+			createTextureSampler();
+		}
+		catch (...)
+		{
+			destroyOwnedHandles();
+			throw;
+		}
 	}
 
 	SEPostProcess::~SEPostProcess()
 	{
-		pipeline.reset();
-		if (!descriptorSets.empty())
+		destroyOwnedHandles();
+	}
+
+	void SEPostProcess::destroyOwnedHandles() noexcept
+	{
+		for (VkDescriptorSet &descriptorSet : descriptorSets)
 		{
-			vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(),
-				static_cast<uint32_t>(descriptorSets.size()), descriptorSets.data());
+			if (descriptorSet != VK_NULL_HANDLE)
+			{
+				logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
+					"vkFreeDescriptorSets(SEPostProcess)");
+				descriptorSet = VK_NULL_HANDLE;
+			}
 		}
+		descriptorSets.clear();
 		if (textureSampler != VK_NULL_HANDLE)
+		{
 			vkDestroySampler(seDevice.device(), textureSampler, nullptr);
+			textureSampler = VK_NULL_HANDLE;
+		}
+		pipeline.reset();
+		if (pipelineLayout != VK_NULL_HANDLE)
+		{
+			vkDestroyPipelineLayout(seDevice.device(), pipelineLayout, nullptr);
+			pipelineLayout = VK_NULL_HANDLE;
+		}
+		if (descriptorSetLayout != VK_NULL_HANDLE)
+		{
+			vkDestroyDescriptorSetLayout(seDevice.device(), descriptorSetLayout, nullptr);
+			descriptorSetLayout = VK_NULL_HANDLE;
+		}
 		for (std::size_t i = 0; i < dofBuffers.size(); ++i)
 		{
-			vkDestroyBuffer(seDevice.device(), dofBuffers[i], nullptr);
-			vkFreeMemory(seDevice.device(), dofBufferMemories[i], nullptr);
+			if (dofBuffers[i] != VK_NULL_HANDLE)
+			{
+				vkDestroyBuffer(seDevice.device(), dofBuffers[i], nullptr);
+				dofBuffers[i] = VK_NULL_HANDLE;
+			}
+			if (i < dofBufferMemories.size() && dofBufferMemories[i] != VK_NULL_HANDLE)
+			{
+				vkFreeMemory(seDevice.device(), dofBufferMemories[i], nullptr);
+				dofBufferMemories[i] = VK_NULL_HANDLE;
+			}
 		}
-		vkDestroyPipelineLayout(seDevice.device(), pipelineLayout, nullptr);
-		vkDestroyDescriptorSetLayout(seDevice.device(), descriptorSetLayout, nullptr);
+		dofBuffers.clear();
+		dofBufferMemories.clear();
 	}
 
 	void SEPostProcess::createPipelineLayout()
@@ -46,14 +89,11 @@ namespace se
 		pipelineLayoutInfo.setLayoutCount = 1;
 		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
-		if (vkCreatePipelineLayout(
+		checkVkResult(vkCreatePipelineLayout(
 				seDevice.device(),
 				&pipelineLayoutInfo,
 				nullptr,
-				&pipelineLayout) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create postprocess pipeline layout!");
-		}
+				&pipelineLayout), "vkCreatePipelineLayout(postprocess)");
 	}
 
 	void SEPostProcess::createPipeline()
@@ -88,11 +128,8 @@ namespace se
 			allocInfo.descriptorPool = seDevice.getDescriptorPool();
 			allocInfo.descriptorSetCount = 1;
 			allocInfo.pSetLayouts = &descriptorSetLayout;
-			if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo,
-					&descriptorSets[frameIndex]) != VK_SUCCESS)
-			{
-				throw std::runtime_error("failed to allocate descriptor sets!");
-			}
+			checkVkResult(vkAllocateDescriptorSets(seDevice.device(), &allocInfo,
+				&descriptorSets[frameIndex]), "vkAllocateDescriptorSets(postprocess)");
 		}
 	}
 
@@ -120,14 +157,11 @@ namespace se
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
 
-		if (vkCreateDescriptorSetLayout(
+		checkVkResult(vkCreateDescriptorSetLayout(
 				seDevice.device(),
 				&layoutInfo,
 				nullptr,
-				&descriptorSetLayout) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create descriptor set layout!");
-		}
+				&descriptorSetLayout), "vkCreateDescriptorSetLayout(postprocess)");
 	}
 
 	void SEPostProcess::createPostProcessBuffer()
@@ -147,11 +181,8 @@ namespace se
 	void SEPostProcess::updatePostProcessBuffer(std::size_t frameIndex)
 	{
 		void* data = nullptr;
-		if (vkMapMemory(seDevice.device(), dofBufferMemories.at(frameIndex),
-				0, sizeof(PostProcessSettings), 0, &data) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to map postprocess settings buffer!");
-		}
+		checkVkResult(vkMapMemory(seDevice.device(), dofBufferMemories.at(frameIndex),
+			0, sizeof(PostProcessSettings), 0, &data), "vkMapMemory(postprocess settings)");
 		std::memcpy(data, &postProcessSettings, sizeof(PostProcessSettings));
 		vkUnmapMemory(seDevice.device(), dofBufferMemories[frameIndex]);
 	}
@@ -218,10 +249,8 @@ namespace se
 		samplerInfo.minLod = 0.0f;
 		samplerInfo.maxLod = 0.0f;
 
-		if (vkCreateSampler(seDevice.device(), &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create texture sampler!");
-		}
+		checkVkResult(vkCreateSampler(seDevice.device(), &samplerInfo, nullptr, &textureSampler),
+			"vkCreateSampler(postprocess)");
 	}
 
 	void SEPostProcess::render(VkCommandBuffer cmd, std::size_t frameIndex)

@@ -1,10 +1,9 @@
 #pragma once
 
-#include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_frame_context.hpp"
 #include "engine/renderer/se_swap_chain.hpp"
-#include "engine/platform/se_window.hpp"
-#include "engine/renderer/se_offscreen_renderer.hpp"
+
+#include <vulkan/vulkan.h>
 
 #include <cassert>
 #include <memory>
@@ -13,6 +12,9 @@
 
 namespace se
 {
+    class SEDevice;
+    class SEWindow;
+    class SEOffscreenRenderer;
   class SERenderer
   {
   public:
@@ -21,6 +23,8 @@ namespace se
 
     SERenderer(const SERenderer &) = delete;
     SERenderer &operator=(const SERenderer &) = delete;
+    SERenderer(SERenderer&&) = delete;
+    SERenderer& operator=(SERenderer&&) = delete;
 
     VkRenderPass getSwapChainRenderPass() const { return seSwapChain->getRenderPass(); }
     uint32_t getSwapChainImageCount() const

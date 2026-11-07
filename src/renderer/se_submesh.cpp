@@ -1,4 +1,5 @@
 #include "engine/renderer/se_submesh.hpp"
+#include "engine/vulkan/se_vk_result.hpp"
 
 // std
 #include <cassert>
@@ -7,28 +8,73 @@
 
 namespace se
 {
+  namespace
+  {
+    struct ScopedStagingBuffer
+    {
+      explicit ScopedStagingBuffer(SEDevice& owner) : device{owner} {}
+      ~ScopedStagingBuffer()
+      {
+        if (buffer != VK_NULL_HANDLE)
+          vkDestroyBuffer(device.device(), buffer, nullptr);
+        if (memory != VK_NULL_HANDLE)
+          vkFreeMemory(device.device(), memory, nullptr);
+      }
+
+      SEDevice& device;
+      VkBuffer buffer{VK_NULL_HANDLE};
+      VkDeviceMemory memory{VK_NULL_HANDLE};
+    };
+  }
   SESubMesh::SESubMesh(SEDevice &device, const SESubMesh::Builder &builder) : seDevice{device}
   {
-    createVertexBuffers(builder.vertices);
-    createIndexBuffers(builder.indices);
+    try
+    {
+      createVertexBuffers(builder.vertices);
+      createIndexBuffers(builder.indices);
+    }
+    catch (...)
+    {
+      destroyOwnedHandles();
+      throw;
+    }
   }
 
   SESubMesh::SESubMesh(SEDevice &device, const SESubMesh::Builder &builder, std::shared_ptr<SEMaterial> material) : seDevice{device}, seMaterial{material}
   {
-    createVertexBuffers(builder.vertices);
-    createIndexBuffers(builder.indices);
+    try
+    {
+      createVertexBuffers(builder.vertices);
+      createIndexBuffers(builder.indices);
+    }
+    catch (...)
+    {
+      destroyOwnedHandles();
+      throw;
+    }
   }
 
   SESubMesh::~SESubMesh()
   {
-    vkDestroyBuffer(seDevice.device(), vertexBuffer, nullptr);
-    vkFreeMemory(seDevice.device(), vertexBufferMemory, nullptr);
+    destroyOwnedHandles();
+  }
 
-    if (hasIndexBuffer)
-    {
+  void SESubMesh::destroyOwnedHandles() noexcept
+  {
+    if (indexBuffer != VK_NULL_HANDLE)
       vkDestroyBuffer(seDevice.device(), indexBuffer, nullptr);
+    indexBuffer = VK_NULL_HANDLE;
+    if (indexBufferMemory != VK_NULL_HANDLE)
       vkFreeMemory(seDevice.device(), indexBufferMemory, nullptr);
-    }
+    indexBufferMemory = VK_NULL_HANDLE;
+
+    if (vertexBuffer != VK_NULL_HANDLE)
+      vkDestroyBuffer(seDevice.device(), vertexBuffer, nullptr);
+    vertexBuffer = VK_NULL_HANDLE;
+    if (vertexBufferMemory != VK_NULL_HANDLE)
+      vkFreeMemory(seDevice.device(), vertexBufferMemory, nullptr);
+    vertexBufferMemory = VK_NULL_HANDLE;
+    hasIndexBuffer = false;
   }
 
   void SESubMesh::createVertexBuffers(const std::vector<Vertex> &vertices)
@@ -37,70 +83,45 @@ namespace se
     assert(vertexCount >= 3 && "Vertex count must be at least 3");
     VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
 
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    seDevice.createBuffer(
-        bufferSize,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    ScopedStagingBuffer staging{seDevice};
+    seDevice.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        stagingBuffer,
-        stagingBufferMemory);
+        staging.buffer, staging.memory);
 
-    void *data;
-    vkMapMemory(seDevice.device(), stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
-    vkUnmapMemory(seDevice.device(), stagingBufferMemory);
+    void* data = nullptr;
+    checkVkResult(vkMapMemory(seDevice.device(), staging.memory, 0, bufferSize, 0, &data),
+        "vkMapMemory(vertex staging buffer)");
+    std::memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
+    vkUnmapMemory(seDevice.device(), staging.memory);
 
-    seDevice.createBuffer(
-        bufferSize,
+    seDevice.createBuffer(bufferSize,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        vertexBuffer,
-        vertexBufferMemory);
-
-    seDevice.copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-
-    vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
-    vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertexBuffer, vertexBufferMemory);
+    seDevice.copyBuffer(staging.buffer, vertexBuffer, bufferSize);
   }
 
   void SESubMesh::createIndexBuffers(const std::vector<uint32_t> &indices)
   {
     indexCount = static_cast<uint32_t>(indices.size());
     hasIndexBuffer = indexCount > 0;
-
-    if (!hasIndexBuffer)
-    {
-      return;
-    }
+    if (!hasIndexBuffer) return;
 
     VkDeviceSize bufferSize = sizeof(indices[0]) * indexCount;
-
-    VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
-    seDevice.createBuffer(
-        bufferSize,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    ScopedStagingBuffer staging{seDevice};
+    seDevice.createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        stagingBuffer,
-        stagingBufferMemory);
+        staging.buffer, staging.memory);
 
-    void *data;
-    vkMapMemory(seDevice.device(), stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
-    vkUnmapMemory(seDevice.device(), stagingBufferMemory);
+    void* data = nullptr;
+    checkVkResult(vkMapMemory(seDevice.device(), staging.memory, 0, bufferSize, 0, &data),
+        "vkMapMemory(index staging buffer)");
+    std::memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
+    vkUnmapMemory(seDevice.device(), staging.memory);
 
-    seDevice.createBuffer(
-        bufferSize,
+    seDevice.createBuffer(bufferSize,
         VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        indexBuffer,
-        indexBufferMemory);
-
-    seDevice.copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-
-    vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
-    vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, indexBuffer, indexBufferMemory);
+    seDevice.copyBuffer(staging.buffer, indexBuffer, bufferSize);
   }
 
 

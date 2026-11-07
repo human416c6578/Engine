@@ -61,12 +61,12 @@ namespace se
 					std::optional<std::shared_ptr<SETexture>> aoTexture = std::nullopt,
 					std::optional<std::shared_ptr<SETexture>> heightTexture = std::nullopt);
 
-		~SEMaterial()
-		{
-		}
+		~SEMaterial();
 
 		SEMaterial(const SEMaterial &) = delete;
 		SEMaterial &operator=(const SEMaterial &) = delete;
+		SEMaterial(SEMaterial &&) = delete;
+		SEMaterial &operator=(SEMaterial &&) = delete;
 
 		void bind(VkCommandBuffer commandBuffer, int frameIndex) override
 		{
@@ -245,21 +245,22 @@ namespace se
 		void createDescriptorSets();
 
 		void updateDescriptorSet(size_t frameIndex);
+		void destroyOwnedHandles() noexcept;
 
 		std::vector<bool> needUpdate;
 
 
 		SEDevice &seDevice;
-		VkPipeline pipeline;
-		VkPipelineLayout pipelineLayout;
-		VkDescriptorSetLayout descriptorSetLayout;
+		VkPipeline pipeline{VK_NULL_HANDLE}; // borrowed from MaterialSystem
+		VkPipelineLayout pipelineLayout{VK_NULL_HANDLE}; // borrowed from PBR
+		VkDescriptorSetLayout descriptorSetLayout{VK_NULL_HANDLE}; // borrowed from MaterialSystem
 		std::vector<VkDescriptorSet> descriptorSets;
 
 		MaterialFlags flags{};
 
-		VkBuffer matBuffer;
-		VkDeviceMemory matBufferMemory;
-		void *matBufferMapped;
+		VkBuffer matBuffer{VK_NULL_HANDLE};
+		VkDeviceMemory matBufferMemory{VK_NULL_HANDLE};
+		void *matBufferMapped{nullptr};
 
 		std::shared_ptr<se::SETexture> dummyTexture;
 

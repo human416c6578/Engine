@@ -1,4 +1,11 @@
 #include "engine/renderer/se_pipeline.hpp"
+#include "engine/core/se_vertex.hpp"
+#include "engine/vulkan/se_device.hpp"
+
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+#include "engine/vulkan/se_vk_result.hpp"
 
 namespace se
 {
@@ -11,7 +18,15 @@ namespace se
         )
         : seDevice{device}
     {
-        createGraphicsPipeline(vertFilepath, fragFilepath, configInfo);
+        try
+        {
+            createGraphicsPipeline(vertFilepath, fragFilepath, configInfo);
+        }
+        catch (...)
+        {
+            destroyOwnedHandles();
+            throw;
+        }
     }
 
     SEPipeline::SEPipeline(
@@ -20,22 +35,39 @@ namespace se
         VkPipelineLayout computePipelineLayout)
         : seDevice{ device }
     {
-        createComputePipeline(compFilepath, computePipelineLayout);
+        try
+        {
+            createComputePipeline(compFilepath, computePipelineLayout);
+        }
+        catch (...)
+        {
+            destroyOwnedHandles();
+            throw;
+        }
     }
 
     SEPipeline::~SEPipeline()
     {
+        destroyOwnedHandles();
+    }
 
-        if (vertShaderModule != VK_NULL_HANDLE)
-            vkDestroyShaderModule(seDevice.device(), vertShaderModule, nullptr);
-        if (fragShaderModule != VK_NULL_HANDLE)
-            vkDestroyShaderModule(seDevice.device(), fragShaderModule, nullptr);
-        if (compShaderModule != VK_NULL_HANDLE)
-            vkDestroyShaderModule(seDevice.device(), compShaderModule, nullptr);
+    void SEPipeline::destroyOwnedHandles() noexcept
+    {
         if (graphicsPipeline != VK_NULL_HANDLE)
             vkDestroyPipeline(seDevice.device(), graphicsPipeline, nullptr);
+        graphicsPipeline = VK_NULL_HANDLE;
         if (computePipeline != VK_NULL_HANDLE)
             vkDestroyPipeline(seDevice.device(), computePipeline, nullptr);
+        computePipeline = VK_NULL_HANDLE;
+        if (vertShaderModule != VK_NULL_HANDLE)
+            vkDestroyShaderModule(seDevice.device(), vertShaderModule, nullptr);
+        vertShaderModule = VK_NULL_HANDLE;
+        if (fragShaderModule != VK_NULL_HANDLE)
+            vkDestroyShaderModule(seDevice.device(), fragShaderModule, nullptr);
+        fragShaderModule = VK_NULL_HANDLE;
+        if (compShaderModule != VK_NULL_HANDLE)
+            vkDestroyShaderModule(seDevice.device(), compShaderModule, nullptr);
+        compShaderModule = VK_NULL_HANDLE;
     }
 
     void SEPipeline::bind(VkCommandBuffer commandBuffer)
@@ -288,16 +320,13 @@ namespace se
         pipelineInfo.basePipelineIndex = -1;
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-        if (vkCreateGraphicsPipelines(
+        checkVkResult(vkCreateGraphicsPipelines(
                 seDevice.device(),
                 VK_NULL_HANDLE,
                 1,
                 &pipelineInfo,
                 nullptr,
-                &graphicsPipeline) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create graphics pipeline");
-        }
+                &graphicsPipeline), "vkCreateGraphicsPipelines");
     }
 
     void SEPipeline::createComputePipeline(
@@ -321,13 +350,12 @@ namespace se
         pipelineInfo.stage  = stageInfo;
         pipelineInfo.layout = layout;
 
-        if (vkCreateComputePipelines(
+        checkVkResult(vkCreateComputePipelines(
                 seDevice.device(),
                 VK_NULL_HANDLE,
                 1, &pipelineInfo,
                 nullptr,
-                &computePipeline) != VK_SUCCESS)
-            throw std::runtime_error("Failed to create compute pipeline!");
+                &computePipeline), "vkCreateComputePipelines");
     }
 
     void SEPipeline::createShaderModule(const std::vector<char> &code, VkShaderModule *shaderModule)
@@ -337,9 +365,6 @@ namespace se
         createInfo.codeSize = code.size();
         createInfo.pCode = reinterpret_cast<const uint32_t *>(code.data());
 
-        if (vkCreateShaderModule(seDevice.device(), &createInfo, nullptr, shaderModule) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create shader module");
-        }
+        checkVkResult(vkCreateShaderModule(seDevice.device(), &createInfo, nullptr, shaderModule), "vkCreateShaderModule");
     }
 }

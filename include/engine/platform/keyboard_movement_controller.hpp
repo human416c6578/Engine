@@ -1,7 +1,9 @@
 #pragma once
 
 #include "engine/scene/se_gameobject.hpp"
-#include "engine/platform/se_window.hpp"
+#include "engine/platform/se_input_system.hpp"
+
+#include <GLFW/glfw3.h>
 
 namespace se
 {
@@ -22,12 +24,13 @@ namespace se
             int lookDown = GLFW_KEY_DOWN;
         };
 
-        void moveInPlaneXZ(GLFWwindow *window, float dt, TransformComponent &transform);
+        void moveInPlaneXZ(SEInputSystem &input, float dt, TransformComponent &transform);
 
         KeyMappings keys{};
         float moveSpeed{1.5f};
         float lookSpeed{3.f};
         double oldX{0.f};
         double oldY{0.f};
+        bool captured{false};
     };
 }

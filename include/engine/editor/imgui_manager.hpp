@@ -1,95 +1,105 @@
 #pragma once
-#include "engine/vulkan/se_device.hpp"
-#include "engine/platform/se_window.hpp"
-#include "engine/renderer/se_renderer.hpp"
-#include "engine/renderer/se_postprocess.hpp"
-#include "engine/scene/se_gameobject.hpp"
-#include "engine/resources/se_resource_manager.hpp"
-#include "engine/scene/se_scene_manager.hpp"
-#include <imgui/imgui.h>
-#include "imgui/imgui_impl_glfw.h"
-#include "imgui/imgui_impl_vulkan.h"
-#include "imgui_filedialog/ImGuiFileDialog.h"
 
+#include <vulkan/vulkan.h>
+
+#include <array>
+#include <functional>
+#include <memory>
+#include <string>
+#include <vector>
+
+struct GLFWwindow;
 
 namespace se
 {
+    class SEDevice;
+    class ResourceManager;
+    class SceneManager;
+    class SEPostProcess;
+    class ParticleSystem;
+    class SEInputSystem;
+    class SEGameObject;
+    class SEMaterial;
+    class SETexture;
+    class SEMesh;
+    class ScriptComponent;
+    class ScriptManager;
+
     class ImGuiManager
     {
     public:
-        ImGuiManager() = default;
-        ~ImGuiManager() = default;
+        ImGuiManager(SEDevice& device, VkRenderPass renderPass, GLFWwindow& window,
+            uint32_t swapChainImageCount, ResourceManager& resources,
+            SceneManager& scenes, SEPostProcess& postProcess,
+            ParticleSystem& particles, SEInputSystem& input, ScriptManager& scripts);
+        ~ImGuiManager();
 
-        void init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, uint32_t swapChainImageCount, se::ResourceManager* resourceManager, se::SEPostProcess* postprocess, se::ParticleSystem* particleSystem);
+        ImGuiManager(const ImGuiManager&) = delete;
+        ImGuiManager& operator=(const ImGuiManager&) = delete;
+        ImGuiManager(ImGuiManager&&) = delete;
+        ImGuiManager& operator=(ImGuiManager&&) = delete;
 
         void newFrame();
         void render(VkCommandBuffer commandBuffer);
         void cleanup();
 
     private:
-        // Core rendering methods
         void renderSceneHierarchy();
         void renderAssetBrowser();
         void renderAssetContextMenu();
         void renderAssetViewer();
         void renderPropertiesPanel();
-
-        // GameObject properties
         void renderGameObjectProperties();
-        void renderTransformComponent(std::unique_ptr<se::SEGameObject>& gameObject);
-        void renderMeshComponent(std::unique_ptr<se::SEGameObject>& gameObject);
-        void renderMaterialComponent(std::unique_ptr<se::SEGameObject>& gameObject);
-        void renderLightComponent(std::unique_ptr<se::SEGameObject>& gameObject);
-        void renderScriptComponent(std::unique_ptr<se::SEGameObject>& gameObject);
-        void renderParticleEmitterComponent(std::unique_ptr<se::SEGameObject>& gameObject);
-
-
-        // Asset properties
+        void renderTransformComponent(std::unique_ptr<SEGameObject>& gameObject);
+        void renderMeshComponent(std::unique_ptr<SEGameObject>& gameObject);
+        void renderMaterialComponent(std::unique_ptr<SEGameObject>& gameObject);
+        void renderLightComponent(std::unique_ptr<SEGameObject>& gameObject);
+        void renderScriptComponent(std::unique_ptr<SEGameObject>& gameObject);
+        void renderParticleEmitterComponent(std::unique_ptr<SEGameObject>& gameObject);
         void renderMeshProperties();
         void renderMaterialProperties();
         void renderTextureProperties();
         void renderPostProcessProperties();
+        void renderMaterialEditor(std::shared_ptr<SEMaterial> material);
+        void renderTextureSelector(const std::string& label,
+            std::shared_ptr<SETexture> currentTexture,
+            std::function<void(std::shared_ptr<SETexture>)> onTextureSelected);
+        void renderMaterialSelector(std::shared_ptr<SEMaterial> currentMaterial,
+            std::function<void(std::shared_ptr<SEMaterial>)> onMaterialSelected);
+        void renderMeshSelector(std::shared_ptr<SEMesh> currentMesh,
+            std::function<void(std::shared_ptr<SEMesh>)> onMeshSelected);
+        void renderScriptSelector(std::unique_ptr<ScriptComponent>& currentScript,
+            std::function<void(std::unique_ptr<ScriptComponent>)> onScriptSelected);
 
-        // Utility methods
-        void renderMaterialEditor(std::shared_ptr<se::SEMaterial> material);
-        void renderTextureSelector(const std::string& label, std::shared_ptr<se::SETexture> currentTexture, std::function<void(std::shared_ptr<se::SETexture>)> onTextureSelected);
+        ResourceManager& resourceManager;
+        SceneManager& sceneManager;
+        SEPostProcess& postprocess;
+        ParticleSystem& particleSystem;
+        SEInputSystem& inputSystem;
+        ScriptManager& scriptManager;
+        bool contextCreated{false};
+        bool glfwBackendInitialized{false};
+        bool vulkanBackendInitialized{false};
 
-        void renderMaterialSelector(std::shared_ptr<se::SEMaterial> currentMaterial, std::function<void(std::shared_ptr<se::SEMaterial>)> onMaterialSelected);
+        int selectedGameObjectIndex{-1};
+        std::string selectedAssetCategory{"Meshes"};
+        std::string selectedAssetName;
+        std::vector<std::string> assetCategories{"Meshes", "Materials", "Textures", "Scripts"};
+        bool showSceneHierarchy{true};
+        bool showAssetBrowser{true};
+        bool showAssetViewer{true};
+        bool showProperties{true};
 
-        void renderMeshSelector(std::shared_ptr<se::SEMesh> currentMesh, std::function<void(std::shared_ptr<se::SEMesh>)> onMeshSelected);
-
-        void renderScriptSelector(std::unique_ptr<se::ScriptComponent>& currentScript, std::function<void(std::unique_ptr<se::ScriptComponent>)> onScriptSelected);
-
-        // Vulkan/ImGui setup
-        GLFWwindow* window{ nullptr };
-        VkInstance instance{ VK_NULL_HANDLE };
-        VkPhysicalDevice physicalDevice{ VK_NULL_HANDLE };
-        VkDevice device{ VK_NULL_HANDLE };
-        uint32_t graphicsFamily{ 0 };
-        VkQueue graphicsQueue{ VK_NULL_HANDLE };
-        VkDescriptorPool descriptorPool{ VK_NULL_HANDLE };
-        VkRenderPass renderPass{ VK_NULL_HANDLE };
-        uint32_t imageCount{ 0 };
-
-        // Data references
-        se::ResourceManager* resourceManager{ nullptr };
-        se::SceneManager* sceneManager{ nullptr };
-        se::SEPostProcess* postprocess{ nullptr };
-        se::ParticleSystem* particleSystem = nullptr;
-
-
-        // Selection state
-        int selectedGameObjectIndex = -1;
-        std::string selectedAssetCategory = "Meshes";
-        std::string selectedAssetName = "";
-
-        // Asset categories
-        std::vector<std::string> assetCategories = { "Meshes", "Materials", "Textures", "Scripts"};
-
-        // UI flags
-        bool showSceneHierarchy = true;
-        bool showAssetBrowser = true;
-        bool showAssetViewer = true;
-        bool showProperties = true;
+        int cubeCount{0};
+        int sphereCount{0};
+        std::array<char, 128> assetBrowserTextureSearch{};
+        std::array<char, 128> textureSelectorSearch{};
+        std::array<char, 128> materialSelectorSearch{};
+        std::array<char, 128> meshSelectorSearch{};
+        std::array<char, 128> scriptSelectorSearch{};
+        std::array<char, 128> gameObjectNameBuffer{};
+        std::array<char, 128> meshNameBuffer{};
+        std::array<char, 128> materialNameBuffer{};
+        std::array<char, 128> textureNameBuffer{};
     };
 }

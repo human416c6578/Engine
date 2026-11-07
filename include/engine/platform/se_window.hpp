@@ -1,9 +1,10 @@
 #pragma once
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <vulkan/vulkan.h>
 
 #include <string>
+
+struct GLFWwindow;
 
 namespace se
 {
@@ -13,29 +14,29 @@ namespace se
         SEWindow(uint32_t width, uint32_t height, std::string name);
         ~SEWindow();
 
-        bool shouldClose() { return glfwWindowShouldClose(m_window); }
-        VkExtent2D getExtent() { return {static_cast<uint32_t>(m_width), static_cast<uint32_t>(m_height)}; }
-        VkExtent2D getFramebufferExtent() const
-        {
-            int width, height;
-            glfwGetFramebufferSize(m_window, &width, &height);
-            return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
-        }
-        bool wasWindowResized() { return m_framebufferResized; }
-        void resetWindowResizedFlag() { m_framebufferResized = false; }
-        void setTitle(std::string title) { glfwSetWindowTitle(m_window, title.c_str());}
+        SEWindow(const SEWindow &) = delete;
+        SEWindow &operator=(const SEWindow &) = delete;
+        SEWindow(SEWindow &&) = delete;
+        SEWindow &operator=(SEWindow &&) = delete;
+
+        bool shouldClose() const;
+        VkExtent2D getExtent() const;
+        VkExtent2D getFramebufferExtent() const;
+        bool wasWindowResized() const;
+        void resetWindowResizedFlag();
+        void setTitle(const std::string& title);
         GLFWwindow *getGLFWwindow() const { return m_window; }
 
         void createWindowSurface(VkInstance instance, VkSurfaceKHR *surface);
 
     private:
-        GLFWwindow *m_window;
+        GLFWwindow *m_window{nullptr};
 
-        uint32_t m_width;
-        uint32_t m_height;
+        uint32_t m_width{0};
+        uint32_t m_height{0};
         std::string m_name;
 
-        bool m_framebufferResized;
+        bool m_framebufferResized{false};
 
         void initWindow();
         static void framebufferResizeCallback(GLFWwindow *window, int width, int height);

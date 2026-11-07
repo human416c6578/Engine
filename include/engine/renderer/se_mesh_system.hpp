@@ -1,48 +1,34 @@
 #pragma once
 
 #include <string>
-#include <vector>
 #include <unordered_map>
 #include <memory>
-
-#include "engine/vulkan/se_device.hpp"
-#include "engine/renderer/se_material_system.hpp"
-#include "engine/renderer/se_texture_system.hpp"
-#include "engine/renderer/se_mesh.hpp"
-
-#define ASSIMP_LOAD_FLAGS (aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace | aiProcess_JoinIdenticalVertices | aiProcess_GenSmoothNormals | aiProcess_OptimizeMeshes | aiProcess_ValidateDataStructure)
-
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
 
 
 namespace se
 {
+	class SEDevice;
+	class MaterialSystem;
+	class TextureSystem;
+	class SEMesh;
+
 	class MeshSystem
 	{
 	public:
-		MeshSystem(se::SEDevice& device);
+		MeshSystem(se::SEDevice& device, se::MaterialSystem& materials,
+			se::TextureSystem& textures);
 		~MeshSystem();
 
 		MeshSystem(const MeshSystem&) = delete;
 		MeshSystem& operator=(const MeshSystem&) = delete;
+		MeshSystem(MeshSystem&&) = delete;
+		MeshSystem& operator=(MeshSystem&&) = delete;
 
 		std::unordered_map<std::string, std::shared_ptr<se::SEMesh>>* getMeshes()
 		{
 			return &meshes;
 		}
 
-
-		void setMaterialSystem(se::MaterialSystem* materialSystem)
-		{
-			this->materialSystem = materialSystem;
-		}
-
-		void setTextureSystem(se::TextureSystem* textureSystem)
-		{
-			this->textureSystem = textureSystem;
-		}
 
 		std::shared_ptr<se::SEMesh> loadMesh(const std::string& guid, const std::string& name, const std::string& path);
 
@@ -53,8 +39,8 @@ namespace se
 	private:
 
 		se::SEDevice& seDevice;
-		se::MaterialSystem* materialSystem = nullptr;
-		se::TextureSystem* textureSystem = nullptr;
+		se::MaterialSystem& materialSystem;
+		se::TextureSystem& textureSystem;
 
 		std::unordered_map<std::string, std::shared_ptr<se::SEMesh>> meshes;
 

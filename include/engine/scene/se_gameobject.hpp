@@ -1,13 +1,14 @@
 #pragma once
 
 #include "engine/renderer/se_mesh.hpp"
-#include "engine/renderer/se_particle_system.hpp"
+#include "engine/scene/se_particle_emitter_component.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <memory>
 
 #include "engine/scripting/se_script_component.hpp"
-#include "engine/scripting/se_script_manager.hpp"
+
+#include <utility>
 
 namespace se
 {
@@ -74,65 +75,36 @@ namespace se
         }
     };
 
-    struct ParticleEmitterComponent
-        {
-            EmitterHandle   handle  = INVALID_HANDLE;   // index into ParticleSystem
-            ParticleSystem* system  = nullptr;
-
-            bool isValid() const { return handle != INVALID_HANDLE && system != nullptr; }
-
-            void syncTransform(const glm::vec3& worldPos)
-            {
-                if (!isValid()) return;
-                auto& emitter = system->getEmitter(handle);
-                emitter.volume.position = glm::vec4(worldPos, 1.0f);
-            }
-
-            void setActive(bool active)
-            {
-                if (!isValid()) return;
-                system->setEmitterActive(handle, active);
-            }
-
-            // Convenience: apply an offset if the emitter should hang above / in front
-            void syncTransform(const glm::vec3& worldPos, const glm::vec3& offset)
-            {
-                syncTransform(worldPos + offset);
-            }
-        };
-
     class SEGameObject
     {
     public:
         using id_t = unsigned int;
 
-        SEGameObject() : id{ currentId++ }, name{ std::string("GameObject_") + std::to_string(currentId) } {}
+        SEGameObject() : id{ 0 }, name{ "GameObject_0" } {}
 
-        SEGameObject(const std::string& name) : id{ currentId++ }, name{ name } {}
+        explicit SEGameObject(const std::string& name) : id{ 0 }, name{ name } {}
+
+        SEGameObject(id_t objId, std::string objName) : id{ objId }, name{ std::move(objName) } {}
 
         static SEGameObject createGameObject()
         {
-            return SEGameObject{ currentId++, std::string("GameObject_") + std::to_string(currentId) };
+            return SEGameObject{ 0, "GameObject_0" };
         }
 
 
         static SEGameObject createGameObject(const std::string& name)
         {
-            if (name.empty())
-                return SEGameObject{ currentId++, std::string("GameObject_") + std::to_string(currentId) };
-            return SEGameObject{ currentId++, name };
+            return SEGameObject{ 0, name.empty() ? "GameObject_0" : name };
         }
 
         template<typename T, typename... Args>
-        void addScript(Args&&... args) {
+        void addScript(ScriptContext &context, Args&&... args) {
             static_assert(std::is_base_of<ScriptComponent, T>::value, "Script must inherit from ScriptComponent");
-            script = std::make_unique<T>(std::forward<Args>(args)...);
-            script->setOwner(this);
-            script->onCreate();
+            setScript(std::make_unique<T>(std::forward<Args>(args)...), context);
         }
 
-        void onUpdate(float dt) {
-            if (script) script->onUpdate(dt);
+        void onUpdate(float dt, ScriptContext &context) {
+            if (script) script->onUpdate(dt, context);
         }
 
         void onDestroy() {
@@ -183,12 +155,12 @@ namespace se
             return light.type != LightType::None;
         }
 
-		void setScript(std::unique_ptr<ScriptComponent> newScript)
+		void setScript(std::unique_ptr<ScriptComponent> newScript, ScriptContext &context)
 		{
 			script = std::move(newScript);
 			if (script) {
 				script->setOwner(this);
-				script->onCreate();
+				script->onCreate(context);
 			}
 		}
 
@@ -205,11 +177,6 @@ namespace se
         id_t id;
 
     private:
-        static id_t currentId;
-
-        SEGameObject(id_t objId, std::string objName) : id{ objId }, name{ objName } {}
-
-
         std::string name;
 
         std::shared_ptr<SEMesh> mesh{};

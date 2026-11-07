@@ -1,10 +1,62 @@
 #include "engine/scene/se_scene_manager.hpp"
+#include "engine/scene/se_scene.hpp"
+#include "engine/core/se_camera.hpp"
+#include <fstream>
+#include <unordered_set>
+#include "engine/platform/se_input_system.hpp"
+#include "engine/resources/se_resource_manager.hpp"
+#include "engine/renderer/se_postprocess.hpp"
+#include "engine/renderer/se_particle_system.hpp"
 #include "engine/scripting/se_script_component.hpp"
+#include "engine/scripting/se_script_manager.hpp"
 #include <glm/gtc/type_ptr.hpp>
 
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
+
+se::SceneManager::SceneManager(ResourceManager &resources, SEPostProcess &postProcess,
+                               ParticleSystem &particleSystem, SEInputSystem &input,
+                               ScriptManager& scripts)
+    : resourceManager{resources}, postProcess{postProcess},
+      particleSystem{particleSystem}, inputSystem{input}, scriptManager{scripts} {}
+
+se::SceneManager::~SceneManager() = default;
+
+void se::SceneManager::destroyAllScenes()
+{
+  activeScene = nullptr;
+  scenes.clear();
+}
+
+se::Scene& se::SceneManager::createScene(const std::string& name)
+{
+  auto scene = std::make_unique<Scene>(name);
+  Scene& ref = *scene;
+  scenes[name] = std::move(scene);
+  return ref;
+}
+
+se::Scene* se::SceneManager::getScene(const std::string& name)
+{
+  const auto it = scenes.find(name);
+  return it != scenes.end() ? it->second.get() : nullptr;
+}
+
+void se::SceneManager::setActiveScene(const std::string& name)
+{
+  activeScene = getScene(name);
+}
+
+se::Scene* se::SceneManager::getActiveScene()
+{
+  return activeScene;
+}
+
+se::SECamera& se::SceneManager::getCamera()
+{
+  return activeScene->getCamera();
+}
 
 bool se::SceneManager::saveScene(const std::string &sceneName,
                                  const std::string &filePath) {
@@ -35,8 +87,8 @@ bool se::SceneManager::saveScene(const std::string &sceneName,
   jscene["scene"]["camera"]["view"] =
       std::vector<float>(glm::value_ptr(view), glm::value_ptr(view) + 16);
 
-  if (postProcess) {
-    const auto &pp = postProcess->getSettings();
+  {
+    const auto &pp = postProcess.getSettings();
     json jpp;
     jpp["focusDistance"] = pp.focusDistance;
     jpp["focusRange"] = pp.focusRange;
@@ -93,10 +145,10 @@ bool se::SceneManager::saveScene(const std::string &sceneName,
       jgo["script"] = script->getName();
     }
 
-    if (go->hasParticleEmitter() && particleSystem) {
+    if (go->hasParticleEmitter()) {
       auto &comp = go->getParticleEmitter();
       if (comp.isValid()) {
-        auto &em = particleSystem->getEmitter(comp.handle);
+        auto &em = particleSystem.getEmitter(comp.handle);
 
         json jpe;
         json je;
@@ -135,7 +187,7 @@ bool se::SceneManager::saveScene(const std::string &sceneName,
           if (fh == ~0u)
             continue;
           try {
-            auto &f = particleSystem->getForce(fh);
+            auto &f = particleSystem.getForce(fh);
             json jf;
             jf["position"] = {f.position.x, f.position.y, f.position.z,
                               f.position.w};
@@ -206,7 +258,7 @@ bool se::SceneManager::saveScene(const std::string &sceneName,
     json jmesh;
     jmesh["guid"] = mesh->getGUID();
     jmesh["name"] = mesh->getName();
-    jmesh["path"] = resourceManager->getResourcePath(mesh->getGUID());
+    jmesh["path"] = resourceManager.getResourcePath(mesh->getGUID());
 
     jmeshes.push_back(jmesh);
   }
@@ -217,7 +269,7 @@ bool se::SceneManager::saveScene(const std::string &sceneName,
     json jtex;
     jtex["guid"] = tex->getGUID();
     jtex["name"] = tex->getName();
-    jtex["path"] = resourceManager->getResourcePath(tex->getGUID());
+    jtex["path"] = resourceManager.getResourcePath(tex->getGUID());
 
     if (!jtex["path"].empty())
       jtextures.push_back(jtex);
@@ -291,7 +343,7 @@ bool se::SceneManager::loadScene(const std::string &filePath,
     camera.setViewYXZ();
   }
 
-  if (jscene["scene"].contains("postProcess") && postProcess) {
+  if (jscene["scene"].contains("postProcess")) {
     auto &jpp = jscene["scene"]["postProcess"];
     se::SEPostProcess::PostProcessSettings pp;
     pp.focusDistance = jpp.value("focusDistance", 0.1f);
@@ -310,7 +362,7 @@ bool se::SceneManager::loadScene(const std::string &filePath,
     }
     pp.enableTonemap = jpp.value("enableTonemap", 1);
     pp.exposure = jpp.value("exposure", 1.0f);
-    postProcess->updateSettings(pp);
+    postProcess.updateSettings(pp);
   }
 
   // --- Load meshes ---
@@ -321,13 +373,13 @@ bool se::SceneManager::loadScene(const std::string &filePath,
       std::string path = jmesh["path"];
       std::shared_ptr<SEMesh> mesh;
       if (path == "CUBE") {
-        mesh = resourceManager->createCube(name);
+        mesh = resourceManager.createCube(name);
       } else if (path == "SPHERE") {
-        mesh = resourceManager->createSphere(name);
+        mesh = resourceManager.createSphere(name);
       } else if (path == "PLANE") {
-        mesh = resourceManager->createPlane(name);
+        mesh = resourceManager.createPlane(name);
       } else if (!path.empty()) {
-        mesh = resourceManager->loadMesh(guid, path);
+        mesh = resourceManager.loadMesh(guid, path);
       }
     }
   }
@@ -338,7 +390,7 @@ bool se::SceneManager::loadScene(const std::string &filePath,
       std::string guid = jtex["guid"];
       std::string path = jtex["path"];
       if (guid != "GUID_DUMMY") {
-        auto tex = resourceManager->loadTexture(guid, path);
+        auto tex = resourceManager.loadTexture(guid, path);
       }
     }
   }
@@ -348,9 +400,9 @@ bool se::SceneManager::loadScene(const std::string &filePath,
     for (const auto &jmat : sceneData["materials"]) {
       std::string guid = jmat["guid"];
       std::string name = jmat["name"];
-      auto mat = resourceManager->getMaterial(guid);
+      auto mat = resourceManager.getMaterial(guid);
       if (!mat) {
-        mat = resourceManager->createMaterial(guid, name);
+        mat = resourceManager.createMaterial(guid, name);
       }
       // Set properties
       mat->setName(name);
@@ -363,37 +415,37 @@ bool se::SceneManager::loadScene(const std::string &filePath,
       // Set textures by GUID
       if (jmat.contains("diffuseTexture")) {
         std::string texGuid = jmat["diffuseTexture"];
-        auto texture = resourceManager->getTexture(texGuid);
+        auto texture = resourceManager.getTexture(texGuid);
         if (texture)
           mat->setDiffuseTexture(texture);
       }
       if (jmat.contains("normalTexture")) {
         std::string texGuid = jmat["normalTexture"];
-        auto texture = resourceManager->getTexture(texGuid);
+        auto texture = resourceManager.getTexture(texGuid);
         if (texture)
           mat->setNormalTexture(texture);
       }
       if (jmat.contains("metallicTexture")) {
         std::string texGuid = jmat["metallicTexture"];
-        auto texture = resourceManager->getTexture(texGuid);
+        auto texture = resourceManager.getTexture(texGuid);
         if (texture)
           mat->setMetallicTexture(texture);
       }
       if (jmat.contains("roughnessTexture")) {
         std::string texGuid = jmat["roughnessTexture"];
-        auto texture = resourceManager->getTexture(texGuid);
+        auto texture = resourceManager.getTexture(texGuid);
         if (texture)
           mat->setRoughnessTexture(texture);
       }
       if (jmat.contains("aoTexture")) {
         std::string texGuid = jmat["aoTexture"];
-        auto texture = resourceManager->getTexture(texGuid);
+        auto texture = resourceManager.getTexture(texGuid);
         if (texture)
           mat->setAOTexture(texture);
       }
       if (jmat.contains("heightTexture")) {
         std::string texGuid = jmat["heightTexture"];
-        auto texture = resourceManager->getTexture(texGuid);
+        auto texture = resourceManager.getTexture(texGuid);
         if (texture)
           mat->setHeightTexture(texture);
       }
@@ -418,7 +470,7 @@ bool se::SceneManager::loadScene(const std::string &filePath,
     // Mesh
     if (jgo.contains("mesh")) {
       std::string meshGuid = jgo["mesh"];
-      auto mesh = resourceManager->getMesh(meshGuid);
+      auto mesh = resourceManager.getMesh(meshGuid);
       if (mesh)
         go.setMesh(mesh);
     }
@@ -426,7 +478,7 @@ bool se::SceneManager::loadScene(const std::string &filePath,
     // Material
     if (jgo.contains("material")) {
       std::string matGuid = jgo["material"];
-      auto mat = resourceManager->getMaterial(matGuid);
+      auto mat = resourceManager.getMaterial(matGuid);
       if (mat)
         go.setMaterial(mat);
     }
@@ -445,13 +497,16 @@ bool se::SceneManager::loadScene(const std::string &filePath,
     // Script
     if (jgo.contains("script")) {
       std::string scriptName = jgo["script"];
-      auto script = createScript(scriptName);
+      auto script = scriptManager.createScript(scriptName);
 
       if (script)
-        go.setScript(std::move(script));
+      {
+        ScriptContext context{scene, resourceManager, inputSystem};
+        go.setScript(std::move(script), context);
+      }
     }
 
-    if (jgo.contains("particleEmitter") && particleSystem) {
+    if (jgo.contains("particleEmitter")) {
       auto &jpe = jgo["particleEmitter"];
 
       se::Emitter em{};
@@ -495,7 +550,7 @@ bool se::SceneManager::loadScene(const std::string &filePath,
         em.emitRate = je.value("emitRate", 100.0f);
       }
 
-      auto ehandle = particleSystem->addEmitter(em);
+      auto ehandle = particleSystem.addEmitter(em);
 
       if (jpe.contains("forces")) {
         for (auto &jf : jpe["forces"]) {
@@ -514,12 +569,12 @@ bool se::SceneManager::loadScene(const std::string &filePath,
           f.type = static_cast<se::ForceType>(jf.value("type", 0u));
           f.active = jf.value("active", 1u);
 
-          auto fhandle = particleSystem->addForce(f);
-          particleSystem->attachForce(ehandle, fhandle);
+          auto fhandle = particleSystem.addForce(f);
+          particleSystem.attachForce(ehandle, fhandle);
         }
       }
 
-      go.getParticleEmitter() = {ehandle, particleSystem};
+      go.getParticleEmitter() = {ehandle, &particleSystem};
     }
   }
 

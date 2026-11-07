@@ -2,62 +2,33 @@
 #include <unordered_map>
 #include <memory>
 #include <string>
-#include "engine/scene/se_scene.hpp"
-#include "engine/resources/se_resource_manager.hpp"
-#include "engine/renderer/se_postprocess.hpp"
-#include "engine/renderer/se_particle_system.hpp"
-#include "engine/core/se_camera.hpp"
 
 namespace se {
+    class Scene;
+    class SECamera;
+    class ResourceManager;
+    class SEPostProcess;
+    class ParticleSystem;
+    class SEInputSystem;
+    class ScriptManager;
 
     class SceneManager {
     public:
-        static SceneManager& getInstance() {
-            static SceneManager instance;
-            return instance;
-        }
+        SceneManager(ResourceManager &resources, SEPostProcess &postProcess,
+            ParticleSystem &particleSystem, SEInputSystem &input, ScriptManager& scripts);
+        ~SceneManager();
 
-        void destroyAllScenes()
-        {
-            activeScene = nullptr;
-            scenes.clear();
-        }
+        SceneManager(const SceneManager &) = delete;
+        SceneManager &operator=(const SceneManager &) = delete;
+        SceneManager(SceneManager &&) = delete;
+        SceneManager &operator=(SceneManager &&) = delete;
 
-        void setResourceManager(ResourceManager* rm)
-        {
-            resourceManager = rm;
-        }
-
-        void setPostProcess(SEPostProcess* pp)       { postProcess = pp; }
-        void setParticleSystem(ParticleSystem* ps)   { particleSystem = ps; }
-
-        ResourceManager* getResourceManager()
-        {
-            return resourceManager;
-        }
-
-        Scene& createScene(const std::string& name)
-        {
-            auto scene = std::make_unique<Scene>(name);
-            Scene& ref = *scene;
-            scenes[name] = std::move(scene);
-            return ref;
-        }
-
-        Scene* getScene(const std::string& name)
-        {
-            auto it = scenes.find(name);
-            return it != scenes.end() ? it->second.get() : nullptr;
-        }
-
-        void setActiveScene(const std::string& name)
-        {
-            activeScene = getScene(name);
-        }
-
-        Scene* getActiveScene() { return activeScene; }
-
-        SECamera& getCamera() { return activeScene->getCamera(); }
+        void destroyAllScenes();
+        Scene& createScene(const std::string& name);
+        Scene* getScene(const std::string& name);
+        void setActiveScene(const std::string& name);
+        Scene* getActiveScene();
+        SECamera& getCamera();
 
         bool saveActiveScene(const std::string& filePath);
 
@@ -67,9 +38,11 @@ namespace se {
 
 
     private:
-        ResourceManager* resourceManager = nullptr;
-        SEPostProcess*   postProcess   = nullptr;
-        ParticleSystem*  particleSystem = nullptr;
+        ResourceManager &resourceManager;
+        SEPostProcess &postProcess;
+        ParticleSystem &particleSystem;
+        SEInputSystem &inputSystem;
+        ScriptManager &scriptManager;
 
         std::unordered_map<std::string, std::unique_ptr<Scene>> scenes;
         Scene* activeScene = nullptr;

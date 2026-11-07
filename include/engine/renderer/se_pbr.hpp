@@ -22,9 +22,9 @@ namespace se
     };
 
     struct Buffer {
-        VkBuffer buffer;
-        VkDeviceMemory memory;
-        void* mapped;
+        VkBuffer buffer{VK_NULL_HANDLE};
+        VkDeviceMemory memory{VK_NULL_HANDLE};
+        void* mapped{nullptr};
     };
 
     class PBR
@@ -36,6 +36,8 @@ namespace se
 
         PBR(const PBR&) = delete;
         PBR& operator=(const PBR&) = delete;
+        PBR(PBR&&) = delete;
+        PBR& operator=(PBR&&) = delete;
 
         VkDescriptorSetLayout getMaterialDescriptorSetLayout() { return materialDescriptorSetLayout; }
 		VkPipelineLayout getPipelineLayout() { return pipelineLayout; }
@@ -57,6 +59,7 @@ namespace se
         void createMaterialDescriptorSetLayout();
 
         void createUniformBuffer();
+        void destroyOwnedHandles() noexcept;
 
         void bind(VkCommandBuffer commandBuffer, int frameIndex)
         {
@@ -76,11 +79,11 @@ namespace se
         SEDevice& seDevice;
         SECubemap& seCubemap;
         std::vector<VkDescriptorSet> descriptorSets;
-        VkDescriptorSetLayout globalDescriptorSetLayout;
-        VkDescriptorSetLayout materialDescriptorSetLayout;
+        VkDescriptorSetLayout globalDescriptorSetLayout{VK_NULL_HANDLE};
+        VkDescriptorSetLayout materialDescriptorSetLayout{VK_NULL_HANDLE};
 
         std::unique_ptr<SEPipeline> sePipeline;
-        VkPipelineLayout pipelineLayout;
+        VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
 
 		std::vector<Buffer> lightBuffers;
         std::vector<bool> needUpdate;

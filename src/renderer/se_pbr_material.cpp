@@ -1,5 +1,7 @@
 #include "engine/renderer/se_pbr_material.hpp"
 #include "engine/renderer/se_swap_chain.hpp"
+#include "engine/vulkan/se_vk_result.hpp"
+#include <cstring>
 
 // libs
 #define GLM_FORCE_RADIANS
@@ -31,11 +33,10 @@ namespace se
 		std::optional<std::shared_ptr<SETexture>> roughnessTexture,
 		std::optional<std::shared_ptr<SETexture>> aoTexture,
         std::optional<std::shared_ptr<SETexture>> heightTexture)
-		: seDevice{ device }, pipelineLayout{ pipelineLayout }, pipeline{ pipeline },  
+		: Resource(guid, name), seDevice{ device }, pipelineLayout{ pipelineLayout }, pipeline{ pipeline },
 		descriptorSetLayout {descSetLayout}, dummyTexture{ dummyTexture }, diffuseTexture{diffuseTexture},
 		  normalTexture{normalTexture}, metallicTexture{metallicTexture},
-		  roughnessTexture{roughnessTexture}, aoTexture{aoTexture}, heightTexture{heightTexture},
-		Resource(guid, name)
+		  roughnessTexture{roughnessTexture}, aoTexture{aoTexture}, heightTexture{heightTexture}
 	{
         flags.color = { 1.0f, 1.0f, 1.0f }; // Default color
 		flags.hasDiffuseMap = diffuseTexture.has_value();
@@ -50,8 +51,50 @@ namespace se
 		flags.ao = ao;
 		
 
-		createUniformBuffer();
-		createDescriptorSets();
+		try
+		{
+			createUniformBuffer();
+			createDescriptorSets();
+		}
+		catch (...)
+		{
+			destroyOwnedHandles();
+			throw;
+		}
+	}
+
+	SEMaterial::~SEMaterial()
+	{
+		destroyOwnedHandles();
+	}
+
+	void SEMaterial::destroyOwnedHandles() noexcept
+	{
+		for (VkDescriptorSet &descriptorSet : descriptorSets)
+		{
+			if (descriptorSet != VK_NULL_HANDLE)
+			{
+				logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
+					"vkFreeDescriptorSets(SEMaterial)");
+				descriptorSet = VK_NULL_HANDLE;
+			}
+		}
+		descriptorSets.clear();
+		if (matBufferMapped != nullptr && matBufferMemory != VK_NULL_HANDLE)
+		{
+			vkUnmapMemory(seDevice.device(), matBufferMemory);
+			matBufferMapped = nullptr;
+		}
+		if (matBuffer != VK_NULL_HANDLE)
+		{
+			vkDestroyBuffer(seDevice.device(), matBuffer, nullptr);
+			matBuffer = VK_NULL_HANDLE;
+		}
+		if (matBufferMemory != VK_NULL_HANDLE)
+		{
+			vkFreeMemory(seDevice.device(), matBufferMemory, nullptr);
+			matBufferMemory = VK_NULL_HANDLE;
+		}
 	}
 
 	void SEMaterial::createUniformBuffer()
@@ -67,11 +110,8 @@ namespace se
 			matBufferMemory);
 
 		// Map the buffer memory
-		VkResult result = vkMapMemory(seDevice.device(), matBufferMemory, 0, bufferSize, 0, &matBufferMapped);
-		if (result != VK_SUCCESS)
-		{
-			throw std::runtime_error("Failed to map uniform buffer memory!");
-		}
+		checkVkResult(vkMapMemory(seDevice.device(), matBufferMemory, 0, bufferSize, 0, &matBufferMapped),
+			"vkMapMemory(material buffer)");
 
 		// Copy data to the mapped memory
 		memcpy(matBufferMapped, &flags, sizeof(flags));
@@ -94,7 +134,8 @@ namespace se
 		{
 			if (descriptorSets[i] != VK_NULL_HANDLE)
 			{
-				vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSets[i]);
+				logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSets[i]),
+					"vkFreeDescriptorSets(SEMaterial frame)");
 			}
 
 			VkDescriptorSetAllocateInfo allocInfo{};
@@ -103,10 +144,8 @@ namespace se
 			allocInfo.descriptorSetCount = 1;
 			allocInfo.pSetLayouts = &descriptorSetLayout;
 
-			if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSets[i]) != VK_SUCCESS)
-			{
-				throw std::runtime_error("failed to allocate descriptor sets!");
-			}
+			checkVkResult(vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSets[i]),
+				"vkAllocateDescriptorSets(material)");
 
 			// Update descriptor set right after allocation with default/static data if needed
 			updateDescriptorSet(i);

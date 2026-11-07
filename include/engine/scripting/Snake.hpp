@@ -1,9 +1,10 @@
 #pragma once
 #include "engine/scene/se_gameobject.hpp"
 #include "engine/scripting/se_script_component.hpp"
-#include "engine/scripting/se_script_manager.hpp"
 #include "engine/platform/se_input_system.hpp"
-#include "engine/scene/se_scene_manager.hpp"
+#include <GLFW/glfw3.h>
+#include "engine/scene/se_scene.hpp"
+#include "engine/resources/se_resource_manager.hpp"
 #include "engine/scene/se_gameobject_handle.hpp"
 #include <glm/glm.hpp>
 #include <cmath>
@@ -22,27 +23,24 @@ namespace se {
         std::vector<GameObjectHandle> body;
         GameObjectHandle apple;
 
-        void onCreate() override {
-            sceneManager = &SceneManager::getInstance();
-            scene = sceneManager->getActiveScene();
-            resourceManager = sceneManager->getResourceManager();
+        void onCreate(ScriptContext &context) override {
 
             dir = glm::vec3(0.0f);
 
-            body.push_back(GameObjectHandle(owner->getId(), scene));
+            body.push_back(GameObjectHandle(owner->getId(), &context.scene));
 
-            apple = scene->getGameObjectByName("apple");
+            apple = context.scene.getGameObjectByName("apple");
             if (!apple) {
-                apple = scene->createGameObject("apple");
+                apple = context.scene.createGameObject("apple");
                 apple->getTransform().translation = getRandomPosition();
             }
 
         }
 
-        void onUpdate(float dt) override {
+        void onUpdate(float dt, ScriptContext &context) override {
             if (!owner) return;
 
-            handleInput();
+            handleInput(context);
 
 
             if (gameOver) return;
@@ -64,21 +62,21 @@ namespace se {
                     return;
                 }
 
-                checkAppleCollision();
+                checkAppleCollision(context);
             }
         }
 
 
-        void handleInput() {
-            if (SEInputSystem::isKeyPressed(GLFW_KEY_LEFT) && dir.x == 0)
+        void handleInput(ScriptContext &context) {
+            if (context.input.isKeyPressed(GLFW_KEY_LEFT) && dir.x == 0)
                 dir = glm::vec3(-1.0f, 0.0f, 0.0f);
-            if (SEInputSystem::isKeyPressed(GLFW_KEY_RIGHT) && dir.x == 0)
+            if (context.input.isKeyPressed(GLFW_KEY_RIGHT) && dir.x == 0)
                 dir = glm::vec3(1.0f, 0.0f, 0.0f);
-            if (SEInputSystem::isKeyPressed(GLFW_KEY_UP) && dir.z == 0)
+            if (context.input.isKeyPressed(GLFW_KEY_UP) && dir.z == 0)
                 dir = glm::vec3(0.0f, 0.0f, 1.0f);
-            if (SEInputSystem::isKeyPressed(GLFW_KEY_DOWN) && dir.z == 0)
+            if (context.input.isKeyPressed(GLFW_KEY_DOWN) && dir.z == 0)
                 dir = glm::vec3(0.0f, 0.0f, -1.0f);
-            if (SEInputSystem::isKeyPressed(GLFW_KEY_ESCAPE))
+            if (context.input.isKeyPressed(GLFW_KEY_ESCAPE))
             {
                 resetScene();
             }
@@ -105,7 +103,7 @@ namespace se {
         }
 
 
-        void checkAppleCollision() {
+        void checkAppleCollision(ScriptContext &context) {
 
             if (!apple) return;
 
@@ -113,7 +111,7 @@ namespace se {
             auto applePos = apple->getTransform().translation;
 
             if (glm::distance(headPos, applePos) <= tileSize * 0.5f){
-                growBody();
+                growBody(context);
                 apple->getTransform().translation = getRandomPosition();
             }
         }
@@ -141,8 +139,8 @@ namespace se {
             gameOver = false;
         }
 
-        void growBody() {
-            auto newSegment = scene->createGameObject("segment_" + std::to_string(body.size()));
+        void growBody(ScriptContext &context) {
+            auto newSegment = context.scene.createGameObject("segment_" + std::to_string(body.size()));
             newSegment->getTransform().translation = body.back()->getTransform().translation;
             newSegment->setMesh(owner->getMesh());
             newSegment->setMaterial(owner->getMaterial());
@@ -194,14 +192,6 @@ namespace se {
             }
         }
 
-    private:
-        SceneManager* sceneManager = nullptr;
-        Scene* scene = nullptr;
-        ResourceManager* resourceManager = nullptr;
     };
 
-}
-
-namespace {
-    const bool registered_SnakeScript = se::registerScript<se::SnakeScript>("SnakeScript");
 }

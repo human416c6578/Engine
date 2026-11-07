@@ -1,5 +1,6 @@
 #pragma once
 #include "engine/vulkan/se_device.hpp"
+#include "engine/scene/se_particle_emitter_component.hpp"
 #include "engine/renderer/se_pipeline.hpp"
 #include <memory>
 #include <vector>
@@ -100,10 +101,6 @@ namespace se
         float    padding[3];
     };
 
-    using EmitterHandle = uint32_t;
-    using ForceHandle   = uint32_t;
-    static constexpr uint32_t INVALID_HANDLE = ~0u;
-
     struct ParticleBuffer
     {
         VkBuffer       buffer = VK_NULL_HANDLE;
@@ -119,6 +116,8 @@ namespace se
 
         ParticleSystem(const ParticleSystem&)            = delete;
         ParticleSystem& operator=(const ParticleSystem&) = delete;
+        ParticleSystem(ParticleSystem&&)                  = delete;
+        ParticleSystem& operator=(ParticleSystem&&)       = delete;
 
         void update(VkCommandBuffer commandBuffer, int frameIndex,
                     float deltaTime, float totalTime);
@@ -162,6 +161,7 @@ namespace se
         void uploadBuffers(int frameIndex, float deltaTime, float totalTime);
         void insertGraphicsToComputeBarrier(VkCommandBuffer commandBuffer);
         void insertComputeToGraphicsBarrier(VkCommandBuffer commandBuffer);
+        void destroyOwnedHandles() noexcept;
 
         SEDevice& seDevice;
 

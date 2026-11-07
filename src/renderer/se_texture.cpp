@@ -1,52 +1,118 @@
 #include "engine/renderer/se_texture.hpp"
+#include "engine/vulkan/se_device.hpp"
+#include "engine/vulkan/se_vk_result.hpp"
+
+#include <cmath>
 
 #include "imgui/imgui_impl_vulkan.h"
 
+#include <algorithm>
+#include <cstring>
+#include <utility>
+
 namespace se
 {
-    SETexture::SETexture(SEDevice& device, const std::string guid, const std::string name, stbi_uc* pixels, int width, int height)
+    SETexture::SETexture(SEDevice& device, const std::string guid, const std::string name, ImagePixels pixels, int width, int height)
 		: seDevice{ device }, Resource(guid, name)
     {
-        createTextureImage(pixels, width, height);
-        createTextureImageView();
-        createTextureSampler();
-        createTextureDescriptorSet();
+        try
+        {
+            createTextureImage(std::move(pixels), width, height);
+            createTextureImageView();
+            createTextureSampler();
+            createTextureDescriptorSet();
+        }
+        catch (...)
+        {
+            destroyOwnedHandles();
+            throw;
+        }
     }
 
     SETexture::~SETexture()
     {
-        vkDestroySampler(seDevice.device(), textureSampler, nullptr);
-        vkDestroyImageView(seDevice.device(), textureImageView, nullptr);
-
-        vkDestroyImage(seDevice.device(), textureImage, nullptr);
-        vkFreeMemory(seDevice.device(), textureImageMemory, nullptr);
+        destroyOwnedHandles();
     }
 
-    void SETexture::createTextureImage(stbi_uc* pixels, int width, int height)
+    void SETexture::destroyOwnedHandles() noexcept
     {
-        VkDeviceSize imageSize = width * height * 4;
+        if (textureDescriptorSet != VK_NULL_HANDLE)
+        {
+            logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &textureDescriptorSet),
+                "vkFreeDescriptorSets(SETexture)");
+            textureDescriptorSet = VK_NULL_HANDLE;
+        }
+        if (textureSampler != VK_NULL_HANDLE)
+        {
+            vkDestroySampler(seDevice.device(), textureSampler, nullptr);
+            textureSampler = VK_NULL_HANDLE;
+        }
+        if (textureImageView != VK_NULL_HANDLE)
+        {
+            vkDestroyImageView(seDevice.device(), textureImageView, nullptr);
+            textureImageView = VK_NULL_HANDLE;
+        }
+        if (textureImage != VK_NULL_HANDLE)
+        {
+            vkDestroyImage(seDevice.device(), textureImage, nullptr);
+            textureImage = VK_NULL_HANDLE;
+        }
+        if (textureImageMemory != VK_NULL_HANDLE)
+        {
+            vkFreeMemory(seDevice.device(), textureImageMemory, nullptr);
+            textureImageMemory = VK_NULL_HANDLE;
+        }
+    }
+
+    void SETexture::createTextureImage(ImagePixels pixels, int width, int height)
+    {
+        VkDeviceSize imageSize = static_cast<VkDeviceSize>(width) * static_cast<VkDeviceSize>(height) * 4;
         mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
+        VkBuffer stagingBuffer{VK_NULL_HANDLE};
+        VkDeviceMemory stagingBufferMemory{VK_NULL_HANDLE};
         seDevice.createBuffer(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
-        void *data;
-        vkMapMemory(seDevice.device(), stagingBufferMemory, 0, imageSize, 0, &data);
-        memcpy(data, pixels, static_cast<size_t>(imageSize));
-        vkUnmapMemory(seDevice.device(), stagingBufferMemory);
+        bool memoryMapped = false;
+        try
+        {
+            void *data = nullptr;
+            checkVkResult(vkMapMemory(seDevice.device(), stagingBufferMemory, 0, imageSize, 0, &data),
+                "vkMapMemory(texture staging buffer)");
+            memoryMapped = true;
+            std::memcpy(data, pixels.get(), static_cast<size_t>(imageSize));
+            vkUnmapMemory(seDevice.device(), stagingBufferMemory);
+            memoryMapped = false;
+            pixels.reset();
 
-        stbi_image_free(pixels);
+            createImage(width, height, mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
 
-        createImage(width, height, mipLevels, VK_SAMPLE_COUNT_1_BIT, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, textureImage, textureImageMemory);
+            transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
+            copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+            // transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
 
-        transitionImageLayout(textureImage, VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, mipLevels);
-        copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(width), static_cast<uint32_t>(height));
-        // transitioned to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
+            vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
+            stagingBuffer = VK_NULL_HANDLE;
+            vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
+            stagingBufferMemory = VK_NULL_HANDLE;
 
-        vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
-        vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
-
-        generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
+            generateMipmaps(textureImage, VK_FORMAT_R8G8B8A8_SRGB, width, height, mipLevels);
+        }
+        catch (...)
+        {
+            if (memoryMapped)
+            {
+                vkUnmapMemory(seDevice.device(), stagingBufferMemory);
+            }
+            if (stagingBuffer != VK_NULL_HANDLE)
+            {
+                vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
+            }
+            if (stagingBufferMemory != VK_NULL_HANDLE)
+            {
+                vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
+            }
+            throw;
+        }
     }
 
     void SETexture::generateMipmaps(VkImage image, VkFormat imageFormat, int32_t texWidth, int32_t texHeight, uint32_t mipLevels)
@@ -167,10 +233,8 @@ namespace se
         samplerInfo.maxLod = static_cast<float>(mipLevels);
         samplerInfo.mipLodBias = 0.0f;
 
-        if (vkCreateSampler(seDevice.device(), &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create texture sampler!");
-        }
+        checkVkResult(vkCreateSampler(seDevice.device(), &samplerInfo, nullptr, &textureSampler),
+            "vkCreateSampler(texture)");
     }
 
     VkImageView SETexture::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, uint32_t mipLevels)
@@ -186,11 +250,9 @@ namespace se
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
 
-        VkImageView imageView;
-        if (vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &imageView) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create texture image view!");
-        }
+        VkImageView imageView{VK_NULL_HANDLE};
+        checkVkResult(vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &imageView),
+            "vkCreateImageView(texture)");
 
         return imageView;
     }
@@ -212,25 +274,7 @@ namespace se
         imageInfo.samples = numSamples;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-        if (vkCreateImage(seDevice.device(), &imageInfo, nullptr, &image) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create image!");
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetImageMemoryRequirements(seDevice.device(), image, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = seDevice.findMemoryType(memRequirements.memoryTypeBits, properties);
-
-        if (vkAllocateMemory(seDevice.device(), &allocInfo, nullptr, &imageMemory) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to allocate image memory!");
-        }
-
-        vkBindImageMemory(seDevice.device(), image, imageMemory, 0);
+        seDevice.createImageWithInfo(imageInfo, properties, image, imageMemory);
     }
 
     void SETexture::createTextureDescriptorSet()
@@ -245,7 +289,8 @@ namespace se
             alloc_info.descriptorPool = pool;
             alloc_info.descriptorSetCount = 1;
             alloc_info.pSetLayouts = &layout;
-            VkResult err = vkAllocateDescriptorSets(seDevice.device(), &alloc_info, &textureDescriptorSet);
+            checkVkResult(vkAllocateDescriptorSets(seDevice.device(), &alloc_info, &textureDescriptorSet),
+                "vkAllocateDescriptorSets(texture)");
         }
 
         // Update the Descriptor Set:

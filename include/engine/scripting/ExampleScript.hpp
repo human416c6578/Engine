@@ -1,21 +1,18 @@
 #pragma once
 #include "engine/scene/se_gameobject.hpp"
+#include "engine/scene/se_scene.hpp"
+#include "engine/resources/se_resource_manager.hpp"
 #include "engine/scripting/se_script_component.hpp"
-#include "engine/scripting/se_script_manager.hpp"
 
 namespace se {
 
     class ExampleScript : public ScriptComponent {
     public:
-        void onCreate() override {
-            sceneManager = &SceneManager::getInstance();
-            scene = sceneManager->getActiveScene();
-            resourceManager = sceneManager->getResourceManager();
-
-            spawnSpheres();
+        void onCreate(ScriptContext &context) override {
+            spawnSpheres(context);
         }
 
-        void spawnSpheres()
+        void spawnSpheres(ScriptContext &context)
         {
             float step = 0.1f;
             int count = static_cast<int>(1.0f / step) + 1;
@@ -25,9 +22,9 @@ namespace se {
                 for (int j = 0; j < count; ++j) {
                     float roughness = j * step;
 
-                    auto go = scene->createGameObject("Sphere_" + std::to_string(i) + "_" + std::to_string(j));
-                    auto mesh = resourceManager->createSphere("SphereMesh");
-                    auto mat = resourceManager->createMaterial("Mat_" + std::to_string(i) + "_" + std::to_string(j));
+                    auto go = context.scene.createGameObject("Sphere_" + std::to_string(i) + "_" + std::to_string(j));
+                    auto mesh = context.resources.createSphere("SphereMesh");
+                    auto mat = context.resources.createMaterial("Mat_" + std::to_string(i) + "_" + std::to_string(j));
 
 
                     mat->setColor({ 0.0f, 0.7f, 1.0f });
@@ -45,7 +42,7 @@ namespace se {
             }
         }
 
-        void onUpdate(float dt) override {
+        void onUpdate(float dt, ScriptContext &) override {
             if (owner) {
                 auto& transform = owner->getTransform();
                 transform.rotation.y += dt;
@@ -54,15 +51,6 @@ namespace se {
 
         std::string getName() const override { return "ExampleScript"; }
 
-    private:
-        SceneManager* sceneManager = nullptr;
-        Scene* scene = nullptr;
-        ResourceManager* resourceManager = nullptr;
     };
 
-}
-
-// Auto-register the script at load time
-namespace {
-    const bool registered_ExampleScript = se::registerScript<se::ExampleScript>("ExampleScript");
 }

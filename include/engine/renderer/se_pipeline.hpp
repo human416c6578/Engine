@@ -1,16 +1,14 @@
 #pragma once
 
-#include "engine/vulkan/se_device.hpp"
-#include "engine/core/se_vertex.hpp"
+#include <vulkan/vulkan.h>
 
 #include <string>
-#include <fstream>
-#include <iostream>
 #include <vector>
 #include <cassert>
 
 namespace se
 {
+    class SEDevice;
 
     struct PipelineConfigInfo
     {
@@ -18,17 +16,17 @@ namespace se
         PipelineConfigInfo(const PipelineConfigInfo &) = delete;
         PipelineConfigInfo &operator=(const PipelineConfigInfo &) = delete;
 
-        VkPipelineViewportStateCreateInfo viewportInfo;
-        VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo;
-        VkPipelineRasterizationStateCreateInfo rasterizationInfo;
-        VkPipelineMultisampleStateCreateInfo multisampleInfo;
-        VkPipelineColorBlendAttachmentState colorBlendAttachment;
-        VkPipelineColorBlendStateCreateInfo colorBlendInfo;
-        VkPipelineDepthStencilStateCreateInfo depthStencilInfo;
+        VkPipelineViewportStateCreateInfo viewportInfo{};
+        VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo{};
+        VkPipelineRasterizationStateCreateInfo rasterizationInfo{};
+        VkPipelineMultisampleStateCreateInfo multisampleInfo{};
+        VkPipelineColorBlendAttachmentState colorBlendAttachment{};
+        VkPipelineColorBlendStateCreateInfo colorBlendInfo{};
+        VkPipelineDepthStencilStateCreateInfo depthStencilInfo{};
         std::vector<VkDynamicState> dynamicStateEnables;
-        VkPipelineDynamicStateCreateInfo dynamicStateInfo;
-        VkPipelineLayout pipelineLayout = nullptr;
-        VkRenderPass renderPass = nullptr;
+        VkPipelineDynamicStateCreateInfo dynamicStateInfo{};
+        VkPipelineLayout pipelineLayout{VK_NULL_HANDLE};
+        VkRenderPass renderPass{VK_NULL_HANDLE};
         uint32_t subpass = 0;
 
         std::vector<VkVertexInputBindingDescription>   bindingDescriptions{};
@@ -54,6 +52,8 @@ namespace se
 
 		SEPipeline(const SEPipeline &) = delete;
         SEPipeline &operator=(const SEPipeline &) = delete;
+        SEPipeline(SEPipeline&&) = delete;
+        SEPipeline& operator=(SEPipeline&&) = delete;
 
         void bind(VkCommandBuffer commandBuffer);
         void bindCompute(VkCommandBuffer commandBuffer);
@@ -76,6 +76,7 @@ namespace se
             VkPipelineLayout layout);
 
         void createShaderModule(const std::vector<char> &code, VkShaderModule *shaderModule);
+        void destroyOwnedHandles() noexcept;
 
         SEDevice &seDevice;
         VkPipeline     graphicsPipeline = VK_NULL_HANDLE;

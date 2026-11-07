@@ -10,26 +10,35 @@ namespace se
 {
     using ScriptFactory = std::function<std::unique_ptr<ScriptComponent>()>;
 
-    inline std::unordered_map<std::string, ScriptFactory>& getScriptRegistry() {
-        static std::unordered_map<std::string, ScriptFactory> registry;
-        return registry;
-    }
+    class ScriptManager
+    {
+    public:
+        ScriptManager() = default;
+        ScriptManager(const ScriptManager&) = delete;
+        ScriptManager& operator=(const ScriptManager&) = delete;
+        ScriptManager(ScriptManager&&) = delete;
+        ScriptManager& operator=(ScriptManager&&) = delete;
 
-
-    inline std::unique_ptr<ScriptComponent> createScript(const std::string& scriptName) {
-        auto& registry = se::getScriptRegistry();
-        auto it = registry.find(scriptName);
-        if (it != registry.end()) {
-            return it->second();
-        }
-        return nullptr;
-    }
-
-    template<typename T>
-    bool registerScript(const std::string& name) {
-        getScriptRegistry()[name] = []() -> std::unique_ptr<ScriptComponent> {
-            return std::make_unique<T>();
+        template<typename T>
+        void registerScript(const std::string& name)
+        {
+            registry[name] = []() -> std::unique_ptr<ScriptComponent> {
+                return std::make_unique<T>();
             };
-        return true;
-    }
+        }
+
+        std::unique_ptr<ScriptComponent> createScript(const std::string& scriptName) const
+        {
+            const auto it = registry.find(scriptName);
+            return it != registry.end() ? it->second() : nullptr;
+        }
+
+        const std::unordered_map<std::string, ScriptFactory>& getRegistry() const
+        {
+            return registry;
+        }
+
+    private:
+        std::unordered_map<std::string, ScriptFactory> registry;
+    };
 }

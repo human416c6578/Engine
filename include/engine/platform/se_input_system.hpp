@@ -1,29 +1,20 @@
 #pragma once
-#include <GLFW/glfw3.h>
+struct GLFWwindow;
 
 namespace se
 {
     class SEInputSystem
     {
     public:
-        static void initialize(GLFWwindow* window) {
-            s_window = window;
-        }
+        explicit SEInputSystem(GLFWwindow &window) noexcept : m_window{&window} {}
 
-        static bool isKeyPressed(int key) {
-            return glfwGetKey(s_window, key) == GLFW_PRESS;
-        }
-
-        static bool isMouseButtonPressed(int button) {
-            return glfwGetMouseButton(s_window, button) == GLFW_PRESS;
-        }
-
-        static void getMousePosition(double& x, double& y) {
-            glfwGetCursorPos(s_window, &x, &y);
-        }
+        bool isKeyPressed(int key) const;
+        bool isMouseButtonPressed(int button) const;
+        void getMousePosition(double &x, double &y) const;
+        void setCursorCaptured(bool captured) const;
 
     private:
-        static GLFWwindow* s_window;
+        GLFWwindow *m_window;
     };
 }
 

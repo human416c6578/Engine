@@ -1,21 +1,28 @@
 #include "engine/renderer/se_hdr_to_cubemap.h"
+#include "engine/renderer/se_offscreen_renderer.hpp"
+#include "engine/vulkan/se_vk_result.hpp"
 #include "engine/core/se_camera.hpp"
 #include "engine/scene/se_gameobject.hpp"
 
 #include <third_party/stb/stb_image.h>
+#include <utility>
 
 namespace se
 {
 	SEHdrToCubemap::SEHdrToCubemap(SEDevice& device, SERenderer& renderer, const std::string& textureFilepath): seDevice{ device }, seRenderer{ renderer }
 	{
 		int width, height, texChannels;
-		stbi_uc* pixels = stbi_load(textureFilepath.c_str(), &width, &height, &texChannels, STBI_rgb_alpha);
+		se::SETexture::ImagePixels pixels{
+			stbi_load(textureFilepath.c_str(), &width, &height, &texChannels, STBI_rgb_alpha),
+			&stbi_image_free};
 
 		if (!pixels)
 		{
 			throw std::runtime_error("Failed to load texture image: " + textureFilepath);
 		}
-		mapTexture = std::make_shared<se::SETexture>(seDevice, "GUID_CUBEMAP", "CUBEMAP", pixels, width, height);
+		try
+		{
+		mapTexture = std::make_shared<se::SETexture>(seDevice, "GUID_CUBEMAP", "CUBEMAP", std::move(pixels), width, height);
 
 		se::SESubMesh::Builder builder = createCubeModel({ 0, 0, 0 });
 		cubeMesh = std::make_unique<se::SESubMesh>(seDevice, builder);
@@ -25,6 +32,42 @@ namespace se
 		createPipelineLayout();
 		createPipeline(renderer.getOffscreenRenderer()->getRenderPass(), "shaders/cubemapVert.spv", "shaders/cubemapConvert.spv");
 		createCubemapImage();
+		}
+		catch (...)
+		{
+			destroyOwnedHandles();
+			throw;
+		}
+	}
+
+	SEHdrToCubemap::~SEHdrToCubemap()
+	{
+		destroyOwnedHandles();
+	}
+
+	void SEHdrToCubemap::destroyOwnedHandles() noexcept
+	{
+		cleanup();
+		if (cubeMapSampler != VK_NULL_HANDLE)
+		{
+			vkDestroySampler(seDevice.device(), cubeMapSampler, nullptr);
+			cubeMapSampler = VK_NULL_HANDLE;
+		}
+		if (cubeMapImageView != VK_NULL_HANDLE)
+		{
+			vkDestroyImageView(seDevice.device(), cubeMapImageView, nullptr);
+			cubeMapImageView = VK_NULL_HANDLE;
+		}
+		if (cubeMapImage != VK_NULL_HANDLE)
+		{
+			vkDestroyImage(seDevice.device(), cubeMapImage, nullptr);
+			cubeMapImage = VK_NULL_HANDLE;
+		}
+		if (cubeMapImageMemory != VK_NULL_HANDLE)
+		{
+			vkFreeMemory(seDevice.device(), cubeMapImageMemory, nullptr);
+			cubeMapImageMemory = VK_NULL_HANDLE;
+		}
 	}
 	
 	void SEHdrToCubemap::createPipelineLayout()
@@ -34,11 +77,7 @@ namespace se
 		pipelineLayoutInfo.setLayoutCount = 1;
 		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 		pipelineLayoutInfo.pushConstantRangeCount = 0;
-		if (vkCreatePipelineLayout(seDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) !=
-			VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create pipeline layout!");
-		}
+		checkVkResult(vkCreatePipelineLayout(seDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout), "vkCreatePipelineLayout");
 	}
 
 	void SEHdrToCubemap::createPipeline(VkRenderPass renderPass, const std::string vertPath, const std::string fragPath)
@@ -65,10 +104,7 @@ namespace se
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &descriptorSetLayout;
 
-		if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSet) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to allocate descriptor sets!");
-		}
+		checkVkResult(vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSet), "vkAllocateDescriptorSets");
 
 		// Descriptor writes array
 		std::vector<VkWriteDescriptorSet> descriptorWrites(2);
@@ -141,10 +177,7 @@ namespace se
 		layoutInfo.pBindings = bindings.data();
 
 		// Create the descriptor set layout
-		if (vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create descriptor set layout!");
-		}
+		checkVkResult(vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &descriptorSetLayout), "vkCreateDescriptorSetLayout");
 	}
 
 	void SEHdrToCubemap::createCubemapImage()
@@ -177,9 +210,7 @@ namespace se
 		viewInfo.subresourceRange.baseArrayLayer = 0;
 		viewInfo.subresourceRange.layerCount = 6;
 
-		if (vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &cubeMapImageView) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create cubemap image view!");
-		}
+		checkVkResult(vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &cubeMapImageView), "vkCreateImageView");
 	}
 
 	void SEHdrToCubemap::draw(VkCommandBuffer commandBuffer)
@@ -365,15 +396,28 @@ namespace se
 		samplerInfo.maxLod = static_cast<float>(1.0);
 		samplerInfo.mipLodBias = 0.0f;
 
-		if (vkCreateSampler(seDevice.device(), &samplerInfo, nullptr, &cubeMapSampler) != VK_SUCCESS)
-		{
-			throw std::runtime_error("failed to create texture sampler!");
-		}
+		checkVkResult(vkCreateSampler(seDevice.device(), &samplerInfo, nullptr, &cubeMapSampler), "vkCreateSampler");
 	}
 
 	void SEHdrToCubemap::cleanup()
 	{
-
+		if (descriptorSet != VK_NULL_HANDLE)
+		{
+			logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
+				"vkFreeDescriptorSets(SEHdrToCubemap)");
+			descriptorSet = VK_NULL_HANDLE;
+		}
+		sePipeline.reset();
+		if (pipelineLayout != VK_NULL_HANDLE)
+		{
+			vkDestroyPipelineLayout(seDevice.device(), pipelineLayout, nullptr);
+			pipelineLayout = VK_NULL_HANDLE;
+		}
+		if (descriptorSetLayout != VK_NULL_HANDLE)
+		{
+			vkDestroyDescriptorSetLayout(seDevice.device(), descriptorSetLayout, nullptr);
+			descriptorSetLayout = VK_NULL_HANDLE;
+		}
 	}
 
 

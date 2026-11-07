@@ -1,4 +1,23 @@
 ﻿#include "engine/app/app.hpp"
+#include "engine/vulkan/se_vk_result.hpp"
+#include <string>
+#include <memory>
+#include <iostream>
+#include <exception>
+#include <cstdlib>
+#include <chrono>
+#include "engine/scene/se_gameobject.hpp"
+#include "engine/scene/se_scene.hpp"
+#include "engine/editor/imgui_manager.hpp"
+#include "engine/scene/se_scene_manager.hpp"
+#include "engine/resources/se_resource_manager.hpp"
+#include "engine/renderer/se_mesh_system.hpp"
+#include "engine/renderer/se_texture_system.hpp"
+#include "engine/renderer/se_postprocess.hpp"
+#include "engine/renderer/se_particle_system.hpp"
+#include "engine/renderer/se_pbr.hpp"
+#include "engine/renderer/se_offscreen_renderer.hpp"
+#include "engine/renderer/se_cubemap.hpp"
 #include <cstdio>
 #include "engine/platform/keyboard_movement_controller.hpp"
 #include "engine/renderer/se_material_system.hpp"
@@ -6,16 +25,61 @@
 #include "engine/scripting/TestScript.hpp"
 #include "engine/scripting/Snake.hpp"
 #include "engine/scripting/StressTest.hpp"
+#include "engine/scripting/se_script_manager.hpp"
+
+App::App()
+{
+    seCubemap = std::make_unique<se::SECubemap>(seDevice, seRenderer, "assets/hdr/snowy_forest_4k.hdr");
+    PBR = std::make_unique<se::PBR>(seDevice, seRenderer.getOffscreenRenderer()->getRenderPass(), *seCubemap);
+    ParticleSystem = std::make_unique<se::ParticleSystem>(seDevice, seRenderer.getOffscreenRenderer()->getRenderPass());
+    PostProcess = std::make_unique<se::SEPostProcess>(seDevice, seRenderer.getSwapChainRenderPass());
+    TextureSystem = std::make_unique<se::TextureSystem>(seDevice);
+    MaterialSystem = std::make_unique<se::MaterialSystem>(
+        seDevice, *TextureSystem, PBR->getPipelineLayout(), PBR->getPipeline(),
+        PBR->getMaterialDescriptorSetLayout());
+    MeshSystem = std::make_unique<se::MeshSystem>(seDevice, *MaterialSystem, *TextureSystem);
+
+    ResourceManager = std::make_unique<se::ResourceManager>(
+        *TextureSystem, *MaterialSystem, *MeshSystem);
+
+    scriptManager = std::make_unique<se::ScriptManager>();
+    scriptManager->registerScript<se::ExampleScript>("ExampleScript");
+    scriptManager->registerScript<se::TestScript>("TestScript");
+    scriptManager->registerScript<se::SnakeScript>("SnakeScript");
+    scriptManager->registerScript<se::StressScript>("StressScript");
+
+    sceneManager = std::make_unique<se::SceneManager>(
+        *ResourceManager, *PostProcess, *ParticleSystem, inputSystem, *scriptManager);
+    sceneManager->createScene("MainScene");
+    sceneManager->setActiveScene("MainScene");
+
+    imguiManager = std::make_unique<se::ImGuiManager>(
+        seDevice, seRenderer.getSwapChainRenderPass(), *seWindow.getGLFWwindow(),
+        seRenderer.getSwapChainImageCount(), *ResourceManager, *sceneManager,
+        *PostProcess, *ParticleSystem, inputSystem, *scriptManager);
+}
+
+App::~App()
+{
+    if (seDevice.device() != VK_NULL_HANDLE)
+    {
+        const VkResult idleResult = vkDeviceWaitIdle(seDevice.device());
+        if (idleResult != VK_SUCCESS)
+            std::cerr << "vkDeviceWaitIdle during App teardown failed: " << idleResult << std::endl;
+    }
+    if (sceneManager)
+        sceneManager->destroyAllScenes();
+}
 
 void App::mainLoop()
 {
     se::KeyboardMovementController cameraController{};
-    static std::string str("");
+    std::string str;
 
-    static auto currentTime = std::chrono::high_resolution_clock::now();
-    static auto lastTime = std::chrono::high_resolution_clock::now();
-    static float totalTime = 0.f;
-    static int fps = 0;
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    auto lastTime = currentTime;
+    float totalTime = 0.f;
+    int fps = 0;
 
     glfwSetInputMode(seWindow.getGLFWwindow(), GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
     se::SEOffscreenRenderer* offscreenRenderer = seRenderer.getOffscreenRenderer();
@@ -41,7 +105,7 @@ void App::mainLoop()
         currentTime = newTime;
 
         se::TransformComponent transform = sceneManager->getCamera().getTransform();
-        cameraController.moveInPlaneXZ(seWindow.getGLFWwindow(), frameTime, transform);
+        cameraController.moveInPlaneXZ(inputSystem, frameTime, transform);
         sceneManager->getCamera().setTransform(transform);
         sceneManager->getCamera().setViewYXZ();
 
@@ -56,7 +120,7 @@ void App::mainLoop()
         }
 
         auto& gameObjects = scene->getGameObjects();
-        scene->onUpdate(frameTime);
+        scene->onUpdate(frameTime, *ResourceManager, inputSystem);
 
         if (seWindow.wasWindowResized())
         {
@@ -104,13 +168,12 @@ void App::mainLoop()
 
         seRenderer.beginSwapChainRenderPass(*frame);
         PostProcess->render(commandBuffer, frame->frameIndex);
-        imguiManager.newFrame();
-        imguiManager.render(commandBuffer);
+        imguiManager->newFrame();
+        imguiManager->render(commandBuffer);
         seRenderer.endSwapChainRenderPass(*frame);
         seRenderer.endFrame(*frame);
         ++fps;
     }
 
-    vkDeviceWaitIdle(seDevice.device());
-    imguiManager.cleanup();
+    se::checkVkResult(vkDeviceWaitIdle(seDevice.device()), "vkDeviceWaitIdle(main loop shutdown)");
 }

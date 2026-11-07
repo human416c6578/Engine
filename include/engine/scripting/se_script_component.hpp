@@ -1,17 +1,28 @@
 #pragma once
 
 #include <memory>
+#include <string>
 
 namespace se {
 
     class SEGameObject;
+    class Scene;
+    class ResourceManager;
+    class SEInputSystem;
+
+    struct ScriptContext
+    {
+        Scene &scene;
+        ResourceManager &resources;
+        SEInputSystem &input;
+    };
 
     class ScriptComponent {
     public:
         virtual ~ScriptComponent() = default;
 
-        virtual void onCreate() {}
-        virtual void onUpdate(float deltaTime) {}
+        virtual void onCreate(ScriptContext &) {}
+        virtual void onUpdate(float deltaTime, ScriptContext &) {}
         virtual void onDestroy() {}
 
         void setOwner(SEGameObject* gameObject) { owner = gameObject; }

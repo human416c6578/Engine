@@ -1,4 +1,6 @@
 #pragma once
+
+#include <iostream>
 #include <list>
 #include <memory>
 #include <string>
@@ -7,20 +9,22 @@
 #include "engine/scene/se_gameobject_handle.hpp"
 
 namespace se {
+    class ResourceManager;
+    class SEInputSystem;
+
     class Scene {
     public:
         Scene(const std::string& name) : name(name) {}
 
         GameObjectHandle createGameObject(const std::string& name) {
-            auto obj = std::make_unique<SEGameObject>(name);
-            int id = obj->id;
+            auto obj = std::make_unique<SEGameObject>(nextGameObjectId++, name);
+            const int id = static_cast<int>(obj->id);
             gameObjects.push_back(std::move(obj));
             return GameObjectHandle(id, this);
         }
 
         SEGameObject& createGameObjectRef(const std::string& name) {
-            auto obj = std::make_unique<SEGameObject>(name);
-            auto& ref = *obj;
+            auto obj = std::make_unique<SEGameObject>(nextGameObjectId++, name);
             gameObjects.push_back(std::move(obj));
             return *gameObjects.back();
         }
@@ -51,13 +55,14 @@ namespace se {
             }
         }
 
-        void onUpdate(float dt) {
+        void onUpdate(float dt, ResourceManager &resources, SEInputSystem &input) {
+            ScriptContext context{*this, resources, input};
             for (auto& obj : gameObjects) {
                 if (!obj) {
                     std::cerr << "[Scene] Null object in gameObjects!\n";
                     continue;
                 }
-                obj->onUpdate(dt);
+                obj->onUpdate(dt, context);
             }
         }
 
@@ -77,6 +82,7 @@ namespace se {
     private:
         std::string name;
         se::SECamera camera{};
+        SEGameObject::id_t nextGameObjectId{1};
         std::list<std::unique_ptr<SEGameObject>> gameObjects;
 
     };

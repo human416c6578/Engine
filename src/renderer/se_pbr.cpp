@@ -1,4 +1,6 @@
 #include "engine/renderer/se_pbr.hpp"
+#include <cstring>
+#include "engine/vulkan/se_vk_result.hpp"
 
 // libs
 #define GLM_FORCE_RADIANS
@@ -16,19 +18,62 @@ namespace se
     PBR::PBR(SEDevice& device, VkRenderPass renderPass, SECubemap& cubemap)
         : seDevice{ device }, seCubemap{ cubemap }
     {
-        createGlobalDescriptorSetLayout();
-        createMaterialDescriptorSetLayout();
-        createUniformBuffer();
-        createDescriptorSets();
-        createPipelineLayout();
-        createPipeline(renderPass);
+        try
+        {
+            createGlobalDescriptorSetLayout();
+            createMaterialDescriptorSetLayout();
+            createUniformBuffer();
+            createDescriptorSets();
+            createPipelineLayout();
+            createPipeline(renderPass);
+        }
+        catch (...)
+        {
+            destroyOwnedHandles();
+            throw;
+        }
     }
 
     PBR::~PBR()
     {
-        vkDestroyDescriptorSetLayout(seDevice.device(), globalDescriptorSetLayout, nullptr);
-        vkDestroyDescriptorSetLayout(seDevice.device(), materialDescriptorSetLayout, nullptr);
-        vkDestroyPipelineLayout(seDevice.device(), pipelineLayout, nullptr);
+        destroyOwnedHandles();
+    }
+
+    void PBR::destroyOwnedHandles() noexcept
+    {
+        sePipeline.reset();
+        for (VkDescriptorSet& descriptorSet : descriptorSets)
+        {
+            if (descriptorSet != VK_NULL_HANDLE)
+                logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
+                    "vkFreeDescriptorSets(PBR)");
+            descriptorSet = VK_NULL_HANDLE;
+        }
+        descriptorSets.clear();
+
+        for (Buffer& buffer : lightBuffers)
+        {
+            if (buffer.mapped != nullptr && buffer.memory != VK_NULL_HANDLE)
+                vkUnmapMemory(seDevice.device(), buffer.memory);
+            buffer.mapped = nullptr;
+            if (buffer.buffer != VK_NULL_HANDLE)
+                vkDestroyBuffer(seDevice.device(), buffer.buffer, nullptr);
+            buffer.buffer = VK_NULL_HANDLE;
+            if (buffer.memory != VK_NULL_HANDLE)
+                vkFreeMemory(seDevice.device(), buffer.memory, nullptr);
+            buffer.memory = VK_NULL_HANDLE;
+        }
+        lightBuffers.clear();
+
+        if (pipelineLayout != VK_NULL_HANDLE)
+            vkDestroyPipelineLayout(seDevice.device(), pipelineLayout, nullptr);
+        pipelineLayout = VK_NULL_HANDLE;
+        if (materialDescriptorSetLayout != VK_NULL_HANDLE)
+            vkDestroyDescriptorSetLayout(seDevice.device(), materialDescriptorSetLayout, nullptr);
+        materialDescriptorSetLayout = VK_NULL_HANDLE;
+        if (globalDescriptorSetLayout != VK_NULL_HANDLE)
+            vkDestroyDescriptorSetLayout(seDevice.device(), globalDescriptorSetLayout, nullptr);
+        globalDescriptorSetLayout = VK_NULL_HANDLE;
     }
 
     void PBR::createPipelineLayout()
@@ -49,11 +94,7 @@ namespace se
         pipelineLayoutInfo.pSetLayouts = descriptorSetLayouts.data();
         pipelineLayoutInfo.pushConstantRangeCount = 1;
         pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
-        if (vkCreatePipelineLayout(seDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) !=
-            VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create pipeline layout!");
-        }
+        checkVkResult(vkCreatePipelineLayout(seDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout), "vkCreatePipelineLayout");
     }
 
     void PBR::createPipeline(VkRenderPass renderPass)
@@ -117,10 +158,7 @@ namespace se
         layoutInfo.pBindings = bindings.data();
 
         // Create the descriptor set layout
-        if (vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &globalDescriptorSetLayout) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create descriptor set layout!");
-        }
+        checkVkResult(vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &globalDescriptorSetLayout), "vkCreateDescriptorSetLayout");
     }
 
     void PBR::createMaterialDescriptorSetLayout()
@@ -201,10 +239,7 @@ namespace se
         layoutInfo.pBindings = bindings.data();
 
         // Create the descriptor set layout
-        if (vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &materialDescriptorSetLayout) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create descriptor set layout!");
-        }
+        checkVkResult(vkCreateDescriptorSetLayout(seDevice.device(), &layoutInfo, nullptr, &materialDescriptorSetLayout), "vkCreateDescriptorSetLayout");
     }
 
     void PBR::createUniformBuffer()
@@ -223,11 +258,8 @@ namespace se
                 lightBuffers[i].buffer,
                 lightBuffers[i].memory);
 
-            VkResult result = vkMapMemory(seDevice.device(), lightBuffers[i].memory, 0, bufferSize, 0, &lightBuffers[i].mapped);
-            if (result != VK_SUCCESS)
-            {
-                throw std::runtime_error("Failed to map uniform buffer memory!");
-            }
+            checkVkResult(vkMapMemory(seDevice.device(), lightBuffers[i].memory, 0, bufferSize, 0, &lightBuffers[i].mapped),
+                "vkMapMemory(PBR light buffer)");
 
         }
     }
@@ -242,7 +274,8 @@ namespace se
         {
             if (descriptorSets[i] != VK_NULL_HANDLE)
             {
-                vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSets[i]);
+                logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSets[i]),
+                    "vkFreeDescriptorSets(PBR frame)");
             }
 
             VkDescriptorSetAllocateInfo allocInfo{};
@@ -251,10 +284,7 @@ namespace se
             allocInfo.descriptorSetCount = 1;
             allocInfo.pSetLayouts = &globalDescriptorSetLayout;
 
-            if (vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSets[i]) != VK_SUCCESS)
-            {
-                throw std::runtime_error("failed to allocate descriptor sets!");
-            }
+            checkVkResult(vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSets[i]), "vkAllocateDescriptorSets");
 
             updateDescriptorSet(i);
         }

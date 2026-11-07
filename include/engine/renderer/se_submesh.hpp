@@ -51,6 +51,8 @@ namespace se
 
         SESubMesh(const SESubMesh &) = delete;
         SESubMesh &operator=(const SESubMesh &) = delete;
+        SESubMesh(SESubMesh&&) = delete;
+        SESubMesh& operator=(SESubMesh&&) = delete;
 
         void bind(VkCommandBuffer commandBuffer);
         void draw(VkCommandBuffer commandBuffer);
@@ -58,17 +60,18 @@ namespace se
     private:
         void createVertexBuffers(const std::vector<Vertex> &vertices);
         void createIndexBuffers(const std::vector<uint32_t> &indices);
+        void destroyOwnedHandles() noexcept;
 
         SEDevice &seDevice;
         std::shared_ptr<SEMaterial> seMaterial = nullptr;
-        VkBuffer vertexBuffer;
-        VkDeviceMemory vertexBufferMemory;
-        uint32_t vertexCount;
+        VkBuffer vertexBuffer{VK_NULL_HANDLE};
+        VkDeviceMemory vertexBufferMemory{VK_NULL_HANDLE};
+        uint32_t vertexCount{0};
 
-        bool hasIndexBuffer = false;
-        VkBuffer indexBuffer;
-        VkDeviceMemory indexBufferMemory;
-        uint32_t indexCount;
+        bool hasIndexBuffer{false};
+        VkBuffer indexBuffer{VK_NULL_HANDLE};
+        VkDeviceMemory indexBufferMemory{VK_NULL_HANDLE};
+        uint32_t indexCount{0};
     };
 
 } // namespace se

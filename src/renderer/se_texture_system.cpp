@@ -1,5 +1,10 @@
 #include "engine/renderer/se_texture_system.hpp"
+#include "engine/renderer/se_texture.hpp"
+#include "engine/vulkan/se_device.hpp"
+
 #include <algorithm>
+#include <stdexcept>
+#include <utility>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <third_party/stb/stb_image.h>
@@ -38,7 +43,8 @@ namespace se
 		{
 			throw std::runtime_error("Failed to load texture image: " + path);
 		}
-		auto texture = std::make_shared<se::SETexture>(seDevice, guid, name, pixels, width, height);
+		se::SETexture::ImagePixels pixelOwner{pixels, &stbi_image_free};
+		auto texture = std::make_shared<se::SETexture>(seDevice, guid, name, std::move(pixelOwner), width, height);
 
 		textures.insert({ guid, texture });
 

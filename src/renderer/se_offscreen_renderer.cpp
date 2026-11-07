@@ -1,5 +1,6 @@
 #include "engine/renderer/se_offscreen_renderer.hpp"
-
+#include "engine/vulkan/se_device.hpp"
+#include "engine/vulkan/se_vk_result.hpp"
 
 #include <array>
 
@@ -8,74 +9,71 @@ namespace se
 
     SEOffscreenRenderer::~SEOffscreenRenderer()
     {
-        for (size_t i = 0; i < framebuffers.size(); i++)
+        destroyOwnedHandles();
+    }
+
+    void SEOffscreenRenderer::destroyOwnedHandles() noexcept
+    {
+        for (VkFramebuffer framebuffer : framebuffers)
         {
-            vkDestroyFramebuffer(seDevice.device(), framebuffers[i], nullptr);
+            if (framebuffer != VK_NULL_HANDLE)
+                vkDestroyFramebuffer(seDevice.device(), framebuffer, nullptr);
+        }
+        framebuffers.clear();
+
+        if (renderPass != VK_NULL_HANDLE)
+        {
+            vkDestroyRenderPass(seDevice.device(), renderPass, nullptr);
+            renderPass = VK_NULL_HANDLE;
         }
 
-        vkDestroyRenderPass(seDevice.device(), renderPass, nullptr);
-
-        for (size_t i = 0; i < colorImageViews.size(); i++)
+        for (std::size_t i = 0; i < colorImages.size(); ++i)
         {
-            vkDestroyImageView(seDevice.device(), colorImageViews[i], nullptr);
-            vkDestroyImage(seDevice.device(), colorImages[i], nullptr);
-            vkFreeMemory(seDevice.device(), colorImageMemory[i], nullptr);
+            if (i < colorImageViews.size() && colorImageViews[i] != VK_NULL_HANDLE)
+                vkDestroyImageView(seDevice.device(), colorImageViews[i], nullptr);
+            if (colorImages[i] != VK_NULL_HANDLE)
+                vkDestroyImage(seDevice.device(), colorImages[i], nullptr);
+            if (i < colorImageMemory.size() && colorImageMemory[i] != VK_NULL_HANDLE)
+                vkFreeMemory(seDevice.device(), colorImageMemory[i], nullptr);
         }
+        colorImageViews.clear();
+        colorImages.clear();
+        colorImageMemory.clear();
 
-        for (size_t i = 0; i < depthImageViews.size(); i++)
+        for (std::size_t i = 0; i < depthImages.size(); ++i)
         {
-            vkDestroyImageView(seDevice.device(), depthImageViews[i], nullptr);
-            vkDestroyImage(seDevice.device(), depthImages[i], nullptr);
-            vkFreeMemory(seDevice.device(), depthImageMemory[i], nullptr);
+            if (i < depthImageViews.size() && depthImageViews[i] != VK_NULL_HANDLE)
+                vkDestroyImageView(seDevice.device(), depthImageViews[i], nullptr);
+            if (depthImages[i] != VK_NULL_HANDLE)
+                vkDestroyImage(seDevice.device(), depthImages[i], nullptr);
+            if (i < depthImageMemory.size() && depthImageMemory[i] != VK_NULL_HANDLE)
+                vkFreeMemory(seDevice.device(), depthImageMemory[i], nullptr);
         }
+        depthImageViews.clear();
+        depthImages.clear();
+        depthImageMemory.clear();
 
-        vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
-        vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
-
+        if (stagingBuffer != VK_NULL_HANDLE)
+        {
+            vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
+            stagingBuffer = VK_NULL_HANDLE;
+        }
+        if (stagingBufferMemory != VK_NULL_HANDLE)
+        {
+            vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
+            stagingBufferMemory = VK_NULL_HANDLE;
+        }
     }
 
     void SEOffscreenRenderer::resize(uint32_t newWidth, uint32_t newHeight)
     {
         if (width == newWidth && height == newHeight) return;
 
-        vkDeviceWaitIdle(seDevice.device());
+        checkVkResult(vkDeviceWaitIdle(seDevice.device()), "vkDeviceWaitIdle(offscreen resize)");
+        destroyOwnedHandles();
 
         width = newWidth;
         height = newHeight;
-
-        for (size_t i = 0; i < framebuffers.size(); i++)
-        {
-            vkDestroyFramebuffer(seDevice.device(), framebuffers[i], nullptr);
-        }
-        framebuffers.clear();
-
-        vkDestroyRenderPass(seDevice.device(), renderPass, nullptr);
-
-        for (size_t i = 0; i < colorImageViews.size(); i++)
-        {
-            vkDestroyImageView(seDevice.device(), colorImageViews[i], nullptr);
-            vkDestroyImage(seDevice.device(), colorImages[i], nullptr);
-            vkFreeMemory(seDevice.device(), colorImageMemory[i], nullptr);
-        }
-
-        for (size_t i = 0; i < depthImageViews.size(); i++)
-        {
-            vkDestroyImageView(seDevice.device(), depthImageViews[i], nullptr);
-            vkDestroyImage(seDevice.device(), depthImages[i], nullptr);
-            vkFreeMemory(seDevice.device(), depthImageMemory[i], nullptr);
-        }
-
-        colorImageViews.clear();
-        colorImages.clear();
-        colorImageMemory.clear();
-
-        depthImageViews.clear();
-        depthImages.clear();
-        depthImageMemory.clear();
-
-        vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
-        vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
-
 
         createOffscreenImageDepth();
 		createOffscreenImageColor();
@@ -88,34 +86,13 @@ namespace se
     {
         if (colorFormat == format) return;
 
+        checkVkResult(vkDeviceWaitIdle(seDevice.device()), "vkDeviceWaitIdle(offscreen format change)");
+        destroyOwnedHandles();
         colorFormat = format;
 
-        for (size_t i = 0; i < framebuffers.size(); i++)
-            vkDestroyFramebuffer(seDevice.device(), framebuffers[i], nullptr);
-
-        vkDestroyRenderPass(seDevice.device(), renderPass, nullptr);
-
-        for (size_t i = 0; i < colorImages.size(); i++)
-        {
-            vkDestroyImageView(seDevice.device(), colorImageViews[i], nullptr);
-            vkDestroyImage(seDevice.device(), colorImages[i], nullptr);
-            vkFreeMemory(seDevice.device(), colorImageMemory[i], nullptr);
-        }
-
-        for (size_t i = 0; i < colorImages.size(); i++)
-        {
-            vkDestroyImageView(seDevice.device(), depthImageViews[i], nullptr);
-            vkDestroyImage(seDevice.device(), depthImages[i], nullptr);
-            vkFreeMemory(seDevice.device(), depthImageMemory[i], nullptr);
-        }
-
-        vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
-        vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
-
-
-        createRenderPass();
         createOffscreenImageDepth();
         createOffscreenImageColor();
+        createRenderPass();
         createFramebuffers();
         createStagingBuffer();
     }
@@ -159,9 +136,7 @@ namespace se
         viewInfo.subresourceRange.levelCount = 1;
         viewInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &depthImageViews[i]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create depth image view!");
-        }
+        checkVkResult(vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &depthImageViews[i]), "vkCreateImageView");
     }
 }
 
@@ -205,9 +180,7 @@ namespace se
         viewInfo.subresourceRange.levelCount = 1;
         viewInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &colorImageViews[i]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create color image view!");
-        }
+        checkVkResult(vkCreateImageView(seDevice.device(), &viewInfo, nullptr, &colorImageViews[i]), "vkCreateImageView");
     }
 }
 
@@ -280,10 +253,7 @@ namespace se
         renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
         renderPassInfo.pDependencies   = dependencies.data();
 
-        if (vkCreateRenderPass(seDevice.device(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create render pass!");
-        }
+        checkVkResult(vkCreateRenderPass(seDevice.device(), &renderPassInfo, nullptr, &renderPass), "vkCreateRenderPass");
     }
 
     void SEOffscreenRenderer::createFramebuffers()
@@ -306,40 +276,19 @@ namespace se
             framebufferInfo.height = height;
             framebufferInfo.layers = 1;
 
-            if (vkCreateFramebuffer(seDevice.device(), &framebufferInfo, nullptr, &framebuffers[i]) != VK_SUCCESS)
-            {
-                throw std::runtime_error("Failed to create offscreen framebuffer!");
-            }
+            checkVkResult(vkCreateFramebuffer(seDevice.device(), &framebufferInfo, nullptr, &framebuffers[i]), "vkCreateFramebuffer");
         }
     }
 
     void SEOffscreenRenderer::createStagingBuffer() {
         VkDeviceSize bufferSize = width * height * 4; // Assuming 4 bytes per pixel (RGBA8)
 
-        VkBufferCreateInfo bufferInfo{};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufferInfo.size = bufferSize;
-        bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        if (vkCreateBuffer(seDevice.device(), &bufferInfo, nullptr, &stagingBuffer) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create staging buffer!");
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(seDevice.device(), stagingBuffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = memRequirements.size;
-        allocInfo.memoryTypeIndex = seDevice.findMemoryType(memRequirements.memoryTypeBits,
-            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-        if (vkAllocateMemory(seDevice.device(), &allocInfo, nullptr, &stagingBufferMemory) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to allocate staging buffer memory!");
-        }
-
-        vkBindBufferMemory(seDevice.device(), stagingBuffer, stagingBufferMemory, 0);
+        seDevice.createBuffer(
+            bufferSize,
+            VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            stagingBuffer,
+            stagingBufferMemory);
     }
 
 

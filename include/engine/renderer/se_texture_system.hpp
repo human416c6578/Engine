@@ -1,16 +1,14 @@
 #pragma once  
 
-#include <filesystem>
 #include <string>  
-#include <vector>  
 #include <unordered_map>  
 #include <memory>  
 
-#include "engine/vulkan/se_device.hpp"
-#include "engine/renderer/se_texture.hpp"
-
 namespace se
 {
+	class SEDevice;
+	class SETexture;
+
 	class TextureSystem
 	{
 	public:
@@ -19,6 +17,8 @@ namespace se
 
 		TextureSystem(const TextureSystem&) = delete;
 		TextureSystem& operator=(const TextureSystem&) = delete;
+		TextureSystem(TextureSystem&&) = delete;
+		TextureSystem& operator=(TextureSystem&&) = delete;
 
 		std::unordered_map<std::string, std::shared_ptr<se::SETexture>>* getTextures()
 		{
