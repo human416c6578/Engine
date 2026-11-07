@@ -6,7 +6,6 @@
 
 namespace se
 {
-
     SERenderer::SERenderer(SEWindow& window, SEDevice& device)
         : seWindow{ window }, seDevice{ device }
     {
@@ -15,7 +14,10 @@ namespace se
         createCommandBuffers();
     }
 
-    SERenderer::~SERenderer() { freeCommandBuffers(); }
+    SERenderer::~SERenderer()
+    {
+        freeCommandBuffers();
+    }
 
     void SERenderer::recreateSwapChain()
     {
@@ -36,7 +38,7 @@ namespace se
             std::shared_ptr<SESwapChain> oldSwapChain = std::move(seSwapChain);
             seSwapChain = std::make_unique<SESwapChain>(seDevice, extent, oldSwapChain);
 
-            if (!oldSwapChain->compareSwapFormats(*seSwapChain.get()))
+            if (!oldSwapChain->compareSwapFormats(*seSwapChain))
             {
                 throw std::runtime_error("Swap chain image(or depth) format has changed!");
             }
@@ -45,7 +47,7 @@ namespace se
 
     void SERenderer::createCommandBuffers()
     {
-        commandBuffers.resize(SESwapChain::MAX_FRAMES_IN_FLIGHT);
+        commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -53,8 +55,7 @@ namespace se
         allocInfo.commandPool = seDevice.getCommandPool();
         allocInfo.commandBufferCount = static_cast<uint32_t>(commandBuffers.size());
 
-        if (vkAllocateCommandBuffers(seDevice.device(), &allocInfo, commandBuffers.data()) !=
-            VK_SUCCESS)
+        if (vkAllocateCommandBuffers(seDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to allocate command buffers!");
         }
@@ -62,6 +63,11 @@ namespace se
 
     void SERenderer::freeCommandBuffers()
     {
+        if (commandBuffers.empty())
+        {
+            return;
+        }
+
         vkFreeCommandBuffers(
             seDevice.device(),
             seDevice.getCommandPool(),
@@ -70,15 +76,16 @@ namespace se
         commandBuffers.clear();
     }
 
-    VkCommandBuffer SERenderer::beginFrame()
+    std::optional<FrameContext> SERenderer::beginFrame()
     {
         assert(!isFrameStarted && "Can't call beginFrame while already in progress");
 
-        auto result = seSwapChain->acquireNextImage(&currentImageIndex);
+        uint32_t imageIndex = 0;
+        const auto result = seSwapChain->acquireNextImage(&imageIndex);
         if (result == VK_ERROR_OUT_OF_DATE_KHR)
         {
             recreateSwapChain();
-            return nullptr;
+            return std::nullopt;
         }
 
         if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
@@ -86,54 +93,62 @@ namespace se
             throw std::runtime_error("failed to acquire swap chain image!");
         }
 
-        isFrameStarted = true;
+        const auto frameIndex = static_cast<uint32_t>(seSwapChain->getCurrentFrame());
+        const auto commandBuffer = commandBuffers[frameIndex];
 
-        auto commandBuffer = getCurrentCommandBuffer();
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
         if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to begin recording command buffer!");
         }
-        return commandBuffer;
+
+        activeFrame = FrameContext{ frameIndex, imageIndex, commandBuffer };
+        isFrameStarted = true;
+        return activeFrame;
     }
 
-    void SERenderer::endFrame()
+    void SERenderer::endFrame(const FrameContext& frame)
     {
         assert(isFrameStarted && "Can't call endFrame while frame is not in progress");
-        auto commandBuffer = getCurrentCommandBuffer();
-        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
+        assert(frame.frameIndex == activeFrame.frameIndex);
+        assert(frame.swapchainImageIndex == activeFrame.swapchainImageIndex);
+        assert(frame.commandBuffer == activeFrame.commandBuffer);
+
+        if (vkEndCommandBuffer(frame.commandBuffer) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to record command buffer!");
         }
 
-        auto result = seSwapChain->submitCommandBuffers(&commandBuffer, &currentImageIndex);
+        auto imageIndex = frame.swapchainImageIndex;
+        const auto result = seSwapChain->submitCommandBuffers(&frame.commandBuffer, &imageIndex);
         if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR ||
             seWindow.wasWindowResized())
         {
             seWindow.resetWindowResizedFlag();
+            isFrameStarted = false;
             recreateSwapChain();
         }
         else if (result != VK_SUCCESS)
         {
+            isFrameStarted = false;
             throw std::runtime_error("failed to present swap chain image!");
         }
 
         isFrameStarted = false;
+        activeFrame = {};
     }
 
-    void SERenderer::beginSwapChainRenderPass(VkCommandBuffer commandBuffer)
+    void SERenderer::beginSwapChainRenderPass(const FrameContext& frame)
     {
         assert(isFrameStarted && "Can't call beginSwapChainRenderPass if frame is not in progress");
-        assert(
-            commandBuffer == getCurrentCommandBuffer() &&
-            "Can't begin render pass on command buffer from a different frame");
+        assert(frame.commandBuffer == activeFrame.commandBuffer);
+        assert(frame.swapchainImageIndex == activeFrame.swapchainImageIndex);
 
         VkRenderPassBeginInfo renderPassInfo{};
         renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassInfo.renderPass = seSwapChain->getRenderPass();
-        renderPassInfo.framebuffer = seSwapChain->getFrameBuffer(currentImageIndex);
+        renderPassInfo.framebuffer = seSwapChain->getFrameBuffer(frame.swapchainImageIndex);
 
         renderPassInfo.renderArea.offset = { 0, 0 };
         renderPassInfo.renderArea.extent = seSwapChain->getSwapChainExtent();
@@ -144,7 +159,7 @@ namespace se
         renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
         renderPassInfo.pClearValues = clearValues.data();
 
-        vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(frame.commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
         VkViewport viewport{};
         viewport.x = 0.0f;
@@ -154,17 +169,15 @@ namespace se
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         VkRect2D scissor{ {0, 0}, seSwapChain->getSwapChainExtent() };
-        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+        vkCmdSetViewport(frame.commandBuffer, 0, 1, &viewport);
+        vkCmdSetScissor(frame.commandBuffer, 0, 1, &scissor);
     }
 
-    void SERenderer::endSwapChainRenderPass(VkCommandBuffer commandBuffer)
+    void SERenderer::endSwapChainRenderPass(const FrameContext& frame)
     {
         assert(isFrameStarted && "Can't call endSwapChainRenderPass if frame is not in progress");
-        assert(
-            commandBuffer == getCurrentCommandBuffer() &&
-            "Can't end render pass on command buffer from a different frame");
-        vkCmdEndRenderPass(commandBuffer);
+        assert(frame.commandBuffer == activeFrame.commandBuffer);
+        assert(frame.swapchainImageIndex == activeFrame.swapchainImageIndex);
+        vkCmdEndRenderPass(frame.commandBuffer);
     }
-
 }

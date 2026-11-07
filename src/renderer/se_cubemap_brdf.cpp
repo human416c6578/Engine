@@ -174,36 +174,35 @@ namespace se
 		ubo.view = camera.getView();
 		ubo.cameraPos = viewerObject.getTransform().translation;
 
-		seDevice.updateUniformBuffers(ubo);
-		if (auto commandBuffer = offscreenRenderer->beginFrame())
+		seDevice.updateUniformBuffers(0, ubo);
 		{
-			offscreenRenderer->beginRenderPass(commandBuffer);
+		    VkCommandBuffer commandBuffer = seDevice.beginSingleTimeCommands();
+			offscreenRenderer->beginRenderPass(commandBuffer, 0);
 
 			draw(commandBuffer);
 
 			offscreenRenderer->endRenderPass(commandBuffer);
-			offscreenRenderer->endFrame();
-
+			
 			// Copy from offscreen render target to cube map image
-			VkCommandBuffer cmdBuffer = seDevice.beginSingleTimeCommands();
+			
 
 			VkImageMemoryBarrier barrier{};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			barrier.image = offscreenRenderer->getColorImage(offscreenRenderer->getCurrentFrame());
+			barrier.image = offscreenRenderer->getColorImage(0);
 			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			barrier.subresourceRange.baseMipLevel = 0;
 			barrier.subresourceRange.levelCount = 1;
 			barrier.subresourceRange.baseArrayLayer = 0;
 			barrier.subresourceRange.layerCount = 1;
 			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
 			vkCmdPipelineBarrier(
-				cmdBuffer,
+				commandBuffer,
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 				VK_PIPELINE_STAGE_TRANSFER_BIT,
 				0,
@@ -228,7 +227,7 @@ namespace se
 			dstBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT; // Preparing for transfer write
 
 			vkCmdPipelineBarrier(
-				cmdBuffer,
+				commandBuffer,
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, // No previous stages
 				VK_PIPELINE_STAGE_TRANSFER_BIT,    // Transfer stage
 				0,
@@ -252,8 +251,8 @@ namespace se
 
 
 			vkCmdCopyImage(
-				cmdBuffer,
-				offscreenRenderer->getColorImage(offscreenRenderer->getCurrentFrame()), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				commandBuffer,
+				offscreenRenderer->getColorImage(0), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				BRDFImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				1, &region
 			);
@@ -276,7 +275,7 @@ namespace se
 			cubemapBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 			vkCmdPipelineBarrier(
-				cmdBuffer,
+				commandBuffer,
 				VK_PIPELINE_STAGE_TRANSFER_BIT,
 				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 				0,
@@ -286,7 +285,7 @@ namespace se
 			);
 
 
-			seDevice.endSingleTimeCommands(cmdBuffer);
+			seDevice.endSingleTimeCommands(commandBuffer);
 		}
 
 		createSampler();

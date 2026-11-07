@@ -4,6 +4,8 @@
 #include <string>
 #include "engine/scene/se_scene.hpp"
 #include "engine/resources/se_resource_manager.hpp"
+#include "engine/renderer/se_postprocess.hpp"
+#include "engine/renderer/se_particle_system.hpp"
 #include "engine/core/se_camera.hpp"
 
 namespace se {
@@ -26,6 +28,9 @@ namespace se {
             resourceManager = rm;
         }
 
+        void setPostProcess(SEPostProcess* pp)       { postProcess = pp; }
+        void setParticleSystem(ParticleSystem* ps)   { particleSystem = ps; }
+
         ResourceManager* getResourceManager()
         {
             return resourceManager;
@@ -39,7 +44,7 @@ namespace se {
             return ref;
         }
 
-        Scene* getScene(const std::string& name) 
+        Scene* getScene(const std::string& name)
         {
             auto it = scenes.find(name);
             return it != scenes.end() ? it->second.get() : nullptr;
@@ -63,9 +68,12 @@ namespace se {
 
     private:
         ResourceManager* resourceManager = nullptr;
+        SEPostProcess*   postProcess   = nullptr;
+        ParticleSystem*  particleSystem = nullptr;
+
         std::unordered_map<std::string, std::unique_ptr<Scene>> scenes;
         Scene* activeScene = nullptr;
-        
+
     };
 
 } // namespace se

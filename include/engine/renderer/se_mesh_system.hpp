@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <memory>
 
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_material_system.hpp"
 #include "engine/renderer/se_texture_system.hpp"
 #include "engine/renderer/se_mesh.hpp"
@@ -15,8 +15,6 @@
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-
-
 
 
 namespace se

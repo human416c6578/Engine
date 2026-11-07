@@ -2,7 +2,7 @@
 #include "engine/scene/se_gameobject.hpp"
 #include "engine/scripting/se_script_component.hpp"
 #include "engine/scripting/se_script_manager.hpp"
-#include "engine/core/se_input_system.hpp"
+#include "engine/platform/se_input_system.hpp"
 #include "engine/scene/se_scene_manager.hpp"
 
 namespace se {

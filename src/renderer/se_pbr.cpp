@@ -211,7 +211,7 @@ namespace se
     {
         VkDeviceSize bufferSize = sizeof(se::LightUBO);
 
-        size_t framesInFlight = SESwapChain::MAX_FRAMES_IN_FLIGHT;
+        size_t framesInFlight = MAX_FRAMES_IN_FLIGHT;
         lightBuffers.resize(framesInFlight);
 
         for (size_t i = 0; i < framesInFlight; i++)
@@ -234,7 +234,7 @@ namespace se
 
     void PBR::createDescriptorSets()
     {
-        size_t framesInFlight = SESwapChain::MAX_FRAMES_IN_FLIGHT;
+        size_t framesInFlight = MAX_FRAMES_IN_FLIGHT;
         descriptorSets.resize(framesInFlight);
         needUpdate.resize(framesInFlight, false);
 
@@ -327,12 +327,23 @@ namespace se
         vkUpdateDescriptorSets(seDevice.device(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
     
-    void PBR::updateLightsBuffer(int frameIndex, std::vector<Light> lights) {
+    void PBR::updateLightsBuffer(int frameIndex, const std::vector<Light>& lights)
+    {
         if (!needUpdate[frameIndex]) return;
 
         LightUBO ubo{};
-        ubo.lightCount = static_cast<int>(lights.size());
-        memcpy(ubo.lights, lights.data(), sizeof(Light) * lights.size());
+
+        constexpr size_t capacity = std::size(ubo.lights);
+        const size_t count = std::min(lights.size(), capacity);
+
+        if (lights.size() > capacity) {
+            std::fprintf(stderr, "Too many lights: %zu (max %zu), extra lights ignored\n",
+                        lights.size(), capacity);
+        }
+
+        ubo.lightCount = static_cast<int>(count);
+        if (count > 0)
+            memcpy(ubo.lights, lights.data(), count * sizeof(Light));
 
         memcpy(lightBuffers[frameIndex].mapped, &ubo, sizeof(LightUBO));
 

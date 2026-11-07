@@ -2,7 +2,7 @@
 
 #include <third_party/stb/stb_image.h>
 
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
 #include "engine/resources/se_resource.hpp"
 
 // std

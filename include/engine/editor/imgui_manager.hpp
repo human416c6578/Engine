@@ -1,6 +1,6 @@
 #pragma once
-#include "engine/core/se_device.hpp"
-#include "engine/core/se_window.hpp"
+#include "engine/vulkan/se_device.hpp"
+#include "engine/platform/se_window.hpp"
 #include "engine/renderer/se_renderer.hpp"
 #include "engine/renderer/se_postprocess.hpp"
 #include "engine/scene/se_gameobject.hpp"
@@ -20,7 +20,7 @@ namespace se
         ImGuiManager() = default;
         ~ImGuiManager() = default;
 
-        void init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, se::ResourceManager* resourceManager, se::SEPostProcess* postprocess);
+        void init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, uint32_t swapChainImageCount, se::ResourceManager* resourceManager, se::SEPostProcess* postprocess, se::ParticleSystem* particleSystem);
 
         void newFrame();
         void render(VkCommandBuffer commandBuffer);
@@ -41,12 +41,14 @@ namespace se
         void renderMaterialComponent(std::unique_ptr<se::SEGameObject>& gameObject);
         void renderLightComponent(std::unique_ptr<se::SEGameObject>& gameObject);
         void renderScriptComponent(std::unique_ptr<se::SEGameObject>& gameObject);
+        void renderParticleEmitterComponent(std::unique_ptr<se::SEGameObject>& gameObject);
 
 
         // Asset properties
         void renderMeshProperties();
         void renderMaterialProperties();
         void renderTextureProperties();
+        void renderPostProcessProperties();
 
         // Utility methods
         void renderMaterialEditor(std::shared_ptr<se::SEMaterial> material);
@@ -73,6 +75,8 @@ namespace se
         se::ResourceManager* resourceManager{ nullptr };
         se::SceneManager* sceneManager{ nullptr };
         se::SEPostProcess* postprocess{ nullptr };
+        se::ParticleSystem* particleSystem = nullptr;
+
 
         // Selection state
         int selectedGameObjectIndex = -1;

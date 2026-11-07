@@ -357,3 +357,11 @@ FodyWeavers.xsd
 Engine/hdr
 Engine/models
 Engine/textures
+
+imgui.ini
+
+Architecture Guide.md
+Restructure To-Do.md
+*.md
+*.pdf
+assets/

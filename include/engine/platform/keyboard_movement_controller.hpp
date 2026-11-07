@@ -1,7 +1,7 @@
 #pragma once
 
 #include "engine/scene/se_gameobject.hpp"
-#include "engine/core/se_window.hpp"
+#include "engine/platform/se_window.hpp"
 
 namespace se
 {

@@ -32,7 +32,7 @@ namespace se
 		createDescriptorSetLayout();
 		createDescriptorSets();
 		createPipelineLayout();
-		createPipeline(renderer.getSwapChainRenderPass(), "shaders/backgroundVert.spv", "shaders/backgroundFrag.spv");
+		createPipeline(renderer.getOffscreenRenderer()->getRenderPass(), "shaders/backgroundVert.spv", "shaders/backgroundFrag.spv");
 		
 	}
 

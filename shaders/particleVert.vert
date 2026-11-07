@@ -43,7 +43,7 @@ void main()
     float size = mix(
             p.sizeEnd,
             p.sizeStart,
-            lifeRatio) * 0.1f;
+            lifeRatio);
 
     outColor = color;
     outLifeFraction = lifeRatio;
@@ -60,5 +60,5 @@ void main()
 
     float sizeScale = 20.0;
 
-    gl_PointSize = p.sizeStart * (sizeScale / distance);
+    gl_PointSize = size * (sizeScale / distance);
 }

@@ -1,7 +1,6 @@
 #pragma once
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_pipeline.hpp"
-#include "engine/renderer/se_swap_chain.hpp"
 #include <memory>
 #include <vector>
 #include <glm/glm.hpp>
@@ -76,7 +75,7 @@ namespace se
 
         uint32_t  forceIndices[8] = { ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u, ~0u };
         uint32_t  forceCount      = 0;
-        float     padding2[3]     = {};
+        float     padding2[4]     = {};
     };
 
     struct Particle
@@ -161,6 +160,7 @@ namespace se
         void createComputePipeline();
         void createGraphicsPipeline(VkRenderPass renderPass);
         void uploadBuffers(int frameIndex, float deltaTime, float totalTime);
+        void insertGraphicsToComputeBarrier(VkCommandBuffer commandBuffer);
         void insertComputeToGraphicsBarrier(VkCommandBuffer commandBuffer);
 
         SEDevice& seDevice;

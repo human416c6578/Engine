@@ -1,6 +1,7 @@
 #pragma once
 
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
+#include "engine/core/se_frame_config.hpp"
 
 // vulkan headers
 #include <vulkan/vulkan.h>
@@ -16,7 +17,6 @@ namespace se
   class SESwapChain
   {
   public:
-    static constexpr int MAX_FRAMES_IN_FLIGHT = 3;
 
     SESwapChain(SEDevice &deviceRef, VkExtent2D windowExtent);
     SESwapChain(
@@ -31,7 +31,7 @@ namespace se
     VkFramebuffer getFrameBuffer(int index) { return swapChainFramebuffers[index]; }
     VkRenderPass getRenderPass() { return renderPass; }
     VkImageView getImageView(int index) { return swapChainImageViews[index]; }
-    size_t imageCount() { return swapChainImages.size(); }
+    size_t imageCount() const { return swapChainImages.size(); }
     VkFormat getSwapChainImageFormat() { return swapChainImageFormat; }
     VkExtent2D getSwapChainExtent() { return swapChainExtent; }
     VkDescriptorSetLayout getDescriptorSetLayout() { return descriptorSetLayout; }

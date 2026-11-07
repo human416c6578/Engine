@@ -1,5 +1,4 @@
 #include "engine/renderer/se_particle_system.hpp"
-#include "engine/renderer/se_swap_chain.hpp"
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -69,6 +68,8 @@ namespace se
                 emitters[i].id      = i;
                 emitters[i].active  = 1;
                 emitterSlotFree[i]  = false;
+
+                std::cout<<i<<std::endl;
 
                 return i;
             }
@@ -428,7 +429,7 @@ namespace se
     void ParticleSystem::createEmitterSSBOs()
     {
         VkDeviceSize bufferSize = sizeof(Emitter) * MAX_EMITTERS;
-        size_t frames = SESwapChain::MAX_FRAMES_IN_FLIGHT;
+        size_t frames = MAX_FRAMES_IN_FLIGHT;
         emitterSSBOs.resize(frames);
 
         for (size_t i = 0; i < frames; i++)
@@ -447,7 +448,7 @@ namespace se
     void ParticleSystem::createForceSSBOs()
     {
         VkDeviceSize bufferSize = sizeof(Force) * MAX_FORCES;
-        size_t frames = SESwapChain::MAX_FRAMES_IN_FLIGHT;
+        size_t frames = MAX_FRAMES_IN_FLIGHT;
         forceSSBOs.resize(frames);
 
         for (size_t i = 0; i < frames; i++)
@@ -466,7 +467,7 @@ namespace se
     void ParticleSystem::createFrameUBOs()
     {
         VkDeviceSize bufferSize = sizeof(ParticleFrameUBO);
-        size_t frames = SESwapChain::MAX_FRAMES_IN_FLIGHT;
+        size_t frames = MAX_FRAMES_IN_FLIGHT;
         frameUBOs.resize(frames);
 
         for (size_t i = 0; i < frames; i++)
@@ -538,7 +539,7 @@ namespace se
 
     void ParticleSystem::createDescriptorSets()
     {
-        size_t frames = SESwapChain::MAX_FRAMES_IN_FLIGHT;
+        size_t frames = MAX_FRAMES_IN_FLIGHT;
         computeDescriptorSets.resize(frames);
         graphicsDescriptorSets.resize(frames);
 
@@ -702,6 +703,25 @@ namespace se
         std::memcpy(frameUBOs[frameIndex].mapped, &ubo, sizeof(ubo));
     }
 
+    void ParticleSystem::insertGraphicsToComputeBarrier(VkCommandBuffer commandBuffer)
+    {
+        VkBufferMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+        barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.buffer = particleSSBO.buffer;
+        barrier.offset = 0;
+        barrier.size = sizeof(Particle) * MAX_PARTICLES;
+
+        vkCmdPipelineBarrier(
+            commandBuffer,
+            VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            0, 0, nullptr, 1, &barrier, 0, nullptr);
+    }
+
     void ParticleSystem::insertComputeToGraphicsBarrier(VkCommandBuffer commandBuffer)
     {
         VkBufferMemoryBarrier barrier{};
@@ -725,6 +745,7 @@ namespace se
     void ParticleSystem::update(VkCommandBuffer commandBuffer, int frameIndex,
                                 float deltaTime, float totalTime)
     {
+        insertGraphicsToComputeBarrier(commandBuffer);
         uploadBuffers(frameIndex, deltaTime, totalTime);
 
         seComputePipeline->bindCompute(commandBuffer);

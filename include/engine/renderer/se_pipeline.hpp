@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
 #include "engine/core/se_vertex.hpp"
 
 #include <string>
@@ -78,10 +78,10 @@ namespace se
         void createShaderModule(const std::vector<char> &code, VkShaderModule *shaderModule);
 
         SEDevice &seDevice;
-        VkPipeline graphicsPipeline;
-        VkPipeline computePipeline;  
-        VkShaderModule vertShaderModule;
-        VkShaderModule fragShaderModule;
-        VkShaderModule compShaderModule;
+        VkPipeline     graphicsPipeline = VK_NULL_HANDLE;
+        VkPipeline     computePipeline  = VK_NULL_HANDLE;
+        VkShaderModule vertShaderModule = VK_NULL_HANDLE;
+        VkShaderModule fragShaderModule = VK_NULL_HANDLE;
+        VkShaderModule compShaderModule = VK_NULL_HANDLE;
     };
 }

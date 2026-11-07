@@ -1,6 +1,7 @@
 #pragma once
 
-#include "engine/core/se_window.hpp"
+#include "engine/platform/se_window.hpp"
+#include "engine/core/se_frame_config.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -26,13 +27,11 @@ const std::vector<const char *> validationLayers = {
 const std::vector<const char *> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
-#define NDEBUG
-
-#ifdef NDEBUG
-const bool enableValidationLayers = false;
-#else
-const bool enableValidationLayers = true;
+#ifndef ENGINE_ENABLE_VALIDATION
+#define ENGINE_ENABLE_VALIDATION 0
 #endif
+
+inline constexpr bool enableValidationLayers = ENGINE_ENABLE_VALIDATION != 0;
 
 struct QueueFamilyIndices
 {
@@ -85,7 +84,7 @@ namespace se
 
 		VkDescriptorSetLayout getImGuiDescriptorSetLayout() { return imGuiDescriptorSetLayout; }
 
-        void updateUniformBuffers(UniformBufferObject bufferObject);
+        void updateUniformBuffers(std::size_t frameIndex, const UniformBufferObject& bufferObject);
 
         SwapChainSupportDetails getSwapChainSupport() { return querySwapChainSupport(physicalDevice); }
         uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
@@ -115,7 +114,6 @@ namespace se
         VkPhysicalDeviceProperties properties;
 
     private:
-        const int MAX_FRAMES_IN_FLIGHT = 3;
 
         VkInstance instance = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT debugMessenger;

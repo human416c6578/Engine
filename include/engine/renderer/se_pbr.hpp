@@ -1,7 +1,7 @@
 #pragma once
 
 #include "engine/core/se_camera.hpp"
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
 #include "engine/scene/se_gameobject.hpp"
 #include "engine/renderer/se_cubemap.hpp"
 #include "engine/renderer/se_pipeline.hpp"
@@ -51,7 +51,7 @@ namespace se
 
         void updateDescriptorSet(size_t frameIndex);
 
-        void updateLightsBuffer(int frameIndex, std::vector<Light> lights);
+        void updateLightsBuffer(int frameIndex, const std::vector<Light>& lights);
 
         void createGlobalDescriptorSetLayout();
         void createMaterialDescriptorSetLayout();

@@ -25,6 +25,7 @@ namespace se
 
     SEPipeline::~SEPipeline()
     {
+
         if (vertShaderModule != VK_NULL_HANDLE)
             vkDestroyShaderModule(seDevice.device(), vertShaderModule, nullptr);
         if (fragShaderModule != VK_NULL_HANDLE)

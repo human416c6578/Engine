@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_renderer.hpp"
 #include "engine/renderer/se_hdr_to_cubemap.h"
 #include "engine/renderer/se_cubemap_diffuse.h"

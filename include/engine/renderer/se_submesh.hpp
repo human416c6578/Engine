@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
 #include "engine/core/se_vertex.hpp"
 #include "engine/renderer/se_pbr_material.hpp"
 

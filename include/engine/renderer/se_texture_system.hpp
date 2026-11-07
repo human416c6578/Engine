@@ -6,7 +6,7 @@
 #include <unordered_map>  
 #include <memory>  
 
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_texture.hpp"
 
 namespace se

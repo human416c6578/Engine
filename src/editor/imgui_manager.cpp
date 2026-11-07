@@ -1,5 +1,9 @@
-#include "engine/ui/imgui_manager.hpp"
+#include "engine/editor/imgui_manager.hpp"
+#include "engine/renderer/se_particle_system.hpp"
 #include "engine/renderer/se_pbr.hpp"
+#include "engine/core/se_frame_config.hpp"
+
+#include <algorithm>
 
 void se::ImGuiManager::renderSceneHierarchy()
 {
@@ -24,16 +28,16 @@ void se::ImGuiManager::renderSceneHierarchy()
     ImGui::Begin("Scene Hierarchy", &showSceneHierarchy,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-    ImGui::Text("Game Objects (%d)", gameobjects.size());
+    ImGui::Text("Game Objects (%zu)", gameobjects.size());
     ImGui::Separator();
 
-    for (int i = 0; i < gameobjects.size(); i++)
+    for (size_t i = 0; i < gameobjects.size(); i++)
     {
         auto it = gameobjects.begin();
         std::advance(it, i);
         auto& gameObject = *it;
         ImGuiSelectableFlags flags = ImGuiSelectableFlags_None;
-        bool isSelected = (selectedGameObjectIndex == i);
+        bool isSelected = (selectedGameObjectIndex == static_cast<int>(i));
 
         if (ImGui::Selectable((gameObject->getName() + "##" +std::to_string(gameObject->getId())).c_str(), isSelected, flags))
         {
@@ -50,6 +54,10 @@ void se::ImGuiManager::renderSceneHierarchy()
             {
                 auto it = gameobjects.begin();
                 std::advance(it, i);
+                if (it->get()->getParticleEmitter().isValid())
+                {
+                    particleSystem->removeEmitter(it->get()->getParticleEmitter().handle);
+                }
                 gameobjects.erase(it);
                 if (selectedGameObjectIndex == i) selectedGameObjectIndex = -1;
                 else if (selectedGameObjectIndex > i) selectedGameObjectIndex--;
@@ -377,42 +385,57 @@ void se::ImGuiManager::renderPropertiesPanel()
     ImVec2 workPos = viewport->WorkPos;
     ImVec2 workSize = viewport->WorkSize;
 
-    // Fixed to right, full height, 400px wide
     ImGui::SetNextWindowPos(ImVec2(workPos.x + workSize.x - 300, workPos.y), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2(300, workSize.y), ImGuiCond_Always);
 
     ImGui::Begin("Properties", &showProperties,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-    if (selectedGameObjectIndex >= 0 && selectedGameObjectIndex < gameobjects.size())
+    if (ImGui::BeginTabBar("PropertiesTabBar", ImGuiTabBarFlags_None))
     {
-        renderGameObjectProperties();
-    }
-    else if (!selectedAssetName.empty())
-    {
-        if (selectedAssetCategory == "Meshes")
+        if (ImGui::BeginTabItem("Properties"))
         {
-            renderMeshProperties();
+            if (selectedGameObjectIndex >= 0 && selectedGameObjectIndex < gameobjects.size())
+            {
+                renderGameObjectProperties();
+            }
+            else if (!selectedAssetName.empty())
+            {
+                if (selectedAssetCategory == "Meshes")
+                {
+                    renderMeshProperties();
+                }
+                else if (selectedAssetCategory == "Materials")
+                {
+                    renderMaterialProperties();
+                }
+                else if (selectedAssetCategory == "Textures")
+                {
+                    renderTextureProperties();
+                }
+            }
+            else
+            {
+                ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f),
+                    "Select a game object or asset to view properties");
+            }
+            ImGui::EndTabItem();
         }
-        else if (selectedAssetCategory == "Materials")
+
+        if (ImGui::BeginTabItem("Post Process"))
         {
-            renderMaterialProperties();
+            renderPostProcessProperties();
+            ImGui::EndTabItem();
         }
-        else if (selectedAssetCategory == "Textures")
-        {
-            renderTextureProperties();
-        }
-    }
-    else
-    {
-        ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f),
-            "Select a game object or asset to view properties");
+
+        ImGui::EndTabBar();
     }
 
     ImGui::End();
 }
 
-void se::ImGuiManager::renderGameObjectProperties()
+
+void se::ImGuiManager::renderPostProcessProperties()
 {
     ImGui::Text("Depth of Field");
 
@@ -478,9 +501,10 @@ void se::ImGuiManager::renderGameObjectProperties()
     {
         postprocess->updateSettings(pp);
     }
+}
 
-
-    ImGui::Separator();
+void se::ImGuiManager::renderGameObjectProperties()
+{
 
     auto scene = sceneManager->getActiveScene();
     std::list<std::unique_ptr<SEGameObject>>& gameobjects = scene->getGameObjects();
@@ -495,7 +519,7 @@ void se::ImGuiManager::renderGameObjectProperties()
     std::strncpy(nameBuffer, gameObject->getName().c_str(), sizeof(nameBuffer));
     nameBuffer[sizeof(nameBuffer) - 1] = '\0';
 
-    ImGui::Text("GameObject: ", gameObject->getName().c_str());
+    ImGui::Text("GameObject: %s", gameObject->getName().c_str());
     ImGui::SameLine();
 
     if (ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer))) {
@@ -513,6 +537,7 @@ void se::ImGuiManager::renderGameObjectProperties()
 	renderMaterialComponent(gameObject);
     renderLightComponent(gameObject);
     renderScriptComponent(gameObject);
+    renderParticleEmitterComponent(gameObject);
 }
 
 void se::ImGuiManager::renderTransformComponent(std::unique_ptr<se::SEGameObject>& gameObject)
@@ -650,6 +675,123 @@ void se::ImGuiManager::renderScriptComponent(std::unique_ptr<se::SEGameObject>& 
 
 }
 
+void se::ImGuiManager::renderParticleEmitterComponent(std::unique_ptr<se::SEGameObject>& gameObject)
+{
+    if (!ImGui::CollapsingHeader("Particle Emitter", ImGuiTreeNodeFlags_DefaultOpen))
+        return;
+
+    if (!particleSystem)
+    {
+        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f),
+            "ParticleSystem not bound to ImGuiManager");
+        return;
+    }
+
+    if (!gameObject->hasParticleEmitter())
+    {
+        ImGui::Text("No emitter attached");
+        ImGui::Separator();
+        ImGui::Text("Create Preset");
+
+        glm::vec3 pos = gameObject->getTransform().translation;
+
+        if (ImGui::Button("Fire")) {
+            auto setup = particleSystem->makeFire(pos, 1.0f);
+            gameObject->getParticleEmitter() = { setup.emitter, particleSystem };
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Rain")) {
+            auto setup = particleSystem->makeRain(pos, glm::vec3(10.0f, 0.0f, 10.0f));
+            gameObject->getParticleEmitter() = { setup.emitter, particleSystem };
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Snow")) {
+            auto setup = particleSystem->makeSnow(pos, glm::vec3(10.0f, 0.0f, 10.0f));
+            gameObject->getParticleEmitter() = { setup.emitter, particleSystem };
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Vortex")) {
+            auto setup = particleSystem->makeVortex(pos, glm::vec3(0.0f, 1.0f, 0.0f), 5.0f);
+            gameObject->getParticleEmitter() = { setup.emitter, particleSystem };
+        }
+        if (ImGui::Button("Black Hole")) {
+            auto setup = particleSystem->makeBlackHole(pos, 10.0f);
+            gameObject->getParticleEmitter() = { setup.emitter, particleSystem };
+        }
+
+        ImGui::Separator();
+        if (ImGui::Button("Create Empty Emitter"))
+        {
+            se::Emitter em{};
+            em.volume.position = glm::vec4(pos, 1.0f);
+            em.volume.type     = se::VolumeType::Point;
+            auto handle = particleSystem->addEmitter(em);
+            gameObject->getParticleEmitter() = { handle, particleSystem };
+        }
+        return;
+    }
+
+    auto& comp = gameObject->getParticleEmitter();
+    if (!comp.isValid())
+    {
+        ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "Invalid emitter handle");
+        return;
+    }
+
+    auto& emitter = particleSystem->getEmitter(comp.handle);
+
+    // Header controls
+    if (ImGui::Button("Remove Emitter", ImVec2(120, 0)))
+    {
+        particleSystem->removeEmitter(comp.handle);
+        comp.handle = se::INVALID_HANDLE;
+        comp.system = nullptr;
+        return;
+    }
+
+    ImGui::SameLine();
+    bool active = (emitter.active != 0);
+    if (ImGui::Checkbox("Active", &active))
+        emitter.active = active ? 1 : 0;
+
+    ImGui::Separator();
+
+    ImGui::Text("Spawn Volume");
+    int volType = static_cast<int>(emitter.volume.type);
+    const char* volNames[] = { "Point", "Sphere", "Box", "Cone", "Ring" };
+    if (ImGui::Combo("Shape", &volType, volNames, IM_ARRAYSIZE(volNames)))
+        emitter.volume.type = static_cast<se::VolumeType>(volType);
+
+    ImGui::DragFloat3("Position##Volume", &emitter.volume.position.x, 0.1f);
+    ImGui::DragFloat4("Extents",  &emitter.volume.extents.x,  0.1f);
+    ImGui::DragFloat3("Direction", &emitter.volume.direction.x, 0.01f);
+
+    ImGui::Separator();
+
+    ImGui::Text("Emission");
+    ImGui::DragFloat("Emit Rate",   &emitter.emitRate,    1.0f, 0.0f, 10000.0f);
+    ImGui::DragFloat("Speed Min",   &emitter.speedMin,    0.1f, 0.0f, 100.0f);
+    ImGui::DragFloat("Speed Max",   &emitter.speedMax,    0.1f, 0.0f, 100.0f);
+
+    ImGui::DragFloat("Life Min",    &emitter.lifetimeMin, 0.1f, 0.01f, 60.0f);
+    ImGui::DragFloat("Life Max",    &emitter.lifetimeMax, 0.1f, 0.01f, 60.0f);
+
+    ImGui::DragFloat("Size Start",  &emitter.sizeStart,   0.1f, 0.0f, 100.0f);
+    ImGui::DragFloat("Size End",    &emitter.sizeEnd,     0.1f, 0.0f, 100.0f);
+
+    ImGui::ColorEdit4("Color Start", &emitter.colorStart.x);
+    ImGui::ColorEdit4("Color End",   &emitter.colorEnd.x);
+
+    ImGui::DragFloat3("Emit Direction", &emitter.direction.x, 0.01f);
+    ImGui::DragFloat("Spread (rad)",    &emitter.direction.w, 0.01f, 0.0f, 6.283f);
+
+    ImGui::Separator();
+    ImGui::Text("Attached Forces: %u / 8", emitter.forceCount);
+    for (uint32_t i = 0; i < emitter.forceCount; ++i)
+    {
+        ImGui::BulletText("Force %u", emitter.forceIndices[i]);
+    }
+}
 
 void se::ImGuiManager::renderMeshProperties()
 {
@@ -664,7 +806,7 @@ void se::ImGuiManager::renderMeshProperties()
         std::strncpy(nameBuffer, mesh->getName().c_str(), sizeof(nameBuffer));
         nameBuffer[sizeof(nameBuffer) - 1] = '\0';
 
-        ImGui::Text("Mesh: ", mesh->getName().c_str());
+        ImGui::Text("Mesh: %s", mesh->getName().c_str());
         ImGui::SameLine();
 
         if (ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer))) {
@@ -694,7 +836,7 @@ void se::ImGuiManager::renderMaterialProperties()
         std::strncpy(nameBuffer, material->getName().c_str(), sizeof(nameBuffer));
         nameBuffer[sizeof(nameBuffer) - 1] = '\0';
 
-        ImGui::Text("Material: ", material->getName().c_str());
+        ImGui::Text("Material: %s", material->getName().c_str());
 		ImGui::SameLine();
 
         if (ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer))) {
@@ -722,7 +864,7 @@ void se::ImGuiManager::renderTextureProperties()
         std::strncpy(nameBuffer, texture->getName().c_str(), sizeof(nameBuffer));
         nameBuffer[sizeof(nameBuffer) - 1] = '\0';
 
-        ImGui::Text("Texture: ", texture->getName().c_str());
+        ImGui::Text("Texture: %s", texture->getName().c_str());
         ImGui::SameLine();
 
         if (ImGui::InputText("##Name", nameBuffer, sizeof(nameBuffer))) {
@@ -1131,7 +1273,7 @@ void se::ImGuiManager::renderScriptSelector(
 }
 
 
-void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, se::ResourceManager* resourceManager, se::SEPostProcess* postprocess)
+void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwindow* window, uint32_t swapChainImageCount, se::ResourceManager* resourceManager, se::SEPostProcess* postprocess, se::ParticleSystem* particleSystem)
 {
     sceneManager = &se::SceneManager::getInstance();
 
@@ -1139,6 +1281,7 @@ void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwin
     this->renderPass = renderPass;
     this->resourceManager = resourceManager;
     this->postprocess = postprocess;
+    this->particleSystem = particleSystem;
     // Create ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -1157,7 +1300,10 @@ void se::ImGuiManager::init(SEDevice& seDevice, VkRenderPass renderPass, GLFWwin
     initInfo.PipelineCache = VK_NULL_HANDLE;
     initInfo.DescriptorPool = seDevice.getDescriptorPool();
     initInfo.MinImageCount = 2;
-    initInfo.ImageCount = 2;
+    // ImGui owns a rotating vertex/index buffer pair per slot. Keep that ring
+    // at least as large as the engine flight window to avoid reusing an in-use slot.
+    imageCount = std::max(swapChainImageCount, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
+    initInfo.ImageCount = imageCount;
     initInfo.Allocator = nullptr;
     initInfo.CheckVkResultFn = nullptr;
     ImGui_ImplVulkan_Init(&initInfo);

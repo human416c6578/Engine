@@ -32,7 +32,6 @@ namespace se
         vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
         vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
 
-        freeCommandBuffers();
     }
 
     void SEOffscreenRenderer::resize(uint32_t newWidth, uint32_t newHeight)
@@ -77,13 +76,11 @@ namespace se
         vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
         vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
 
-        freeCommandBuffers();
 
         createOffscreenImageDepth();
 		createOffscreenImageColor();
 		createRenderPass();
 		createFramebuffers();
-		createCommandBuffers();
 		createStagingBuffer();
     }
 
@@ -115,13 +112,11 @@ namespace se
         vkDestroyBuffer(seDevice.device(), stagingBuffer, nullptr);
         vkFreeMemory(seDevice.device(), stagingBufferMemory, nullptr);
 
-        freeCommandBuffers();
 
         createRenderPass();
         createOffscreenImageDepth();
         createOffscreenImageColor();
         createFramebuffers();
-        createCommandBuffers();
         createStagingBuffer();
     }
 
@@ -271,7 +266,6 @@ namespace se
         dependencyStart.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependencyStart.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
         std::array<VkSubpassDependency, 2> dependencies = { dependencyStart, dependencyEnd };
 
@@ -349,89 +343,14 @@ namespace se
     }
 
 
-    void SEOffscreenRenderer::createCommandBuffers()
+    void SEOffscreenRenderer::beginRenderPass(VkCommandBuffer commandBuffer, std::size_t frameIndex)
     {
-        commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-
-        VkCommandBufferAllocateInfo allocInfo{};
-        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = seDevice.getCommandPool();
-        allocInfo.commandBufferCount = 1;
-
-        for (auto& commandBuffer : commandBuffers)
-        {
-            if (vkAllocateCommandBuffers(seDevice.device(), &allocInfo, &commandBuffer) != VK_SUCCESS)
-            {
-                throw std::runtime_error("failed to allocate offscreen command buffer!");
-            }
-        }
-    }
-
-    void SEOffscreenRenderer::freeCommandBuffers()
-    {
-        for (auto& commandBuffer : commandBuffers)
-        {
-            vkFreeCommandBuffers(
-                seDevice.device(),
-                seDevice.getCommandPool(),
-                1,
-                &commandBuffer);
-        }
-
-        commandBuffers.clear();
-    }
-
-    VkCommandBuffer SEOffscreenRenderer::beginFrame() {
-        assert(!frameStarted && "Can't call beginOffscreenFrame while already in progress");
-        currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
-        // Get the current offscreen command buffer
-        auto commandBuffer = getCommandBuffer();
-
-        VkCommandBufferBeginInfo beginInfo{};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-
-        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
-            throw std::runtime_error("failed to begin recording offscreen command buffer!");
-        }
-
-        frameStarted = true;
-        
-        return commandBuffer;
-    }
-    
-    void SEOffscreenRenderer::endFrame() {
-        assert(frameStarted && "Can't call endOffscreenFrame while frame is not in progress");
-        auto commandBuffer = getCommandBuffer();
-        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to record offscreen command buffer!");
-        }
-
-        VkSubmitInfo submitInfo{};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-
-        VkResult result = vkQueueSubmit(seDevice.presentQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-        if (result != VK_SUCCESS) {
-            throw std::runtime_error("failed to submit offscreen command buffer!");
-        }
-
-        frameStarted = false;
-    }
-
-
-    void SEOffscreenRenderer::beginRenderPass(VkCommandBuffer commandBuffer)
-    {
-        assert(frameStarted && "Can't call beginOffscreenRenderPass if frame is not in progress");
 
         // Begin the offscreen render pass (this is similar to beginSwapChainRenderPass)
         VkRenderPassBeginInfo renderPassBeginInfo{};
         renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         renderPassBeginInfo.renderPass = renderPass;
-        renderPassBeginInfo.framebuffer = getFramebuffer(currentFrame);
+        renderPassBeginInfo.framebuffer = getFramebuffer(frameIndex);
         renderPassBeginInfo.renderArea.offset = { 0, 0 };
         renderPassBeginInfo.renderArea.extent = { width, height };
 
@@ -459,10 +378,6 @@ namespace se
 
     void SEOffscreenRenderer::endRenderPass(VkCommandBuffer commandBuffer)
     {
-        assert(frameStarted && "Can't call endSwapChainRenderPass if frame is not in progress");
-        assert(
-            commandBuffer == getCommandBuffer() &&
-            "Can't end render pass on command buffer from a different frame");
         vkCmdEndRenderPass(commandBuffer);
     }
 

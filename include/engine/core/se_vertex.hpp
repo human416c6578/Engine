@@ -1,6 +1,6 @@
 #pragma once
 
-#include "se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
 
 // libs
 #define GLM_FORCE_RADIANS

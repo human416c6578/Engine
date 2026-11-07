@@ -1,4 +1,4 @@
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
 
 #include <array>
 
@@ -159,12 +159,13 @@ namespace se
         }
     }
 
-    void SEDevice::updateUniformBuffers(UniformBufferObject bufferObject)
+    void SEDevice::updateUniformBuffers(std::size_t frameIndex, const UniformBufferObject& bufferObject)
     {
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        if (frameIndex >= uniformBuffersMapped.size())
         {
-            memcpy(uniformBuffersMapped[i], &bufferObject, sizeof(bufferObject));
+            throw std::out_of_range("uniform buffer frame index is out of range");
         }
+        memcpy(uniformBuffersMapped[frameIndex], &bufferObject, sizeof(bufferObject));
     }
 
     void SEDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory)
@@ -270,16 +271,6 @@ namespace se
 
         createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
         createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
-        if (enableValidationLayers)
-        {
-            createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-            createInfo.ppEnabledLayerNames = validationLayers.data();
-        }
-        else
-        {
-            createInfo.enabledLayerCount = 0;
-        }
 
         if (vkCreateDevice(physicalDevice, &createInfo, nullptr, &device_) != VK_SUCCESS)
         {

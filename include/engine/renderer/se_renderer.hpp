@@ -1,12 +1,14 @@
 #pragma once
 
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
+#include "engine/renderer/se_frame_context.hpp"
 #include "engine/renderer/se_swap_chain.hpp"
-#include "engine/core/se_window.hpp"
+#include "engine/platform/se_window.hpp"
 #include "engine/renderer/se_offscreen_renderer.hpp"
 
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace se
@@ -21,28 +23,31 @@ namespace se
     SERenderer &operator=(const SERenderer &) = delete;
 
     VkRenderPass getSwapChainRenderPass() const { return seSwapChain->getRenderPass(); }
+    uint32_t getSwapChainImageCount() const
+    {
+      return static_cast<uint32_t>(seSwapChain->imageCount());
+    }
     float getAspectRatio() const { return seSwapChain->extentAspectRatio(); }
     bool isFrameInProgress() const { return isFrameStarted; }
 
     VkCommandBuffer getCurrentCommandBuffer() const
     {
       assert(isFrameStarted && "Cannot get command buffer when frame not in progress");
-      return commandBuffers[seSwapChain->getCurrentFrame()];
+      return activeFrame.commandBuffer;
     }
 
-    int getFrameIndex() const
+    uint32_t getFrameIndex() const
     {
       assert(isFrameStarted && "Cannot get frame index when frame not in progress");
-      return seSwapChain->getCurrentFrame();
+      return activeFrame.frameIndex;
     }
 
-   
     SEOffscreenRenderer* getOffscreenRenderer() { return offscreenRenderer.get(); }
 
-    VkCommandBuffer beginFrame();
-    void endFrame();
-    void beginSwapChainRenderPass(VkCommandBuffer commandBuffer);
-    void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
+    std::optional<FrameContext> beginFrame();
+    void endFrame(const FrameContext& frame);
+    void beginSwapChainRenderPass(const FrameContext& frame);
+    void endSwapChainRenderPass(const FrameContext& frame);
 
   private:
     void createCommandBuffers();
@@ -53,10 +58,9 @@ namespace se
     SEDevice &seDevice;
     std::unique_ptr<SESwapChain> seSwapChain;
     std::vector<VkCommandBuffer> commandBuffers;
-
     std::unique_ptr<SEOffscreenRenderer> offscreenRenderer;
 
-    uint32_t currentImageIndex;
+    FrameContext activeFrame{};
     bool isFrameStarted{ false };
   };
 }

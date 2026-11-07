@@ -86,7 +86,7 @@ namespace se
 	}
 	void SEMaterial::createDescriptorSets()
 	{
-		size_t framesInFlight = SESwapChain::MAX_FRAMES_IN_FLIGHT;
+		size_t framesInFlight = MAX_FRAMES_IN_FLIGHT;
 		descriptorSets.resize(framesInFlight);
 		needUpdate.resize(framesInFlight, false);
 

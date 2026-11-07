@@ -1,6 +1,7 @@
 #pragma once
 
 #include "engine/renderer/se_mesh.hpp"
+#include "engine/renderer/se_particle_system.hpp"
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <memory>
@@ -21,15 +22,15 @@ namespace se
     //struct alignas(16) Light {
     //    glm::vec4 position;     // xyz: position, w: int type
     //    glm::vec4 color;        // xyz: color, w: intensify
-    //    glm::vec4 direction;    // xyz: direction, w: spotAngle 
+    //    glm::vec4 direction;    // xyz: direction, w: spotAngle
     //};
 
     struct alignas(16) Light {
-        glm::vec3 position; 
+        glm::vec3 position;
         alignas(4) LightType type;
-        glm::vec3 color;     
+        glm::vec3 color;
         alignas(4) float intensity;
-        glm::vec3 direction; 
+        glm::vec3 direction;
         alignas(4) float spotAngle;
     };
 
@@ -73,6 +74,33 @@ namespace se
         }
     };
 
+    struct ParticleEmitterComponent
+        {
+            EmitterHandle   handle  = INVALID_HANDLE;   // index into ParticleSystem
+            ParticleSystem* system  = nullptr;
+
+            bool isValid() const { return handle != INVALID_HANDLE && system != nullptr; }
+
+            void syncTransform(const glm::vec3& worldPos)
+            {
+                if (!isValid()) return;
+                auto& emitter = system->getEmitter(handle);
+                emitter.volume.position = glm::vec4(worldPos, 1.0f);
+            }
+
+            void setActive(bool active)
+            {
+                if (!isValid()) return;
+                system->setEmitterActive(handle, active);
+            }
+
+            // Convenience: apply an offset if the emitter should hang above / in front
+            void syncTransform(const glm::vec3& worldPos, const glm::vec3& offset)
+            {
+                syncTransform(worldPos + offset);
+            }
+        };
+
     class SEGameObject
     {
     public:
@@ -111,10 +139,10 @@ namespace se
             if (script) script->onDestroy();
         }
 
-        //SEGameObject(const SEGameObject &) = delete;
-        //SEGameObject &operator=(const SEGameObject &) = delete;
-        //SEGameObject(SEGameObject &&) = default;
-        //SEGameObject &operator=(SEGameObject &&) = default;
+        SEGameObject(const SEGameObject &) = delete;
+        SEGameObject &operator=(const SEGameObject &) = delete;
+        SEGameObject(SEGameObject &&) = default;
+        SEGameObject &operator=(SEGameObject &&) = default;
 
         id_t getId() { return id; }
         const std::string& getName() const { return name; }
@@ -132,7 +160,7 @@ namespace se
             material = newMaterial;
         }
 
-        const glm::mat4& getTransformMat4() { return transform.mat4(); }
+        const glm::mat4 getTransformMat4() { return transform.mat4(); }
 
         const TransformComponent& getTransform() const { return transform; }
         TransformComponent& getTransform() { return transform; }
@@ -168,6 +196,12 @@ namespace se
 			return script;
 		}
 
+	 const ParticleEmitterComponent& getParticleEmitter() const { return particleEmitter; }
+        ParticleEmitterComponent& getParticleEmitter() { return particleEmitter; }
+        void setParticleEmitter(const ParticleEmitterComponent& comp) { particleEmitter = comp; }
+        bool hasParticleEmitter() const { return particleEmitter.isValid(); }
+
+
         id_t id;
 
     private:
@@ -175,7 +209,7 @@ namespace se
 
         SEGameObject(id_t objId, std::string objName) : id{ objId }, name{ objName } {}
 
-        
+
         std::string name;
 
         std::shared_ptr<SEMesh> mesh{};
@@ -184,5 +218,6 @@ namespace se
         TransformComponent transform{};
 
         std::unique_ptr<ScriptComponent> script{nullptr};
+        ParticleEmitterComponent particleEmitter{};
     };
 }

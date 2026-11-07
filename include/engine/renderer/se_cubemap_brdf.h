@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/core/se_device.hpp"
+#include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_renderer.hpp"
 #include "engine/renderer/se_pipeline.hpp"
 #include "engine/renderer/se_submesh.hpp"

@@ -1,4 +1,4 @@
-#include "engine/core/se_window.hpp"
+#include "engine/platform/se_window.hpp"
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>

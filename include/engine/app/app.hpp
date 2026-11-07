@@ -1,5 +1,5 @@
-#include "engine/core/se_window.hpp"
-#include "engine/core/se_device.hpp"
+#include "engine/platform/se_window.hpp"
+#include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_renderer.hpp"
 #include "engine/scene/se_gameobject.hpp"
 #include "engine/core/se_camera.hpp"
@@ -10,13 +10,14 @@
 #include "engine/renderer/se_texture_system.hpp"
 #include "engine/renderer/se_mesh_system.hpp"
 #include "engine/resources/se_resource_manager.hpp"
-#include "engine/core/se_input_system.hpp"
+#include "engine/platform/se_input_system.hpp"
 
 #include <exception>
 #include <cstdlib>
 #include <iostream>
 #include <chrono>
-#include "engine/ui/imgui_manager.hpp"
+#include <memory>
+#include "engine/editor/imgui_manager.hpp"
 #include "engine/scene/se_scene_manager.hpp"
 
 
@@ -31,7 +32,7 @@ public:
         se::SEInputSystem::initialize(seWindow.getGLFWwindow());
 
 		PBR = std::make_unique<se::PBR>(seDevice, seRenderer.getOffscreenRenderer()->getRenderPass(), seCubemap);
-        ParticleSystem = std::make_unique<se::ParticleSystem>(seDevice, seRenderer.getOffscreenRenderer()->getRenderPass());
+        ParticleSystem = std::make_shared<se::ParticleSystem>(seDevice, seRenderer.getOffscreenRenderer()->getRenderPass());
         PostProcess = std::make_shared<se::SEPostProcess>(seDevice, seRenderer.getSwapChainRenderPass());
         MaterialSystem = std::make_shared<se::MaterialSystem>(seDevice, PBR->getPipelineLayout(), PBR->getPipeline(), PBR->getMaterialDescriptorSetLayout());
 		TextureSystem = std::make_shared<se::TextureSystem>(seDevice);
@@ -45,13 +46,23 @@ public:
 
         sceneManager = &se::SceneManager::getInstance();
         sceneManager->setResourceManager(ResourceManager.get());
+        sceneManager->setPostProcess(PostProcess.get());
+        sceneManager->setParticleSystem(ParticleSystem.get());
         auto& mainScene = sceneManager->createScene("MainScene");
         sceneManager->setActiveScene("MainScene");
 
-		imguiManager.init(seDevice, seRenderer.getSwapChainRenderPass(), seWindow.getGLFWwindow(), ResourceManager.get(), PostProcess.get());
+		imguiManager.init(seDevice, seRenderer.getSwapChainRenderPass(), seWindow.getGLFWwindow(), seRenderer.getSwapChainImageCount(), ResourceManager.get(), PostProcess.get(), ParticleSystem.get());
     }
 
     ~App() {
+        if (seDevice.device() != VK_NULL_HANDLE) {
+            const VkResult idleResult = vkDeviceWaitIdle(seDevice.device());
+            if (idleResult != VK_SUCCESS) {
+                std::cerr << "vkDeviceWaitIdle during App teardown failed: "
+                          << idleResult << std::endl;
+            }
+        }
+
         if (sceneManager) {
             sceneManager->destroyAllScenes();
         }
@@ -73,7 +84,7 @@ private:
 
     std::unique_ptr<se::ResourceManager> ResourceManager;
     std::unique_ptr<se::PBR> PBR;
-    std::unique_ptr<se::ParticleSystem> ParticleSystem;
+    std::shared_ptr<se::ParticleSystem> ParticleSystem;
     std::shared_ptr<se::SEPostProcess> PostProcess;
     std::shared_ptr<se::TextureSystem> TextureSystem;
     std::shared_ptr<se::MaterialSystem> MaterialSystem;

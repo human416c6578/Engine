@@ -262,26 +262,25 @@ namespace se
 				ubo.view = camera.getView();
 				ubo.cameraPos = viewerObject.getTransform().translation;
 
-				seDevice.updateUniformBuffers(ubo);
-				if (auto commandBuffer = offscreenRenderer->beginFrame())
+				seDevice.updateUniformBuffers(0, ubo);
 				{
-					offscreenRenderer->beginRenderPass(commandBuffer);
+				    VkCommandBuffer commandBuffer = seDevice.beginSingleTimeCommands();
+					offscreenRenderer->beginRenderPass(commandBuffer, 0);
 
 					vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(float), &roughness);
 
 					draw(commandBuffer);
 
-					int frame = offscreenRenderer->getCurrentFrame();
+					int frame = 0;
 
 					offscreenRenderer->endRenderPass(commandBuffer);
-					offscreenRenderer->endFrame();
-
+					
 					// Copy from offscreen render target to cube map image
-					VkCommandBuffer cmdBuffer = seDevice.beginSingleTimeCommands();
+					
 
 					VkImageMemoryBarrier barrier{};
 					barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-					barrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+					barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 					barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 					barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 					barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -295,7 +294,7 @@ namespace se
 					barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
 					vkCmdPipelineBarrier(
-						cmdBuffer,
+						commandBuffer,
 						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 						VK_PIPELINE_STAGE_TRANSFER_BIT,
 						0,
@@ -319,7 +318,7 @@ namespace se
 
 
 					vkCmdCopyImage(
-						cmdBuffer,
+						commandBuffer,
 						offscreenRenderer->getColorImage(frame), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 						irradianceImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 						1, &region
@@ -328,7 +327,7 @@ namespace se
 					VkImageMemoryBarrier restoreBarrier{};
 					restoreBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 					restoreBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-					restoreBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+					restoreBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 					restoreBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 					restoreBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 					restoreBarrier.image = offscreenRenderer->getColorImage(frame);
@@ -340,19 +339,19 @@ namespace se
 					restoreBarrier.subresourceRange.layerCount = 1;
 
 					restoreBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-					restoreBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+					restoreBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 					vkCmdPipelineBarrier(
-						cmdBuffer,
+						commandBuffer,
 						VK_PIPELINE_STAGE_TRANSFER_BIT,
-						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+						VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 						0,
 						0, nullptr,
 						0, nullptr,
 						1, &restoreBarrier
 					);
 
-					seDevice.endSingleTimeCommands(cmdBuffer);
+					seDevice.endSingleTimeCommands(commandBuffer);
 				}
 			}
 

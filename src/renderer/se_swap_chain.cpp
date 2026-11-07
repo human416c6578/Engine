@@ -37,36 +37,44 @@ namespace se
 
   SESwapChain::~SESwapChain()
   {
-    for (auto imageView : swapChainImageViews)
+    for (auto framebuffer : swapChainFramebuffers)
     {
-      vkDestroyImageView(device.device(), imageView, nullptr);
+      vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
     }
-    swapChainImageViews.clear();
+    swapChainFramebuffers.clear();
 
-    if (swapChain != nullptr)
+    if (renderPass != VK_NULL_HANDLE)
     {
-      vkDestroySwapchainKHR(device.device(), swapChain, nullptr);
-      swapChain = nullptr;
+      vkDestroyRenderPass(device.device(), renderPass, nullptr);
+      renderPass = VK_NULL_HANDLE;
     }
 
-    for (int i = 0; i < depthImages.size(); i++)
+    for (size_t i = 0; i < depthImages.size(); ++i)
     {
       vkDestroyImageView(device.device(), depthImageViews[i], nullptr);
       vkDestroyImage(device.device(), depthImages[i], nullptr);
       vkFreeMemory(device.device(), depthImageMemorys[i], nullptr);
     }
 
-    for (auto framebuffer : swapChainFramebuffers)
+    for (auto imageView : swapChainImageViews)
     {
-      vkDestroyFramebuffer(device.device(), framebuffer, nullptr);
+      vkDestroyImageView(device.device(), imageView, nullptr);
+    }
+    swapChainImageViews.clear();
+
+    if (swapChain != VK_NULL_HANDLE)
+    {
+      vkDestroySwapchainKHR(device.device(), swapChain, nullptr);
+      swapChain = VK_NULL_HANDLE;
     }
 
-    vkDestroyRenderPass(device.device(), renderPass, nullptr);
-
-    // cleanup synchronization objects
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    for (VkSemaphore semaphore : renderFinishedSemaphores)
     {
-      vkDestroySemaphore(device.device(), renderFinishedSemaphores[i], nullptr);
+      vkDestroySemaphore(device.device(), semaphore, nullptr);
+    }
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+    {
       vkDestroySemaphore(device.device(), imageAvailableSemaphores[i], nullptr);
       vkDestroyFence(device.device(), inFlightFences[i], nullptr);
     }
@@ -112,7 +120,7 @@ namespace se
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = buffers;
 
-    VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[currentFrame]};
+    VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[*imageIndex]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
@@ -379,7 +387,7 @@ namespace se
   void SESwapChain::createSyncObjects()
   {
     imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
-    renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    renderFinishedSemaphores.resize(imageCount());
     inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
     imagesInFlight.resize(imageCount(), VK_NULL_HANDLE);
 
@@ -390,15 +398,21 @@ namespace se
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    for (size_t frame = 0; frame < MAX_FRAMES_IN_FLIGHT; ++frame)
     {
-      if (vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) !=
+      if (vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[frame]) !=
               VK_SUCCESS ||
-          vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) !=
-              VK_SUCCESS ||
-          vkCreateFence(device.device(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
+          vkCreateFence(device.device(), &fenceInfo, nullptr, &inFlightFences[frame]) != VK_SUCCESS)
       {
         throw std::runtime_error("failed to create synchronization objects for a frame!");
+      }
+    }
+
+    for (size_t image = 0; image < renderFinishedSemaphores.size(); ++image)
+    {
+      if (vkCreateSemaphore(device.device(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[image]) != VK_SUCCESS)
+      {
+        throw std::runtime_error("failed to create a swapchain presentation semaphore!");
       }
     }
   }
