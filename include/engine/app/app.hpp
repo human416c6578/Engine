@@ -25,7 +25,7 @@ namespace se
 class App
 {
 public:
-    App();
+    explicit App(se::Logger& logger);
     ~App();
 
     App(const App&) = delete;
@@ -36,9 +36,10 @@ public:
     void run() { mainLoop(); }
 
 private:
+    se::Logger& logger;
     se::SEWindow seWindow{800, 600, "Vulkan"};
     se::SEInputSystem inputSystem{*seWindow.getGLFWwindow()};
-    se::SEDevice seDevice{seWindow};
+    se::SEDevice seDevice{seWindow, logger};
     se::SERenderer seRenderer{seWindow, seDevice};
     std::unique_ptr<se::SECubemap> seCubemap;
 

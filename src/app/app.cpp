@@ -28,7 +28,7 @@
 #include "engine/scripting/StressTest.hpp"
 #include "engine/scripting/se_script_manager.hpp"
 
-App::App()
+App::App(se::Logger& log) : logger{log}
 {
     seCubemap = std::make_unique<se::SECubemap>(seDevice, seRenderer, "assets/hdr/snowy_forest_4k.hdr");
     PBR = std::make_unique<se::PBR>(seDevice, seRenderer.getOffscreenRenderer()->getRenderPass(), *seCubemap);
@@ -50,7 +50,7 @@ App::App()
     scriptManager->registerScript<se::StressScript>("StressScript");
 
     sceneManager = std::make_unique<se::SceneManager>(
-        *ResourceManager, *PostProcess, *ParticleSystem, inputSystem, *scriptManager);
+        *ResourceManager, *PostProcess, *ParticleSystem, inputSystem, *scriptManager, logger);
     sceneManager->createScene("MainScene");
     sceneManager->setActiveScene("MainScene");
 
@@ -65,7 +65,7 @@ App::~App()
     if (seDevice.device() != VK_NULL_HANDLE)
     {
         const VkResult idleResult = vkDeviceWaitIdle(seDevice.device());
-        se::logVkResult(idleResult, "vkDeviceWaitIdle(App teardown)");
+        seDevice.logResult(idleResult, "vkDeviceWaitIdle(App teardown)");
     }
     if (sceneManager)
         sceneManager->destroyAllScenes();
@@ -101,13 +101,13 @@ void App::mainLoop()
             if (!firstTestResizeIssued && elapsed >= 2.0f)
             {
                 glfwSetWindowSize(seWindow.getGLFWwindow(), 1024, 768);
-                std::fprintf(stderr, "[ResizeTest] requested glfwSetWindowSize 1024x768\n");
+                logger.log(se::LogLevel::Info, "ResizeTest", "requested glfwSetWindowSize 1024x768");
                 firstTestResizeIssued = true;
             }
             if (!secondTestResizeIssued && elapsed >= 4.0f)
             {
                 glfwSetWindowSize(seWindow.getGLFWwindow(), 1280, 720);
-                std::fprintf(stderr, "[ResizeTest] requested glfwSetWindowSize 1280x720\n");
+                logger.log(se::LogLevel::Info, "ResizeTest", "requested glfwSetWindowSize 1280x720");
                 secondTestResizeIssued = true;
             }
         }
@@ -139,7 +139,7 @@ void App::mainLoop()
         auto* scene = sceneManager->getActiveScene();
         if (!scene)
         {
-            std::fprintf(stderr, "[ERROR]: SCENE EMPTY!\n");
+            logger.log(se::LogLevel::Error, "App", "SCENE EMPTY!");
             return;
         }
 

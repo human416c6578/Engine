@@ -395,7 +395,7 @@ namespace se
 	{
 		if (descriptorSet != VK_NULL_HANDLE)
 		{
-			logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
+			seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
 				"vkFreeDescriptorSets(SECubemapDiffuse)");
 			descriptorSet = VK_NULL_HANDLE;
 		}

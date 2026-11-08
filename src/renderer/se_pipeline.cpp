@@ -271,7 +271,7 @@ namespace se
         const std::string &fragFilepath,
         const PipelineConfigInfo &configInfo)
     {
-        printf("[Pipeline] creating: %s | bindings: %zu | attribs: %zu | topology: %d\n",
+        seDevice.log(LogLevel::Debug, "Pipeline", "creating: %s | bindings: %zu | attribs: %zu | topology: %d",
             vertFilepath.c_str(),
             configInfo.bindingDescriptions.size(),
             configInfo.attributeDescriptions.size(),

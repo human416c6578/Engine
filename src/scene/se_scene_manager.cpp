@@ -20,8 +20,8 @@ using json = nlohmann::json;
 
 se::SceneManager::SceneManager(ResourceManager &resources, SEPostProcess &postProcess,
                                ParticleSystem &particleSystem, SEInputSystem &input,
-                               ScriptManager& scripts)
-    : resourceManager{resources}, postProcess{postProcess},
+                               ScriptManager& scripts, Logger& log)
+    : logger{log}, resourceManager{resources}, postProcess{postProcess},
       particleSystem{particleSystem}, inputSystem{input}, scriptManager{scripts} {}
 
 se::SceneManager::~SceneManager() = default;
@@ -34,7 +34,7 @@ void se::SceneManager::destroyAllScenes()
 
 se::Scene& se::SceneManager::createScene(const std::string& name)
 {
-  auto scene = std::make_unique<Scene>(name);
+  auto scene = std::make_unique<Scene>(name, logger);
   Scene& ref = *scene;
   scenes[name] = std::move(scene);
   return ref;
@@ -504,7 +504,7 @@ bool se::SceneManager::loadScene(const std::string &filePath,
 
       if (script)
       {
-        ScriptContext context{scene, resourceManager, inputSystem};
+        ScriptContext context = scene.scriptContext(resourceManager, inputSystem);
         go.setScript(std::move(script), context);
       }
     }

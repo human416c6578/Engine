@@ -1,6 +1,6 @@
 #pragma once
 
-#include <iostream>
+#include "engine/core/se_logger.hpp"
 #include <list>
 #include <memory>
 #include <string>
@@ -14,7 +14,7 @@ namespace se {
 
     class Scene {
     public:
-        Scene(const std::string& name) : name(name) {}
+        Scene(const std::string& name, Logger& log) : logger{log}, name(name) {}
 
         Scene(const Scene&) = delete;
         Scene& operator=(const Scene&) = delete;
@@ -60,11 +60,15 @@ namespace se {
             }
         }
 
+        ScriptContext scriptContext(ResourceManager& resources, SEInputSystem& input) {
+            return ScriptContext{*this, resources, input, logger};
+        }
+
         void onUpdate(float dt, ResourceManager &resources, SEInputSystem &input) {
-            ScriptContext context{*this, resources, input};
+            ScriptContext context = scriptContext(resources, input);
             for (auto& obj : gameObjects) {
                 if (!obj) {
-                    std::cerr << "[Scene] Null object in gameObjects!\n";
+                    logger.log(LogLevel::Error, "Scene", "Null object in gameObjects!");
                     continue;
                 }
                 obj->onUpdate(dt, context);
@@ -85,6 +89,7 @@ namespace se {
 
 
     private:
+        Logger& logger;
         std::string name;
         se::SECamera camera{};
         SEGameObject::id_t nextGameObjectId{1};

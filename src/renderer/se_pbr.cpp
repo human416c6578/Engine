@@ -93,7 +93,7 @@ namespace se
         for (VkDescriptorSet& descriptorSet : descriptorSets)
         {
             if (descriptorSet != VK_NULL_HANDLE)
-                logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
+                seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
                     "vkFreeDescriptorSets(PBR)");
             descriptorSet = VK_NULL_HANDLE;
         }
@@ -311,7 +311,7 @@ namespace se
         {
             if (descriptorSets[i] != VK_NULL_HANDLE)
             {
-                logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSets[i]),
+                seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSets[i]),
                     "vkFreeDescriptorSets(PBR frame)");
             }
 
@@ -404,7 +404,7 @@ namespace se
         const size_t count = std::min(lights.size(), capacity);
 
         if (lights.size() > capacity) {
-            std::fprintf(stderr, "Too many lights: %zu (max %zu), extra lights ignored\n",
+            seDevice.log(LogLevel::Warning, "PBR", "Too many lights: %zu (max %zu), extra lights ignored",
                         lights.size(), capacity);
         }
 

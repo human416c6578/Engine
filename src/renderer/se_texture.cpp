@@ -38,7 +38,7 @@ namespace se
     {
         if (textureDescriptorSet != VK_NULL_HANDLE)
         {
-            logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &textureDescriptorSet),
+            seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &textureDescriptorSet),
                 "vkFreeDescriptorSets(SETexture)");
             textureDescriptorSet = VK_NULL_HANDLE;
         }

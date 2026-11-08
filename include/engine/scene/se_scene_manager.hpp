@@ -4,6 +4,7 @@
 #include <string>
 
 namespace se {
+    class Logger;
     class Scene;
     class SECamera;
     class ResourceManager;
@@ -15,7 +16,7 @@ namespace se {
     class SceneManager {
     public:
         SceneManager(ResourceManager &resources, SEPostProcess &postProcess,
-            ParticleSystem &particleSystem, SEInputSystem &input, ScriptManager& scripts);
+            ParticleSystem &particleSystem, SEInputSystem &input, ScriptManager& scripts, Logger& logger);
         ~SceneManager();
 
         SceneManager(const SceneManager &) = delete;
@@ -38,6 +39,7 @@ namespace se {
 
 
     private:
+        Logger& logger;
         ResourceManager &resourceManager;
         SEPostProcess &postProcess;
         ParticleSystem &particleSystem;

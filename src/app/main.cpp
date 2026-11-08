@@ -2,19 +2,19 @@
 
 #include <cstdlib>
 #include <exception>
-#include <iostream>
+#include "engine/core/se_logger.hpp"
 
 int main()
 {
-    App app;
-
+    se::Logger logger;
     try
     {
+        App app{logger};
         app.run();
     }
     catch (const std::exception &e)
     {
-        std::cerr << e.what() << std::endl;
+        logger.log(se::LogLevel::Error, "App", "%s", e.what());
         return EXIT_FAILURE;
     }
 

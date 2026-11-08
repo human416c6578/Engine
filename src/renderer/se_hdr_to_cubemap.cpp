@@ -407,7 +407,7 @@ namespace se
 	{
 		if (descriptorSet != VK_NULL_HANDLE)
 		{
-			logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
+			seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
 				"vkFreeDescriptorSets(SEHdrToCubemap)");
 			descriptorSet = VK_NULL_HANDLE;
 		}
@@ -576,7 +576,7 @@ namespace se
 			throw std::runtime_error("Failed to save image!");
 		}
 
-		std::cout << "Image saved to " << filename << std::endl;
+		seDevice.log(LogLevel::Info, "Cubemap", "Image saved to %s", filename.c_str());
 	}
 	*/
 

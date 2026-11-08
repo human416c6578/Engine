@@ -78,7 +78,7 @@ namespace se {
                 dir = glm::vec3(0.0f, 0.0f, -1.0f);
             if (context.input.isKeyPressed(GLFW_KEY_ESCAPE))
             {
-                resetScene();
+                resetScene(context.logger);
             }
         }
 
@@ -131,9 +131,9 @@ namespace se {
             else if (pos.z >= maxZ) pos.z = minZ;
         }
 
-        void resetScene()
+        void resetScene(Logger& logger)
         {
-            destroyBody();
+            destroyBody(logger);
             dir = glm::vec3(0.0f, 0.0f, 0.0f);
             stepTimer = 0.0f;
             gameOver = false;
@@ -173,14 +173,14 @@ namespace se {
 
         std::string getName() const override { return "SnakeScript"; }
 
-        void destroyBody() {
+        void destroyBody(Logger& logger) {
             if (body.empty()) return;
 
             GameObjectHandle head = body[0];
 
             for (size_t i = 1; i < body.size(); ++i) {
                 if (body[i]) {
-                    body[i].destroy();
+                    body[i].destroy(logger);
                 }
             }
 

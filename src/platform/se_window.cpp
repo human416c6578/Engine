@@ -64,7 +64,6 @@ namespace se
     {
         if (glfwInit() != GLFW_TRUE)
         {
-            std::cerr << "[GLFW] glfwInit failed" << std::endl;
             throw std::runtime_error("glfwInit failed");
         }
 
@@ -73,7 +72,6 @@ namespace se
         m_window = glfwCreateWindow(m_width, m_height, m_name.c_str(), nullptr, nullptr);
         if (m_window == nullptr)
         {
-            std::cerr << "[GLFW] glfwCreateWindow failed" << std::endl;
             glfwTerminate();
             throw std::runtime_error("glfwCreateWindow failed");
         }

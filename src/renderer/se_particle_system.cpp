@@ -146,7 +146,7 @@ namespace se
         for (VkDescriptorSet& set : computeDescriptorSets)
         {
             if (set != VK_NULL_HANDLE)
-                logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &set),
+                seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &set),
                     "vkFreeDescriptorSets(particle compute)");
             set = VK_NULL_HANDLE;
         }
@@ -154,7 +154,7 @@ namespace se
         for (VkDescriptorSet& set : graphicsDescriptorSets)
         {
             if (set != VK_NULL_HANDLE)
-                logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &set),
+                seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &set),
                     "vkFreeDescriptorSets(particle graphics)");
             set = VK_NULL_HANDLE;
         }
@@ -190,7 +190,7 @@ namespace se
                 emitters[i].active  = 1;
                 emitterSlotFree[i]  = false;
 
-                std::cout<<i<<std::endl;
+                seDevice.log(LogLevel::Debug, "Particles", "Added emitter %u", i);
 
                 return i;
             }

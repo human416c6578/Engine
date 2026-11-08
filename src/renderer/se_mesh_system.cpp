@@ -38,7 +38,7 @@ namespace se
 
 		if (!pScene || pScene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !pScene->mRootNode)
 		{
-			std::cerr << "ERROR::ASSIMP::" << Importer.GetErrorString() << std::endl;
+			seDevice.log(LogLevel::Error, "Assimp", "%s", Importer.GetErrorString());
 			return nullptr;
 		}
 

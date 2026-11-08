@@ -28,7 +28,12 @@ namespace se
         const VkDebugUtilsMessengerCallbackDataEXT* callbackData,
         void* userData)
     {
-        std::cerr << "validation layer: " << callbackData->pMessage << std::endl;
+        auto& logger = *static_cast<Logger*>(userData);
+        const LogLevel level = (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+            ? LogLevel::Error : (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+            ? LogLevel::Warning : (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+            ? LogLevel::Info : LogLevel::Debug;
+        logger.log(level, "Validation", "%s", callbackData->pMessage);
         return VK_FALSE;
     }
     VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT *pCreateInfo, const VkAllocationCallbacks *pAllocator, VkDebugUtilsMessengerEXT *pDebugMessenger)
@@ -53,7 +58,7 @@ namespace se
         }
     }
 
-    SEDevice::SEDevice(SEWindow &win) : window{win}
+    SEDevice::SEDevice(SEWindow &win, Logger& log) : window{win}, logger{log}
     {
         try
         {
@@ -87,6 +92,13 @@ namespace se
         }
     }
 
+    void SEDevice::logResult(VkResult result, std::string_view operation) const noexcept
+    {
+        if (result != VK_SUCCESS)
+            logger.log(LogLevel::Error, "Vulkan", "%.*s failed with VkResult %d",
+                static_cast<int>(operation.size()), operation.data(), static_cast<int>(result));
+    }
+
     SEDevice::~SEDevice()
     {
         destroyOwnedHandles();
@@ -97,7 +109,7 @@ namespace se
         if (device_ != VK_NULL_HANDLE)
         {
             const VkResult idleResult = vkDeviceWaitIdle(device_);
-            logVkResult(idleResult, "vkDeviceWaitIdle(SEDevice teardown)");
+            logResult(idleResult, "vkDeviceWaitIdle(SEDevice teardown)");
 
             if (descriptorPool != VK_NULL_HANDLE)
             {
@@ -502,6 +514,7 @@ namespace se
         createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
         createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
         createInfo.pfnUserCallback = debugCallback;
+        createInfo.pUserData = &logger;
     }
 
     void SEDevice::setupDebugMessenger()
@@ -756,19 +769,19 @@ namespace se
         checkVkResult(vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data()),
             "vkEnumerateInstanceExtensionProperties(data)");
 
-        std::cout << "available extensions:" << std::endl;
+        logger.log(LogLevel::Debug, "Vulkan", "available extensions:");
         std::unordered_set<std::string> available;
         for (const auto &extension : extensions)
         {
-            std::cout << "\t" << extension.extensionName << std::endl;
+            logger.log(LogLevel::Debug, "Vulkan", "%s", extension.extensionName);
             available.insert(extension.extensionName);
         }
 
-        std::cout << "required extensions:" << std::endl;
+        logger.log(LogLevel::Debug, "Vulkan", "required extensions:");
         auto requiredExtensions = getRequiredExtensions();
         for (const auto &required : requiredExtensions)
         {
-            std::cout << "\t" << required << std::endl;
+            logger.log(LogLevel::Debug, "Vulkan", "%s", required);
             if (available.find(required) == available.end())
             {
                 throw std::runtime_error("Missing required glfw extension");

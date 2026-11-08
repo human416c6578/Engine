@@ -43,7 +43,7 @@ namespace se
             extent = seWindow.getExtent();
             glfwWaitEvents();
         }
-        std::fprintf(stderr, "[Renderer] recreateSwapChain extent=%ux%u\n", extent.width, extent.height);
+        seDevice.log(LogLevel::Info, "Renderer", "recreateSwapChain extent=%ux%u", extent.width, extent.height);
         checkVkResult(vkDeviceWaitIdle(seDevice.device()), "vkDeviceWaitIdle(swapchain recreation)");
 
         if (seSwapChain == nullptr)

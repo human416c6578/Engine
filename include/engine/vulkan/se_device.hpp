@@ -1,5 +1,6 @@
 #pragma once
 
+#include "engine/core/se_logger.hpp"
 #include "engine/core/se_frame_config.hpp" // SEDevice sizes its frame resources using MAX_FRAMES_IN_FLIGHT.
 
 #include <vulkan/vulkan.h>
@@ -51,7 +52,7 @@ namespace se
     class SEDevice
     {
     public:
-        SEDevice(SEWindow &win);
+        SEDevice(SEWindow &win, Logger& logger);
         ~SEDevice();
 
         // Not copyable or movable
@@ -59,6 +60,13 @@ namespace se
         SEDevice &operator=(const SEDevice &) = delete;
         SEDevice(SEDevice &&) = delete;
         SEDevice &operator=(SEDevice &&) = delete;
+
+        template <typename... Args>
+        void log(LogLevel level, std::string_view component, const char* format, Args... args) const noexcept
+        {
+            logger.log(level, component, format, args...);
+        }
+        void logResult(VkResult result, std::string_view operation) const noexcept;
 
         VkCommandPool getCommandPool() { return commandPool; }
         VkDescriptorPool getDescriptorPool() { return descriptorPool; }
@@ -127,6 +135,7 @@ namespace se
         VkCommandPool commandPool = VK_NULL_HANDLE;
 
         SEWindow &window;
+        Logger& logger;
 
         void createInstance();
         void setupDebugMessenger();

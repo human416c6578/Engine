@@ -78,7 +78,7 @@ namespace se
 		{
 			if (descriptorSet != VK_NULL_HANDLE)
 			{
-				logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
+				seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
 					"vkFreeDescriptorSets(SEMaterial)");
 				descriptorSet = VK_NULL_HANDLE;
 			}
@@ -138,7 +138,7 @@ namespace se
 		{
 			if (descriptorSets[i] != VK_NULL_HANDLE)
 			{
-				logVkResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSets[i]),
+				seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSets[i]),
 					"vkFreeDescriptorSets(SEMaterial frame)");
 			}
 

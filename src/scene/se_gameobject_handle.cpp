@@ -8,9 +8,9 @@ namespace se {
         return nullptr;
     }
 
-    void GameObjectHandle::destroy() const {
+    void GameObjectHandle::destroy(Logger& logger) const {
         if (!scene) {
-            std::cerr << "[GameObjectHandle] Tried to destroy object, but scene is null!\n";
+            logger.log(LogLevel::Warning, "GameObjectHandle", "Tried to destroy object, but scene is null!");
             return;
         }
         scene->destroyGameObject(id);

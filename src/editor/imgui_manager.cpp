@@ -690,7 +690,7 @@ void se::ImGuiManager::renderScriptComponent(std::unique_ptr<se::SEGameObject>& 
                 auto *scene = sceneManager.getActiveScene();
                 if (scene != nullptr)
                 {
-                    ScriptContext context{*scene, resourceManager, inputSystem};
+                    ScriptContext context = scene->scriptContext(resourceManager, inputSystem);
                     gameObject->setScript(std::move(selectedScript), context);
                 }
             });
