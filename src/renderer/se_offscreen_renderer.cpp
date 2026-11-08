@@ -225,6 +225,7 @@ namespace se
         dependencyEnd.srcSubpass    = 0;
         dependencyEnd.dstSubpass    = VK_SUBPASS_EXTERNAL;
         dependencyEnd.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                                    VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
                                     VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         dependencyEnd.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
                                     VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
@@ -236,8 +237,13 @@ namespace se
         dependencyStart.dstSubpass    = 0;
         dependencyStart.srcStageMask  = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         dependencyStart.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        dependencyStart.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependencyStart.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        // The implicit depth transition and loadOp clear must precede depth testing too.
+        dependencyStart.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                                        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+                                        VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        dependencyStart.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                                        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+                                        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
 
         std::array<VkSubpassDependency, 2> dependencies = { dependencyStart, dependencyEnd };
