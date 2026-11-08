@@ -454,9 +454,9 @@ namespace se
         }
     }
 
-    void PBR::renderCubeMap(VkCommandBuffer commandBuffer)
+    void PBR::renderCubeMap(VkCommandBuffer commandBuffer, uint32_t frameIndex)
     {
-        seCubemap.render(commandBuffer);
+        seCubemap.render(commandBuffer, frameIndex);
     }
 
 }

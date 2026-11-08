@@ -194,7 +194,7 @@ void App::mainLoop()
             totalTime);
 
         offscreenRenderer->beginRenderPass(commandBuffer, frame->frameIndex);
-        PBR->renderCubeMap(commandBuffer);
+        PBR->renderCubeMap(commandBuffer, frame->frameIndex);
         PBR->renderGameObjects(commandBuffer, gameObjects, static_cast<int>(frame->frameIndex));
         ParticleSystem->render(
             commandBuffer,

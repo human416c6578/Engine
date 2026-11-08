@@ -1,6 +1,8 @@
 #pragma once
 #include <vulkan/vulkan.h> // Vulkan handle types appear in this interface.
 #include <glm/glm.hpp> // glm::vec3 is passed by value.
+#include <array>
+#include "engine/core/se_frame_config.hpp"
 #include <memory>
 #include <string>
 #include "engine/renderer/se_pipeline.hpp" // bind() invokes SEPipeline inline.
@@ -34,10 +36,10 @@ namespace se
 		SECubemap(SECubemap&&) = delete;
 		SECubemap& operator=(SECubemap&&) = delete;
 		
-		void render(VkCommandBuffer commandBuffer)
+		void render(VkCommandBuffer commandBuffer, uint32_t frameIndex)
 		{
-			bind(commandBuffer);
-			draw(commandBuffer);
+			bind(commandBuffer, frameIndex);
+			draw(commandBuffer, frameIndex);
 		}
 
 		void saveImageToFile(const std::string& filename, VkImage colorImage, uint32_t width, uint32_t height);
@@ -60,7 +62,7 @@ namespace se
 		void createDescriptorSetLayout();
 		void destroyOwnedHandles() noexcept;
 
-		void bind(VkCommandBuffer commandBuffer)
+		void bind(VkCommandBuffer commandBuffer, uint32_t frameIndex)
 		{
 			sePipeline->bind(commandBuffer);
 
@@ -70,18 +72,18 @@ namespace se
 				pipelineLayout,
 				0,
 				1,
-				&descriptorSet,
+				&descriptorSets[frameIndex],
 				0,
 				nullptr);
 		}
 
-		void draw(VkCommandBuffer commandBuffer);
+		void draw(VkCommandBuffer commandBuffer, uint32_t frameIndex);
 
 		SubMeshBuilder createCubeModel(glm::vec3 offset);
 
 		SEDevice& seDevice;
 		SERenderer& seRenderer;
-		VkDescriptorSet descriptorSet{VK_NULL_HANDLE};
+		std::array<VkDescriptorSet, MAX_FRAMES_IN_FLIGHT> descriptorSets{};
 		VkDescriptorSetLayout descriptorSetLayout{VK_NULL_HANDLE};
 
 		std::unique_ptr<SEPipeline> sePipeline;

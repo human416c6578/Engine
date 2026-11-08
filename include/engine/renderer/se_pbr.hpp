@@ -57,7 +57,7 @@ namespace se
         VkPipeline getPipeline() { return sePipeline->getPipeline(); }
 
         void renderGameObjects(VkCommandBuffer commandBuffer, const std::list<std::unique_ptr<se::SEGameObject>>& gameObjects, int frameIndex);
-        void renderCubeMap(VkCommandBuffer commandBuffer);
+        void renderCubeMap(VkCommandBuffer commandBuffer, uint32_t frameIndex);
 
     private:
         void createPipelineLayout();

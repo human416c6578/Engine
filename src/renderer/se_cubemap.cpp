@@ -57,11 +57,14 @@ namespace se
 
 	void SECubemap::destroyOwnedHandles() noexcept
 	{
-		if (descriptorSet != VK_NULL_HANDLE)
+		for (auto& descriptorSet : descriptorSets)
 		{
-			seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
-				"vkFreeDescriptorSets(SECubemap)");
-			descriptorSet = VK_NULL_HANDLE;
+			if (descriptorSet != VK_NULL_HANDLE)
+			{
+				seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
+					"vkFreeDescriptorSets(SECubemap)");
+				descriptorSet = VK_NULL_HANDLE;
+			}
 		}
 		sePipeline.reset();
 		if (pipelineLayout != VK_NULL_HANDLE)
@@ -121,7 +124,10 @@ namespace se
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = &descriptorSetLayout;
 
-		checkVkResult(vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSet),
+		const auto uniformBuffers = seDevice.getUniformBuffers();
+		for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+		{
+		checkVkResult(vkAllocateDescriptorSets(seDevice.device(), &allocInfo, &descriptorSets[i]),
 			"vkAllocateDescriptorSets(cubemap)");
 
 		// Descriptor writes array
@@ -131,9 +137,8 @@ namespace se
 		// glm::mat4 view;
 		// glm::mat4 proj;
 		// glm::vec3 cameraPos;
-		std::vector<VkBuffer> uniformBuffers = seDevice.getUniformBuffers();
 		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = uniformBuffers[0];
+		bufferInfo.buffer = uniformBuffers[i];
 		bufferInfo.offset = 0;
 		bufferInfo.range = sizeof(UniformBufferObject);
 
@@ -146,7 +151,7 @@ namespace se
 
 		// Uniform buffer write
 		descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[0].dstSet = descriptorSet;
+		descriptorWrites[0].dstSet = descriptorSets[i];
 		descriptorWrites[0].dstBinding = 0;
 		descriptorWrites[0].dstArrayElement = 0;
 		descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -155,7 +160,7 @@ namespace se
 
 		// Cubemap texture write
 		descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrites[1].dstSet = descriptorSet;
+		descriptorWrites[1].dstSet = descriptorSets[i];
 		descriptorWrites[1].dstBinding = 1;
 		descriptorWrites[1].dstArrayElement = 0;
 		descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -164,6 +169,7 @@ namespace se
 
 		// Update only the descriptors that are written (ignoring empty ones)
 		vkUpdateDescriptorSets(seDevice.device(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		}
 	}
 
 	void SECubemap::createDescriptorSetLayout()
@@ -200,9 +206,9 @@ namespace se
 	}
 
 
-	void SECubemap::draw(VkCommandBuffer commandBuffer)
+	void SECubemap::draw(VkCommandBuffer commandBuffer, uint32_t frameIndex)
 	{
-		bind(commandBuffer);
+		bind(commandBuffer, frameIndex);
 		cubeMesh->bind(commandBuffer);
 		cubeMesh->draw(commandBuffer);
 	}
