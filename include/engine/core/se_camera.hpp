@@ -3,7 +3,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
-#include "engine/scene/se_gameobject.hpp"
+#include "engine/scene/se_gameobject.hpp" // TransformComponent is stored by value and used inline.
 
 namespace se
 {

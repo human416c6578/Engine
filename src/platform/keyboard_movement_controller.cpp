@@ -1,4 +1,8 @@
 #include "engine/platform/keyboard_movement_controller.hpp"
+#include "engine/platform/se_input_system.hpp"
+#include "engine/scene/se_gameobject.hpp"
+
+#include <glm/gtc/constants.hpp>
 
 #include <limits>
 #include <cmath>

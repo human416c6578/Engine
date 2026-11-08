@@ -1,14 +1,16 @@
 #pragma once
-#include "engine/vulkan/se_device.hpp"
-#include "engine/scene/se_particle_emitter_component.hpp"
-#include "engine/renderer/se_pipeline.hpp"
+
+#include "engine/scene/se_particle_emitter_component.hpp" // Particle and force handles are used by value in the public API.
+#include <vulkan/vulkan.h> // Vulkan handles and command types appear in this interface.
+#include <glm/glm.hpp> // Particle and UBO data store GLM values by value.
+
 #include <memory>
 #include <vector>
-#include <utility>
-#include <glm/glm.hpp>
 
 namespace se
 {
+    class SEDevice;
+    class SEPipeline;
     static constexpr uint32_t MAX_PARTICLES = 1000000;
     static constexpr uint32_t MAX_EMITTERS  = 64;
     static constexpr uint32_t MAX_FORCES    = 32;
@@ -104,46 +106,15 @@ namespace se
 
     struct ParticleBuffer
     {
-        explicit ParticleBuffer(SEDevice& owner) noexcept : device{&owner} {}
-        ~ParticleBuffer() noexcept { reset(); }
+        explicit ParticleBuffer(SEDevice& owner) noexcept;
+        ~ParticleBuffer() noexcept;
 
         ParticleBuffer(const ParticleBuffer&) = delete;
         ParticleBuffer& operator=(const ParticleBuffer&) = delete;
-        ParticleBuffer(ParticleBuffer&& other) noexcept
-            : device{std::exchange(other.device, nullptr)},
-              buffer{std::exchange(other.buffer, VK_NULL_HANDLE)},
-              memory{std::exchange(other.memory, VK_NULL_HANDLE)},
-              mapped{std::exchange(other.mapped, nullptr)}
-        {
-        }
-        ParticleBuffer& operator=(ParticleBuffer&& other) noexcept
-        {
-            if (this != &other)
-            {
-                reset();
-                device = std::exchange(other.device, nullptr);
-                buffer = std::exchange(other.buffer, VK_NULL_HANDLE);
-                memory = std::exchange(other.memory, VK_NULL_HANDLE);
-                mapped = std::exchange(other.mapped, nullptr);
-            }
-            return *this;
-        }
+        ParticleBuffer(ParticleBuffer&& other) noexcept;
+        ParticleBuffer& operator=(ParticleBuffer&& other) noexcept;
 
-        void reset() noexcept
-        {
-            if (device != nullptr && device->device() != VK_NULL_HANDLE)
-            {
-                if (mapped != nullptr && memory != VK_NULL_HANDLE)
-                    vkUnmapMemory(device->device(), memory);
-                if (buffer != VK_NULL_HANDLE)
-                    vkDestroyBuffer(device->device(), buffer, nullptr);
-                if (memory != VK_NULL_HANDLE)
-                    vkFreeMemory(device->device(), memory, nullptr);
-            }
-            buffer = VK_NULL_HANDLE;
-            memory = VK_NULL_HANDLE;
-            mapped = nullptr;
-        }
+        void reset() noexcept;
 
         SEDevice* device{nullptr};
         VkBuffer buffer{VK_NULL_HANDLE};

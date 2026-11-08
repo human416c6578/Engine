@@ -1,9 +1,9 @@
 #pragma once
-#include "engine/scene/se_gameobject.hpp"
-#include "engine/scripting/se_script_component.hpp"
-#include "engine/platform/se_input_system.hpp"
+#include "engine/scene/se_gameobject.hpp" // Inline callbacks access game object components.
+#include "engine/scripting/se_script_component.hpp" // TestScript derives from ScriptComponent.
+#include "engine/platform/se_input_system.hpp" // Inline callbacks query input.
 #include <GLFW/glfw3.h>
-#include "engine/scene/se_scene.hpp"
+#include "engine/scene/se_scene.hpp" // Inline callbacks use Scene operations.
 
 namespace se {
 

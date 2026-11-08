@@ -1,8 +1,10 @@
 #include "engine/renderer/se_mesh.hpp"
+#include "engine/renderer/se_submesh.hpp"
+#include "engine/renderer/se_pbr_material.hpp"
 
 namespace se
 {
-    SEMesh::SEMesh(SEDevice& device, const SESubMesh::Builder builder, const std::string& guid, const std::string& name) : seDevice{ device }, Resource(guid, name)
+    SEMesh::SEMesh(SEDevice& device, const SubMeshBuilder& builder, const std::string& guid, const std::string& name) : seDevice{ device }, Resource(guid, name)
     {
         auto submesh = std::make_unique<SESubMesh>(device, builder);
         seSubmeshes.push_back(std::move(submesh));
@@ -16,6 +18,22 @@ namespace se
     SEMesh::~SEMesh()
     {
     }
+    size_t SEMesh::getSubMeshCount() const { return seSubmeshes.size(); }
+
+    size_t SEMesh::getVerticesCount() const
+    {
+        size_t count = 0;
+        for (const auto& submesh : seSubmeshes) count += submesh->getVerticesCount();
+        return count;
+    }
+
+    size_t SEMesh::getIndicesCount() const
+    {
+        size_t count = 0;
+        for (const auto& submesh : seSubmeshes) count += submesh->getIndicesCount();
+        return count;
+    }
+
 
     static std::string GetBaseDir(const std::string& filepath)
     {

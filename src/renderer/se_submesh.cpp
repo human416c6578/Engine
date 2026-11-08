@@ -1,4 +1,6 @@
 #include "engine/renderer/se_submesh.hpp"
+#include "engine/vulkan/se_device.hpp"
+#include "engine/renderer/se_pbr_material.hpp"
 #include "engine/vulkan/se_vk_result.hpp"
 
 // std
@@ -69,6 +71,22 @@ namespace se
       destroyOwnedHandles();
       throw;
     }
+  }
+
+  bool SESubMesh::hasMaterial() const { return seMaterial != nullptr; }
+
+  void SESubMesh::bindMaterial(VkCommandBuffer commandBuffer, int frameIndex) const
+  {
+    seMaterial->bind(commandBuffer, frameIndex);
+  }
+
+  void SESubMesh::updateMaterial(int frameIndex) { seMaterial->update(frameIndex); }
+
+  void SESubMesh::setMaterial(std::shared_ptr<SEMaterial> material) { seMaterial = std::move(material); }
+
+  VkPipelineLayout SESubMesh::getPipelineLayout() const
+  {
+    return hasMaterial() ? seMaterial->getPipelineLayout() : VK_NULL_HANDLE;
   }
 
   SESubMesh::~SESubMesh()

@@ -1,8 +1,6 @@
 #pragma once
 
-#include "engine/core/se_frame_config.hpp"
-
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.h> // VkCommandBuffer is stored by value.
 
 #include <cstdint>
 

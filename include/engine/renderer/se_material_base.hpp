@@ -5,7 +5,6 @@
 #include <string>
 #include <glm/glm.hpp>
 
-#include "engine/resources/se_resource.hpp"
 
 namespace se {
 

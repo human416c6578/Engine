@@ -4,9 +4,9 @@
 #include <list>
 #include <memory>
 #include <string>
-#include "engine/core/se_camera.hpp"
-#include "engine/scene/se_gameobject.hpp"
-#include "engine/scene/se_gameobject_handle.hpp"
+#include "engine/core/se_camera.hpp" // SECamera is stored by value.
+#include "engine/scene/se_gameobject.hpp" // Inline scene operations access complete SEGameObject objects.
+#include "engine/scene/se_gameobject_handle.hpp" // GameObjectHandle is constructed and returned inline.
 
 namespace se {
     class ResourceManager;

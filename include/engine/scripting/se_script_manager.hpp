@@ -1,5 +1,5 @@
 #pragma once
-#include "engine/scripting/se_script_component.hpp"
+#include "engine/scripting/se_script_component.hpp" // The inline registration template checks and constructs derived scripts.
 
 #include <functional>
 #include <memory>

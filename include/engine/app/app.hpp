@@ -1,9 +1,9 @@
 #pragma once
 
-#include "engine/platform/se_window.hpp"
-#include "engine/platform/se_input_system.hpp"
-#include "engine/vulkan/se_device.hpp"
-#include "engine/renderer/se_renderer.hpp"
+#include "engine/platform/se_window.hpp" // SEWindow is an App member stored by value.
+#include "engine/platform/se_input_system.hpp" // SEInputSystem is an App member stored by value.
+#include "engine/vulkan/se_device.hpp" // SEDevice is an App member stored by value.
+#include "engine/renderer/se_renderer.hpp" // SERenderer is an App member stored by value.
 
 #include <memory>
 

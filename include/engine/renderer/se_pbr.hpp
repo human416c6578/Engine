@@ -1,19 +1,20 @@
 #pragma once
 
-#include "engine/core/se_camera.hpp"
-#include "engine/vulkan/se_device.hpp"
-#include "engine/scene/se_gameobject.hpp"
-#include "engine/renderer/se_cubemap.hpp"
-#include "engine/renderer/se_pipeline.hpp"
+#include "engine/core/se_camera.hpp" // Light is embedded by value in LightUBO.
+#include "engine/renderer/se_pipeline.hpp" // PBR invokes SEPipeline in inline methods.
+#include <vulkan/vulkan.h> // Vulkan handle types appear in this interface.
 
 // std
 #include <memory>
 #include <vector>
 #include <list>
-#include <utility>
 
 namespace se
 {
+    class SEDevice;
+    class SEGameObject;
+    class SECubemap;
+
 	constexpr int MAX_LIGHTS = 100;
 
     struct alignas(16) LightUBO {
@@ -23,46 +24,15 @@ namespace se
     };
 
     struct Buffer {
-        explicit Buffer(SEDevice& owner) noexcept : device{&owner} {}
-        ~Buffer() noexcept { reset(); }
+        explicit Buffer(SEDevice& owner) noexcept;
+        ~Buffer() noexcept;
 
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;
-        Buffer(Buffer&& other) noexcept
-            : device{std::exchange(other.device, nullptr)},
-              buffer{std::exchange(other.buffer, VK_NULL_HANDLE)},
-              memory{std::exchange(other.memory, VK_NULL_HANDLE)},
-              mapped{std::exchange(other.mapped, nullptr)}
-        {
-        }
-        Buffer& operator=(Buffer&& other) noexcept
-        {
-            if (this != &other)
-            {
-                reset();
-                device = std::exchange(other.device, nullptr);
-                buffer = std::exchange(other.buffer, VK_NULL_HANDLE);
-                memory = std::exchange(other.memory, VK_NULL_HANDLE);
-                mapped = std::exchange(other.mapped, nullptr);
-            }
-            return *this;
-        }
+        Buffer(Buffer&& other) noexcept;
+        Buffer& operator=(Buffer&& other) noexcept;
 
-        void reset() noexcept
-        {
-            if (device != nullptr && device->device() != VK_NULL_HANDLE)
-            {
-                if (mapped != nullptr && memory != VK_NULL_HANDLE)
-                    vkUnmapMemory(device->device(), memory);
-                if (buffer != VK_NULL_HANDLE)
-                    vkDestroyBuffer(device->device(), buffer, nullptr);
-                if (memory != VK_NULL_HANDLE)
-                    vkFreeMemory(device->device(), memory, nullptr);
-            }
-            buffer = VK_NULL_HANDLE;
-            memory = VK_NULL_HANDLE;
-            mapped = nullptr;
-        }
+        void reset() noexcept;
 
         SEDevice* device{nullptr};
         VkBuffer buffer{VK_NULL_HANDLE};

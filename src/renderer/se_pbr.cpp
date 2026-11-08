@@ -1,4 +1,11 @@
 #include "engine/renderer/se_pbr.hpp"
+#include "engine/renderer/se_mesh.hpp"
+#include "engine/vulkan/se_device.hpp"
+#include "engine/renderer/se_cubemap.hpp"
+#include "engine/scene/se_gameobject.hpp"
+#include "engine/renderer/se_pipeline.hpp"
+#include "engine/renderer/se_texture.hpp"
+#include "engine/renderer/se_pbr_material.hpp"
 #include <cstring>
 #include "engine/vulkan/se_vk_result.hpp"
 
@@ -12,9 +19,50 @@
 #include <array>
 #include <cassert>
 #include <stdexcept>
+#include <utility>
 
 namespace se
 {
+    Buffer::Buffer(SEDevice& owner) noexcept : device{&owner} {}
+    Buffer::~Buffer() noexcept { reset(); }
+
+    Buffer::Buffer(Buffer&& other) noexcept
+        : device{std::exchange(other.device, nullptr)},
+          buffer{std::exchange(other.buffer, VK_NULL_HANDLE)},
+          memory{std::exchange(other.memory, VK_NULL_HANDLE)},
+          mapped{std::exchange(other.mapped, nullptr)}
+    {
+    }
+
+    Buffer& Buffer::operator=(Buffer&& other) noexcept
+    {
+        if (this != &other)
+        {
+            reset();
+            device = std::exchange(other.device, nullptr);
+            buffer = std::exchange(other.buffer, VK_NULL_HANDLE);
+            memory = std::exchange(other.memory, VK_NULL_HANDLE);
+            mapped = std::exchange(other.mapped, nullptr);
+        }
+        return *this;
+    }
+
+    void Buffer::reset() noexcept
+    {
+        if (device != nullptr && device->device() != VK_NULL_HANDLE)
+        {
+            if (mapped != nullptr && memory != VK_NULL_HANDLE)
+                vkUnmapMemory(device->device(), memory);
+            if (buffer != VK_NULL_HANDLE)
+                vkDestroyBuffer(device->device(), buffer, nullptr);
+            if (memory != VK_NULL_HANDLE)
+                vkFreeMemory(device->device(), memory, nullptr);
+        }
+        buffer = VK_NULL_HANDLE;
+        memory = VK_NULL_HANDLE;
+        mapped = nullptr;
+    }
+
     PBR::PBR(SEDevice& device, VkRenderPass renderPass, SECubemap& cubemap)
         : seDevice{ device }, seCubemap{ cubemap }
     {

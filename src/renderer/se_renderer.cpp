@@ -1,4 +1,5 @@
 #include "engine/renderer/se_renderer.hpp"
+#include "engine/renderer/se_swap_chain.hpp"
 #include <GLFW/glfw3.h>
 #include "engine/vulkan/se_device.hpp"
 #include "engine/platform/se_window.hpp"
@@ -18,6 +19,15 @@ namespace se
         recreateSwapChain();
         createCommandBuffers();
     }
+
+    VkRenderPass SERenderer::getSwapChainRenderPass() const { return seSwapChain->getRenderPass(); }
+
+    uint32_t SERenderer::getSwapChainImageCount() const
+    {
+        return static_cast<uint32_t>(seSwapChain->imageCount());
+    }
+
+    float SERenderer::getAspectRatio() const { return seSwapChain->extentAspectRatio(); }
 
     SERenderer::~SERenderer()
     {

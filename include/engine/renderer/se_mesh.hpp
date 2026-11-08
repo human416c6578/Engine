@@ -1,82 +1,42 @@
 #pragma once
 
-#include "engine/vulkan/se_device.hpp"
-#include "engine/renderer/se_submesh.hpp"
+#include "engine/resources/se_resource.hpp" // Required base class: SEMesh derives from Resource.
+#include <vulkan/vulkan.h> // Vulkan types appear in public method signatures.
 
-// std
-#include <vector>
+#include <cstddef>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace se
 {
+    class SEDevice;
+    class SEMaterial;
+    class SESubMesh;
+    struct SubMeshBuilder;
+    struct SimplePushConstantData;
+
     class SEMesh : public Resource
     {
-
     public:
-
-        SEMesh(SEDevice& device, const SESubMesh::Builder builder, const std::string& guid, const std::string& name);
+        SEMesh(SEDevice& device, const SubMeshBuilder& builder, const std::string& guid, const std::string& name);
         SEMesh(SEDevice& device, std::vector<std::unique_ptr<SESubMesh>> submeshes, const std::string& guid, const std::string& name);
         ~SEMesh();
 
-		/*
-		std::shared_ptr<SEMaterial> getMaterial() const
-		{
-			return seMaterial;
-		}
-
-		void setMaterial(std::shared_ptr<SEMaterial> material)
-		{
-			seMaterial = material;
-			for (auto& submesh : seSubmeshes)
-			{
-				submesh->setMaterial(seMaterial);
-			}
-		}
-       
-        bool hasMaterial() { return seMaterial != nullptr; }
-        void bindMaterial(VkCommandBuffer commandBuffer) { seMaterial->bind(commandBuffer); }
-		*/
-
-		size_t getSubMeshCount() const
-		{
-			return seSubmeshes.size();
-		}
-
-        size_t getVerticesCount() const
-        {
-			size_t count = 0;
-			for (const auto& submesh : seSubmeshes)
-			{
-				count += submesh->getVerticesCount();
-			}
-			return count;
-        }
-
-		size_t getIndicesCount() const
-		{
-			size_t count = 0;
-			for (const auto& submesh : seSubmeshes)
-			{
-				count += submesh->getIndicesCount();
-			}
-			return count;
-		}
-
+        size_t getSubMeshCount() const;
+        size_t getVerticesCount() const;
+        size_t getIndicesCount() const;
 
         SEMesh(const SEMesh &) = delete;
         SEMesh &operator=(const SEMesh &) = delete;
         SEMesh(SEMesh&&) = delete;
         SEMesh& operator=(SEMesh&&) = delete;
 
-        //void bind(VkCommandBuffer commandBuffer);
         std::vector<std::unique_ptr<SESubMesh>> loadMesh(SEDevice &device, const std::string &path, VkRenderPass renderPass, VkDescriptorSetLayout descriptorSetLayout);
-
-		void draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, std::shared_ptr<SEMaterial> goMaterial, SimplePushConstantData push, int frameIndex);
+        void draw(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, std::shared_ptr<SEMaterial> goMaterial, SimplePushConstantData push, int frameIndex);
 
     private:
         SEDevice &seDevice;
-        //std::shared_ptr<SEMaterial> seMaterial = nullptr;
         std::vector<std::unique_ptr<SESubMesh>> seSubmeshes;
     };
-
-} // namespace se
+}

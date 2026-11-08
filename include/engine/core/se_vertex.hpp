@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/vulkan/se_device.hpp"
+#include <vulkan/vulkan.h> // Vertex input descriptions expose Vulkan types.
 
 // libs
 #define GLM_FORCE_RADIANS
@@ -8,6 +8,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
 #include <glm/gtx/hash.hpp>
+
+#include <vector>
 
 namespace se
 {

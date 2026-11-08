@@ -1,8 +1,9 @@
 #pragma once
-#include "engine/scene/se_gameobject.hpp"
-#include "engine/scene/se_scene.hpp"
-#include "engine/resources/se_resource_manager.hpp"
-#include "engine/scripting/se_script_component.hpp"
+#include "engine/scene/se_gameobject.hpp" // Inline script callbacks access game object components.
+#include "engine/renderer/se_pbr_material.hpp" // Inline script code calls SEMaterial methods.
+#include "engine/scene/se_scene.hpp" // Inline callbacks use Scene operations.
+#include "engine/resources/se_resource_manager.hpp" // Inline callbacks request resources.
+#include "engine/scripting/se_script_component.hpp" // ExampleScript derives from ScriptComponent.
 
 namespace se {
 

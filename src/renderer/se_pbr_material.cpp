@@ -1,4 +1,8 @@
 #include "engine/renderer/se_pbr_material.hpp"
+#include "engine/vulkan/se_device.hpp"
+#include "engine/renderer/se_texture.hpp"
+#include "engine/core/se_camera.hpp"
+#include "engine/core/se_frame_config.hpp"
 #include "engine/renderer/se_swap_chain.hpp"
 #include "engine/vulkan/se_vk_result.hpp"
 #include <cstring>

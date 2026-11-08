@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/core/se_frame_config.hpp"
+#include "engine/core/se_frame_config.hpp" // SEDevice sizes its frame resources using MAX_FRAMES_IN_FLIGHT.
 
 #include <vulkan/vulkan.h>
 

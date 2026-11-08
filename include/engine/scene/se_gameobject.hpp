@@ -1,17 +1,20 @@
 #pragma once
 
-#include "engine/renderer/se_mesh.hpp"
-#include "engine/scene/se_particle_emitter_component.hpp"
-#include <glm/gtc/matrix_transform.hpp>
+#include "engine/scene/se_particle_emitter_component.hpp" // Stored by value in SEGameObject.
+#include "engine/scripting/se_script_component.hpp" // Inline script lifecycle methods need the complete base type.
+
+#include <glm/glm.hpp>
 
 #include <memory>
-
-#include "engine/scripting/se_script_component.hpp"
-
+#include <string>
+#include <type_traits>
 #include <utility>
 
 namespace se
 {
+    class SEMaterial;
+    class SEMesh;
+
     enum class LightType {
         None = 0,
         Point = 1,

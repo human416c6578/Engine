@@ -1,11 +1,11 @@
 #pragma once
-#include "engine/scene/se_gameobject.hpp"
-#include "engine/scripting/se_script_component.hpp"
-#include "engine/platform/se_input_system.hpp"
+#include "engine/scene/se_gameobject.hpp" // Inline Snake callbacks access game object components.
+#include "engine/scripting/se_script_component.hpp" // Snake derives from ScriptComponent.
+#include "engine/platform/se_input_system.hpp" // Inline callbacks query input.
 #include <GLFW/glfw3.h>
-#include "engine/scene/se_scene.hpp"
-#include "engine/resources/se_resource_manager.hpp"
-#include "engine/scene/se_gameobject_handle.hpp"
+#include "engine/scene/se_scene.hpp" // Inline callbacks use Scene operations.
+#include "engine/resources/se_resource_manager.hpp" // Inline callbacks request resources.
+#include "engine/scene/se_gameobject_handle.hpp" // Inline callbacks retain and resolve object handles.
 #include <glm/glm.hpp>
 #include <cmath>
 #include <cstdlib>

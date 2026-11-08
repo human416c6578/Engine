@@ -4,7 +4,6 @@
 
 // std lib headers
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace se

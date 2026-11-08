@@ -1,7 +1,7 @@
 #pragma once
-#include "engine/scene/se_gameobject.hpp"
-#include "engine/scripting/se_script_component.hpp"
-#include "engine/scene/se_scene.hpp"
+#include "engine/scene/se_gameobject.hpp" // Inline stress callbacks create and update game objects.
+#include "engine/scripting/se_script_component.hpp" // StressTest derives from ScriptComponent.
+#include "engine/scene/se_scene.hpp" // Inline stress callbacks create objects through Scene.
 
 namespace se {
 

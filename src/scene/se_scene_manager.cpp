@@ -1,5 +1,8 @@
 #include "engine/scene/se_scene_manager.hpp"
+#include "engine/renderer/se_pbr_material.hpp"
+#include "engine/renderer/se_texture.hpp"
 #include "engine/scene/se_scene.hpp"
+#include "engine/renderer/se_mesh.hpp"
 #include "engine/core/se_camera.hpp"
 #include <fstream>
 #include <unordered_set>

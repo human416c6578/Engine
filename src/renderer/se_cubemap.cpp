@@ -1,4 +1,8 @@
 #include "engine/renderer/se_cubemap.hpp"
+#include "engine/vulkan/se_device.hpp"
+#include "engine/renderer/se_renderer.hpp"
+#include "engine/renderer/se_hdr_to_cubemap.h"
+#include "engine/renderer/se_submesh.hpp"
 #include "engine/renderer/se_offscreen_renderer.hpp"
 #include "engine/vulkan/se_vk_result.hpp"
 

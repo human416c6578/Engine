@@ -1,7 +1,6 @@
 #pragma once
 
-#include "engine/renderer/se_frame_context.hpp"
-#include "engine/renderer/se_swap_chain.hpp"
+#include "engine/renderer/se_frame_context.hpp" // FrameContext is stored and returned by value.
 
 #include <vulkan/vulkan.h>
 
@@ -15,6 +14,7 @@ namespace se
     class SEDevice;
     class SEWindow;
     class SEOffscreenRenderer;
+    class SESwapChain;
   class SERenderer
   {
   public:
@@ -26,12 +26,9 @@ namespace se
     SERenderer(SERenderer&&) = delete;
     SERenderer& operator=(SERenderer&&) = delete;
 
-    VkRenderPass getSwapChainRenderPass() const { return seSwapChain->getRenderPass(); }
-    uint32_t getSwapChainImageCount() const
-    {
-      return static_cast<uint32_t>(seSwapChain->imageCount());
-    }
-    float getAspectRatio() const { return seSwapChain->extentAspectRatio(); }
+    VkRenderPass getSwapChainRenderPass() const;
+    uint32_t getSwapChainImageCount() const;
+    float getAspectRatio() const;
     bool isFrameInProgress() const { return isFrameStarted; }
 
     VkCommandBuffer getCurrentCommandBuffer() const

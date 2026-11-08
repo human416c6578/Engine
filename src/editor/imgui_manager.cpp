@@ -1,4 +1,5 @@
 #include "engine/editor/imgui_manager.hpp"
+#include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_particle_system.hpp"
 #include "engine/renderer/se_pbr.hpp"
 #include "engine/renderer/se_postprocess.hpp"

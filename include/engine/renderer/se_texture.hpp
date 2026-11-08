@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/resources/se_resource.hpp"
+#include "engine/resources/se_resource.hpp" // SETexture derives from Resource.
 
 #include <vulkan/vulkan.h>
 

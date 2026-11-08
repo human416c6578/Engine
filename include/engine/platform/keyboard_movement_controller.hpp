@@ -1,12 +1,12 @@
 #pragma once
 
-#include "engine/scene/se_gameobject.hpp"
-#include "engine/platform/se_input_system.hpp"
-
-#include <GLFW/glfw3.h>
+#include <GLFW/glfw3.h> // KeyMappings uses GLFW key constants in its member initializers.
 
 namespace se
 {
+    class SEInputSystem;
+    struct TransformComponent;
+
     class KeyboardMovementController
     {
     public:

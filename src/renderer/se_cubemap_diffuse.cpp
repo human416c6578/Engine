@@ -1,4 +1,7 @@
 #include "engine/renderer/se_cubemap_diffuse.h"
+#include "engine/vulkan/se_device.hpp"
+#include "engine/renderer/se_renderer.hpp"
+#include "engine/renderer/se_submesh.hpp"
 #include "engine/renderer/se_offscreen_renderer.hpp"
 #include "engine/vulkan/se_vk_result.hpp"
 #include "engine/scene/se_gameobject.hpp"

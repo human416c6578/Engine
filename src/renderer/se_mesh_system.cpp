@@ -1,4 +1,5 @@
 ﻿#include "engine/renderer/se_mesh_system.hpp"
+#include "engine/renderer/se_pbr_material.hpp"
 #include "engine/renderer/se_material_system.hpp"
 #include "engine/renderer/se_mesh.hpp"
 #include "engine/renderer/se_submesh.hpp"

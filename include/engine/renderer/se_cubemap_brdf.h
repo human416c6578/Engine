@@ -1,12 +1,20 @@
 #pragma once
+#include <vulkan/vulkan.h> // Vulkan handle types appear in this interface.
+#include <glm/glm.hpp> // glm::vec3 is passed by value.
+#include <memory>
+#include <string>
+#include "engine/renderer/se_pipeline.hpp" // bind() invokes SEPipeline inline.
 
-#include "engine/vulkan/se_device.hpp"
-#include "engine/renderer/se_renderer.hpp"
-#include "engine/renderer/se_pipeline.hpp"
-#include "engine/renderer/se_submesh.hpp"
+
 
 namespace se
 {
+	class SEDevice;
+	class SERenderer;
+	class SESubMesh;
+	class SETexture;
+	struct SubMeshBuilder;
+
 	class SECubemapBRDF
 	{
 	public:
@@ -56,7 +64,7 @@ namespace se
 		void cleanup();
 		void destroyOwnedHandles() noexcept;
 
-		se::SESubMesh::Builder createCubeModel(glm::vec3 offset);
+		SubMeshBuilder createCubeModel(glm::vec3 offset);
 
 		SEDevice& seDevice;
 		SERenderer& seRenderer;
@@ -71,7 +79,7 @@ namespace se
 		VkDeviceMemory BRDFImageMemory{VK_NULL_HANDLE};
 		VkSampler BRDFSampler{VK_NULL_HANDLE};
 
-		std::unique_ptr<se::SESubMesh> cubeMesh;
+		std::unique_ptr<SESubMesh> cubeMesh;
 	};
 }
 

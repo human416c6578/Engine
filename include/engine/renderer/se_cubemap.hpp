@@ -1,19 +1,26 @@
 #pragma once
+#include <vulkan/vulkan.h> // Vulkan handle types appear in this interface.
+#include <glm/glm.hpp> // glm::vec3 is passed by value.
+#include <memory>
+#include <string>
+#include "engine/renderer/se_pipeline.hpp" // bind() invokes SEPipeline inline.
+#include "engine/renderer/se_cubemap_diffuse.h" // Inline getters call SECubemapDiffuse.
+#include "engine/renderer/se_cubemap_specular.h" // Inline getters call SECubemapSpecular.
+#include "engine/renderer/se_cubemap_brdf.h" // Inline getters call SECubemapBRDF.
 
-#include "engine/vulkan/se_device.hpp"
-#include "engine/renderer/se_renderer.hpp"
-#include "engine/renderer/se_hdr_to_cubemap.h"
-#include "engine/renderer/se_cubemap_diffuse.h"
-#include "engine/renderer/se_cubemap_specular.h"
-#include "engine/renderer/se_cubemap_brdf.h"
+
 
 
 // std
-#include <memory>
-#include <vector>
 
 namespace se
 {
+	class SEDevice;
+	class SERenderer;
+	class SEHdrToCubemap;
+	class SESubMesh;
+	class SETexture;
+	struct SubMeshBuilder;
 	class SECubemap
 	{
 	public:
@@ -70,7 +77,7 @@ namespace se
 
 		void draw(VkCommandBuffer commandBuffer);
 
-		se::SESubMesh::Builder createCubeModel(glm::vec3 offset);
+		SubMeshBuilder createCubeModel(glm::vec3 offset);
 
 		SEDevice& seDevice;
 		SERenderer& seRenderer;

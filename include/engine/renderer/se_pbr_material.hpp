@@ -1,16 +1,21 @@
 #pragma once
 
-#include "engine/vulkan/se_device.hpp"
-#include "engine/renderer/se_pipeline.hpp"
-#include "engine/renderer/se_texture.hpp"
-#include "engine/renderer/se_material_base.hpp"
+#include "engine/resources/se_resource.hpp" // SEMaterial derives from Resource.
+#include "engine/renderer/se_material_base.hpp" // SEMaterial derives from SEMaterialBase.
+#include <vulkan/vulkan.h> // Vulkan handles are part of the public API.
+#include <glm/glm.hpp> // Material flags and push constants use GLM values by value.
 
-// std
+#include <algorithm>
 #include <memory>
+#include <optional>
+#include <string>
 #include <vector>
 
 namespace se
 {
+    class SEDevice;
+    class SETexture;
+
 	struct SimplePushConstantData
 	{
 		glm::mat4 transform{1.f};

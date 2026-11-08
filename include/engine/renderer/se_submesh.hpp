@@ -1,53 +1,40 @@
 #pragma once
 
-#include "engine/vulkan/se_device.hpp"
-#include "engine/core/se_vertex.hpp"
-#include "engine/renderer/se_pbr_material.hpp"
+#include "engine/core/se_vertex.hpp" // Builder stores Vertex values.
+#include <vulkan/vulkan.h> // Vulkan handles and command types are part of this interface.
 
-// std
-#include <vector>
+#include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace se
 {
+    class SEDevice;
+    class SEMaterial;
+
+    struct SubMeshBuilder
+    {
+        std::vector<Vertex> vertices{};
+        std::vector<uint32_t> indices{};
+    };
+
     class SESubMesh
     {
     public:
-        struct Builder
-        {
-            std::vector<Vertex> vertices{};
-            std::vector<uint32_t> indices{};
-        };
+        using Builder = SubMeshBuilder;
 
-        SESubMesh(SEDevice &device, const SESubMesh::Builder &builder);
-        SESubMesh(SEDevice &device, const SESubMesh::Builder &builder, std::shared_ptr<SEMaterial> material);
+        SESubMesh(SEDevice &device, const Builder &builder);
+        SESubMesh(SEDevice &device, const Builder &builder, std::shared_ptr<SEMaterial> material);
         ~SESubMesh();
 
-        bool hasMaterial() const { return seMaterial != nullptr; }
-        void bindMaterial(VkCommandBuffer commandBuffer, int frameIndex) const { seMaterial->bind(commandBuffer, frameIndex); }
+        bool hasMaterial() const;
+        void bindMaterial(VkCommandBuffer commandBuffer, int frameIndex) const;
+        void updateMaterial(int frameIndex);
+        void setMaterial(std::shared_ptr<SEMaterial> material);
 
-        void updateMaterial(int frameIndex) { seMaterial->update(frameIndex); }
-
-        void setMaterial(std::shared_ptr<SEMaterial> material) { this->seMaterial = material; }
-
-		size_t getVerticesCount() const
-		{
-			return vertexCount;
-		}
-
-        size_t getIndicesCount() const
-        {
-            return indexCount;
-        }
-
-        VkPipelineLayout getPipelineLayout() const
-		{
-			if (hasMaterial())
-			{
-				return seMaterial->getPipelineLayout();
-			}
-			return nullptr;
-		}
+        size_t getVerticesCount() const { return vertexCount; }
+        size_t getIndicesCount() const { return indexCount; }
+        VkPipelineLayout getPipelineLayout() const;
 
         SESubMesh(const SESubMesh &) = delete;
         SESubMesh &operator=(const SESubMesh &) = delete;
@@ -63,15 +50,13 @@ namespace se
         void destroyOwnedHandles() noexcept;
 
         SEDevice &seDevice;
-        std::shared_ptr<SEMaterial> seMaterial = nullptr;
+        std::shared_ptr<SEMaterial> seMaterial{};
         VkBuffer vertexBuffer{VK_NULL_HANDLE};
         VkDeviceMemory vertexBufferMemory{VK_NULL_HANDLE};
         uint32_t vertexCount{0};
-
         bool hasIndexBuffer{false};
         VkBuffer indexBuffer{VK_NULL_HANDLE};
         VkDeviceMemory indexBufferMemory{VK_NULL_HANDLE};
         uint32_t indexCount{0};
     };
-
-} // namespace se
+}
