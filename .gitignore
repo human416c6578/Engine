@@ -363,5 +363,20 @@ imgui.ini
 Architecture Guide.md
 Restructure To-Do.md
 *.md
+
+# Restructure source of truth, evidence, and project-local workflow (exact paths only).
+!/Architecture Guide.md
+!/Restructure To-Do.md
+!/AGENTS.md
+!/VALIDATION_BASELINE.md
+!/docs/ARCHITECTURE_REVIEW.md
+!/docs/RESTRUCTURE_WORKFLOW.md
+!/.pi/skills/engine-restructure/SKILL.md
+!/.pi/prompts/next-item.md
+!/.pi/prompts/phase-gate.md
+!/.pi/prompts/park-bug.md
+!/.pi/prompts/coupling-report.md
+!/.pi/prompts/phase-kickoff.md
+
 *.pdf
 assets/
