@@ -18,6 +18,7 @@
 #include "engine/renderer/se_pbr.hpp"
 #include "engine/renderer/se_offscreen_renderer.hpp"
 #include "engine/renderer/se_cubemap.hpp"
+#include <GLFW/glfw3.h>
 #include <cstdio>
 #include "engine/platform/keyboard_movement_controller.hpp"
 #include "engine/renderer/se_material_system.hpp"
@@ -80,12 +81,36 @@ void App::mainLoop()
     float totalTime = 0.f;
     int fps = 0;
 
+    // Opt-in smoke path for checking swapchain recreation after real window resizes.
+    const bool resizeTestEnabled = std::getenv("ENGINE_PHASE2_TEST_RESIZE") != nullptr;
+    const auto resizeTestStart = std::chrono::steady_clock::now();
+    bool firstTestResizeIssued = false;
+    bool secondTestResizeIssued = false;
+
     glfwSetInputMode(seWindow.getGLFWwindow(), GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
     se::SEOffscreenRenderer* offscreenRenderer = seRenderer.getOffscreenRenderer();
 
     while (!seWindow.shouldClose())
     {
         glfwPollEvents();
+
+        if (resizeTestEnabled)
+        {
+            const auto elapsed = std::chrono::duration<float>(
+                std::chrono::steady_clock::now() - resizeTestStart).count();
+            if (!firstTestResizeIssued && elapsed >= 2.0f)
+            {
+                glfwSetWindowSize(seWindow.getGLFWwindow(), 1024, 768);
+                std::fprintf(stderr, "[ResizeTest] requested glfwSetWindowSize 1024x768\n");
+                firstTestResizeIssued = true;
+            }
+            if (!secondTestResizeIssued && elapsed >= 4.0f)
+            {
+                glfwSetWindowSize(seWindow.getGLFWwindow(), 1280, 720);
+                std::fprintf(stderr, "[ResizeTest] requested glfwSetWindowSize 1280x720\n");
+                secondTestResizeIssued = true;
+            }
+        }
 
         if (std::chrono::duration<float, std::chrono::seconds::period>(
                 std::chrono::high_resolution_clock::now() - lastTime).count() > 1.f)

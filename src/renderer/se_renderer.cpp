@@ -7,6 +7,7 @@
 #include "engine/vulkan/se_vk_result.hpp"
 
 #include <array>
+#include <cstdio>
 #include <cassert>
 #include <stdexcept>
 
@@ -42,6 +43,7 @@ namespace se
             extent = seWindow.getExtent();
             glfwWaitEvents();
         }
+        std::fprintf(stderr, "[Renderer] recreateSwapChain extent=%ux%u\n", extent.width, extent.height);
         checkVkResult(vkDeviceWaitIdle(seDevice.device()), "vkDeviceWaitIdle(swapchain recreation)");
 
         if (seSwapChain == nullptr)
