@@ -19,7 +19,7 @@ namespace se {
         float stepTimer = 0.0f;
         float tileSize = 1.0f;
         bool gameOver = false;
-        glm::vec3 dir;
+        glm::vec3 dir{0.0f};
         std::vector<GameObjectHandle> body;
         GameObjectHandle apple;
 

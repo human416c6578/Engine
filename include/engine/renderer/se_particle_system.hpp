@@ -43,12 +43,12 @@ namespace se
 
     struct Force
     {
-        glm::vec4  position;   // world pos (for Point/Vortex)
-        glm::vec4  direction;  // force direction or axis (for Directional/Vortex)
-        float      strength;   // magnitude
-        float      radius;     // influence radius (0 = infinite)
-        float      falloff;    // 0=constant 1=linear 2=quadratic
-        ForceType  type;
+        glm::vec4  position{0.0f}; // world pos (for Point/Vortex)
+        glm::vec4  direction{0.0f}; // force direction or axis (for Directional/Vortex)
+        float      strength{0.0f}; // magnitude
+        float      radius{0.0f}; // influence radius (0 = infinite)
+        float      falloff{0.0f}; // 0=constant 1=linear 2=quadratic
+        ForceType  type{ForceType::Directional};
         uint32_t   active = 1;
         float      padding[3] = {};
     };
@@ -62,7 +62,7 @@ namespace se
 
         SpawnVolume volume{};
 
-        glm::vec4 direction;    // xyz = base emit direction, w = spread (radians)
+        glm::vec4 direction{0.0f}; // xyz = base emit direction, w = spread (radians)
         float     speedMin     = 1.f;
         float     speedMax     = 3.f;
 
