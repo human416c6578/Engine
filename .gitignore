@@ -371,9 +371,6 @@ Restructure To-Do.md
 !/VALIDATION_BASELINE.md
 !/docs/ARCHITECTURE_REVIEW.md
 !/docs/RESTRUCTURE_WORKFLOW.md
-!/docs/reference/phase0/height.png
-!/docs/reference/phase0/test1.png
-!/docs/reference/phase0/sponza.png
 !/.pi/skills/engine-restructure/SKILL.md
 !/.pi/prompts/next-item.md
 !/.pi/prompts/phase-gate.md
