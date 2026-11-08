@@ -232,9 +232,11 @@ namespace se
     // allowed to create a swap chain with more. That's why we'll first query the final number of
     // images with vkGetSwapchainImagesKHR, then resize the container and finally call it again to
     // retrieve the handles.
-    vkGetSwapchainImagesKHR(device.device(), swapChain, &imageCount, nullptr);
+    checkVkResult(vkGetSwapchainImagesKHR(device.device(), swapChain, &imageCount, nullptr),
+        "vkGetSwapchainImagesKHR(count)");
     swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(device.device(), swapChain, &imageCount, swapChainImages.data());
+    checkVkResult(vkGetSwapchainImagesKHR(device.device(), swapChain, &imageCount, swapChainImages.data()),
+        "vkGetSwapchainImagesKHR(data)");
 
     swapChainImageFormat = surfaceFormat.format;
     swapChainExtent = extent;

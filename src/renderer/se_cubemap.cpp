@@ -224,9 +224,8 @@ namespace se
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		if (vkCreateBuffer(device, &bufferInfo, nullptr, &stagingBuffer) != VK_SUCCESS) {
-			throw std::runtime_error("Failed to create staging buffer!");
-		}
+		checkVkResult(vkCreateBuffer(device, &bufferInfo, nullptr, &stagingBuffer),
+			"vkCreateBuffer(cubemap staging)");
 
 		// Memory Requirements
 		VkMemoryRequirements memRequirements;
@@ -244,7 +243,8 @@ namespace se
 		}
 
 		// Bind the buffer memory
-		vkBindBufferMemory(device, stagingBuffer, stagingBufferMemory, 0);
+		checkVkResult(vkBindBufferMemory(device, stagingBuffer, stagingBufferMemory, 0),
+			"vkBindBufferMemory(cubemap staging)");
 
 		// 2. Copy Image from GPU to Staging Buffer
 		VkCommandBuffer commandBuffer = seDevice.beginSingleTimeCommands();

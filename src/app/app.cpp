@@ -64,8 +64,7 @@ App::~App()
     if (seDevice.device() != VK_NULL_HANDLE)
     {
         const VkResult idleResult = vkDeviceWaitIdle(seDevice.device());
-        if (idleResult != VK_SUCCESS)
-            std::cerr << "vkDeviceWaitIdle during App teardown failed: " << idleResult << std::endl;
+        se::logVkResult(idleResult, "vkDeviceWaitIdle(App teardown)");
     }
     if (sceneManager)
         sceneManager->destroyAllScenes();

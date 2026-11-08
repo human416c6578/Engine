@@ -97,9 +97,7 @@ namespace se
         if (device_ != VK_NULL_HANDLE)
         {
             const VkResult idleResult = vkDeviceWaitIdle(device_);
-            if (idleResult != VK_SUCCESS)
-                std::cerr << "[Vulkan] vkDeviceWaitIdle(SEDevice teardown) failed with VkResult "
-                          << static_cast<int>(idleResult) << std::endl;
+            logVkResult(idleResult, "vkDeviceWaitIdle(SEDevice teardown)");
 
             if (descriptorPool != VK_NULL_HANDLE)
             {
