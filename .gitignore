@@ -379,4 +379,7 @@ Restructure To-Do.md
 !/.pi/prompts/phase-kickoff.md
 
 *.pdf
-assets/
+assets/*
+!assets/scenes/
+assets/scenes/*
+!assets/scenes/phase0_test.json

@@ -5,6 +5,7 @@
 #include <memory>
 #include <iostream>
 #include <exception>
+#include <stdexcept>
 #include <cstdlib>
 #include <chrono>
 #include "engine/scene/se_gameobject.hpp"
@@ -62,6 +63,14 @@ App::App(StartupTag)
         *ResourceManager, *PostProcess, *ParticleSystem, inputSystem, *scriptManager);
     sceneManager->createScene("MainScene");
     sceneManager->setActiveScene("MainScene");
+
+    // Opt-in fixed safety-net scene; reuse the editor's existing saved-scene loader.
+    if (std::getenv("ENGINE_PHASE0_TEST_SCENE") != nullptr)
+    {
+        if (!sceneManager->loadScene("assets/scenes/phase0_test.json", "Phase0Test"))
+            throw std::runtime_error("Phase 0 test scene load failed");
+        se::log::info("Phase0Test", "Loaded assets/scenes/phase0_test.json");
+    }
 
     imguiManager = std::make_unique<se::ImGuiManager>(
         seDevice, seRenderer.getSwapChainRenderPass(), *seWindow.getGLFWwindow(),

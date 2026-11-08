@@ -1,0 +1,86 @@
+{
+  "scene": {
+    "name": "Phase0Test",
+    "camera": {
+      "translation": [0.0, -2.0, -6.0],
+      "rotation": [-0.22, 0.0, 0.0]
+    },
+    "postProcess": {
+      "focusDistance": 8.0,
+      "focusRange": 10.0,
+      "blurScale": 0.0,
+      "maxBlur": 0.0,
+      "enableFog": 0,
+      "enableTonemap": 1,
+      "exposure": 1.0
+    },
+    "meshes": [
+      {"guid": "PLANE", "name": "PLANE", "path": "PLANE"},
+      {"guid": "CUBE", "name": "CUBE", "path": "CUBE"},
+      {"guid": "SPHERE", "name": "SPHERE", "path": "SPHERE"}
+    ],
+    "textures": [],
+    "materials": [
+      {
+        "guid": "phase0-ground", "name": "Phase0 Ground",
+        "color": [0.45, 0.48, 0.5], "metallic": 0.0, "roughness": 0.8, "ao": 1.0
+      },
+      {
+        "guid": "phase0-red", "name": "Phase0 Red Rough",
+        "color": [0.8, 0.04, 0.02], "metallic": 0.0, "roughness": 0.65, "ao": 1.0
+      },
+      {
+        "guid": "phase0-gold", "name": "Phase0 Gold Metal",
+        "color": [1.0, 0.65, 0.15], "metallic": 0.9, "roughness": 0.2, "ao": 1.0
+      }
+    ],
+    "gameObjects": [
+      {
+        "id": 1, "name": "Ground", "mesh": "PLANE", "material": "phase0-ground",
+        "transform": {"position": [0.0, 1.0, 3.0], "rotation": [0.0, 0.0, 0.0], "scale": [12.0, 1.0, 12.0]}
+      },
+      {
+        "id": 2, "name": "Red Cube", "mesh": "CUBE", "material": "phase0-red",
+        "transform": {"position": [-1.5, 0.0, 3.0], "rotation": [0.0, 0.3, 0.0], "scale": [1.4, 1.4, 1.4]}
+      },
+      {
+        "id": 3, "name": "Gold Sphere", "mesh": "SPHERE", "material": "phase0-gold",
+        "transform": {"position": [1.5, 0.0, 3.0], "rotation": [0.0, 0.0, 0.0], "scale": [0.8, 0.8, 0.8]}
+      },
+      {
+        "id": 4, "name": "Gold Column", "mesh": "CUBE", "material": "phase0-gold",
+        "transform": {"position": [0.0, -0.5, 5.5], "rotation": [0.0, -0.3, 0.0], "scale": [0.7, 1.5, 0.7]}
+      },
+      {
+        "id": 5, "name": "Warm Key",
+        "transform": {"position": [-3.0, -4.0, 0.0], "rotation": [0.0, 0.0, 0.0], "scale": [1.0, 1.0, 1.0]},
+        "light": {"type": 1, "color": [1.0, 0.8, 0.6], "intensity": 30.0}
+      },
+      {
+        "id": 6, "name": "Cool Fill",
+        "transform": {"position": [4.0, -2.0, 4.0], "rotation": [0.0, 0.0, 0.0], "scale": [1.0, 1.0, 1.0]},
+        "light": {"type": 1, "color": [0.5, 0.7, 1.0], "intensity": 15.0}
+      },
+      {
+        "id": 7, "name": "Particle Fountain",
+        "transform": {"position": [0.0, -0.5, 2.0], "rotation": [0.0, 0.0, 0.0], "scale": [1.0, 1.0, 1.0]},
+        "particleEmitter": {
+          "emitter": {
+            "id": 0, "active": 1,
+            "volume": {
+              "position": [0.0, -0.5, 2.0, 0.0],
+              "extents": [0.15, 0.15, 0.15, 0.0],
+              "direction": [0.0, -1.0, 0.0, 0.0], "type": 1
+            },
+            "direction": [0.0, -1.0, 0.0, 0.25],
+            "speedMin": 0.5, "speedMax": 1.5,
+            "lifetimeMin": 1.0, "lifetimeMax": 2.0,
+            "colorStart": [0.2, 0.6, 1.0, 1.0], "colorEnd": [1.0, 0.2, 0.05, 0.0],
+            "sizeStart": 4.0, "sizeEnd": 1.0, "emitRate": 200.0
+          },
+          "forces": []
+        }
+      }
+    ]
+  }
+}
