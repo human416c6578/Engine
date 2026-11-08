@@ -1,11 +1,13 @@
 #pragma once
 
+#include "engine/core/se_frame_config.hpp"
 #include "engine/resources/se_resource.hpp" // SEMaterial derives from Resource.
 #include "engine/renderer/se_material_base.hpp" // SEMaterial derives from SEMaterialBase.
 #include <vulkan/vulkan.h> // Vulkan handles are part of the public API.
 #include <glm/glm.hpp> // Material flags and push constants use GLM values by value.
 
 #include <algorithm>
+#include <array>
 #include <memory>
 #include <optional>
 #include <string>
@@ -263,9 +265,10 @@ namespace se
 
 		MaterialFlags flags{};
 
-		VkBuffer matBuffer{VK_NULL_HANDLE};
-		VkDeviceMemory matBufferMemory{VK_NULL_HANDLE};
-		void *matBufferMapped{nullptr};
+		// Descriptor set i and its dirty update exclusively use material buffer i.
+		std::array<VkBuffer, MAX_FRAMES_IN_FLIGHT> matBuffers{};
+		std::array<VkDeviceMemory, MAX_FRAMES_IN_FLIGHT> matBufferMemories{};
+		std::array<void*, MAX_FRAMES_IN_FLIGHT> matBuffersMapped{};
 
 		std::shared_ptr<se::SETexture> dummyTexture;
 

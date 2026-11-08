@@ -84,20 +84,23 @@ namespace se
 			}
 		}
 		descriptorSets.clear();
-		if (matBufferMapped != nullptr && matBufferMemory != VK_NULL_HANDLE)
+		for (size_t i = 0; i < matBuffers.size(); ++i)
 		{
-			vkUnmapMemory(seDevice.device(), matBufferMemory);
-			matBufferMapped = nullptr;
-		}
-		if (matBuffer != VK_NULL_HANDLE)
-		{
-			vkDestroyBuffer(seDevice.device(), matBuffer, nullptr);
-			matBuffer = VK_NULL_HANDLE;
-		}
-		if (matBufferMemory != VK_NULL_HANDLE)
-		{
-			vkFreeMemory(seDevice.device(), matBufferMemory, nullptr);
-			matBufferMemory = VK_NULL_HANDLE;
+			if (matBuffersMapped[i] != nullptr && matBufferMemories[i] != VK_NULL_HANDLE)
+			{
+				vkUnmapMemory(seDevice.device(), matBufferMemories[i]);
+				matBuffersMapped[i] = nullptr;
+			}
+			if (matBuffers[i] != VK_NULL_HANDLE)
+			{
+				vkDestroyBuffer(seDevice.device(), matBuffers[i], nullptr);
+				matBuffers[i] = VK_NULL_HANDLE;
+			}
+			if (matBufferMemories[i] != VK_NULL_HANDLE)
+			{
+				vkFreeMemory(seDevice.device(), matBufferMemories[i], nullptr);
+				matBufferMemories[i] = VK_NULL_HANDLE;
+			}
 		}
 	}
 
@@ -105,28 +108,21 @@ namespace se
 	{
 		VkDeviceSize bufferSize = sizeof(MaterialFlags);
 
-		// Create the buffer (assuming seDevice.createBuffer handles all buffer creation tasks)
-		seDevice.createBuffer(
-			bufferSize,
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			matBuffer,
-			matBufferMemory);
+		for (size_t i = 0; i < matBuffers.size(); ++i)
+		{
+			seDevice.createBuffer(
+				bufferSize,
+				VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				matBuffers[i],
+				matBufferMemories[i]);
 
-		// Map the buffer memory
-		checkVkResult(vkMapMemory(seDevice.device(), matBufferMemory, 0, bufferSize, 0, &matBufferMapped),
-			"vkMapMemory(material buffer)");
+			checkVkResult(vkMapMemory(seDevice.device(), matBufferMemories[i], 0, bufferSize, 0, &matBuffersMapped[i]),
+				"vkMapMemory(material buffer)");
 
-		// Copy data to the mapped memory
-		memcpy(matBufferMapped, &flags, sizeof(flags));
-
-		// No need to flush for coherent memory, but if non-coherent memory is used:
-		// VkMappedMemoryRange memoryRange{};
-		// memoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-		// memoryRange.memory = matBufferMemory;
-		// memoryRange.offset = 0;
-		// memoryRange.size = VK_WHOLE_SIZE;
-		// vkFlushMappedMemoryRanges(seDevice.device(), 1, &memoryRange);
+			// Initialize before use; coherent memory needs no explicit flush.
+			memcpy(matBuffersMapped[i], &flags, sizeof(flags));
+		}
 	}
 	void SEMaterial::createDescriptorSets()
 	{
@@ -158,7 +154,8 @@ namespace se
 
     void SEMaterial::updateDescriptorSet(size_t frameIndex)
     {
-        memcpy(matBufferMapped, &flags, sizeof(flags));
+        // Runtime callers have waited for this frame slot's fence before updating it.
+        memcpy(matBuffersMapped[frameIndex], &flags, sizeof(flags));
 
         std::vector<VkBuffer> uniformBuffers = seDevice.getUniformBuffers();
         VkDescriptorBufferInfo bufferInfo{};
@@ -167,7 +164,7 @@ namespace se
         bufferInfo.range = sizeof(UniformBufferObject);
 
         VkDescriptorBufferInfo matBufferInfo{};
-        matBufferInfo.buffer = matBuffer;
+        matBufferInfo.buffer = matBuffers[frameIndex];
         matBufferInfo.offset = 0;
         matBufferInfo.range = sizeof(MaterialFlags);
 
