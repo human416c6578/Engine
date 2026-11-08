@@ -1,5 +1,6 @@
 ﻿#include "engine/app/app.hpp"
 #include "engine/vulkan/se_vk_result.hpp"
+#include "engine/core/se_logger.hpp"
 #include <string>
 #include <memory>
 #include <iostream>
@@ -28,7 +29,15 @@
 #include "engine/scripting/StressTest.hpp"
 #include "engine/scripting/se_script_manager.hpp"
 
-App::App(se::Logger& log) : logger{log}
+App::StartupTag App::initializeLogging()
+{
+    se::log::initialize(se::log::Level::Debug);
+    return {};
+}
+
+App::App() : App{initializeLogging()} {}
+
+App::App(StartupTag)
 {
     seCubemap = std::make_unique<se::SECubemap>(seDevice, seRenderer, "assets/hdr/snowy_forest_4k.hdr");
     PBR = std::make_unique<se::PBR>(seDevice, seRenderer.getOffscreenRenderer()->getRenderPass(), *seCubemap);
@@ -50,7 +59,7 @@ App::App(se::Logger& log) : logger{log}
     scriptManager->registerScript<se::StressScript>("StressScript");
 
     sceneManager = std::make_unique<se::SceneManager>(
-        *ResourceManager, *PostProcess, *ParticleSystem, inputSystem, *scriptManager, logger);
+        *ResourceManager, *PostProcess, *ParticleSystem, inputSystem, *scriptManager);
     sceneManager->createScene("MainScene");
     sceneManager->setActiveScene("MainScene");
 
@@ -101,13 +110,13 @@ void App::mainLoop()
             if (!firstTestResizeIssued && elapsed >= 2.0f)
             {
                 glfwSetWindowSize(seWindow.getGLFWwindow(), 1024, 768);
-                logger.log(se::LogLevel::Info, "ResizeTest", "requested glfwSetWindowSize 1024x768");
+                se::log::info("ResizeTest", "requested glfwSetWindowSize 1024x768");
                 firstTestResizeIssued = true;
             }
             if (!secondTestResizeIssued && elapsed >= 4.0f)
             {
                 glfwSetWindowSize(seWindow.getGLFWwindow(), 1280, 720);
-                logger.log(se::LogLevel::Info, "ResizeTest", "requested glfwSetWindowSize 1280x720");
+                se::log::info("ResizeTest", "requested glfwSetWindowSize 1280x720");
                 secondTestResizeIssued = true;
             }
         }
@@ -139,7 +148,7 @@ void App::mainLoop()
         auto* scene = sceneManager->getActiveScene();
         if (!scene)
         {
-            logger.log(se::LogLevel::Error, "App", "SCENE EMPTY!");
+            se::log::error("App", "SCENE EMPTY!");
             return;
         }
 

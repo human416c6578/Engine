@@ -6,15 +6,14 @@
 
 int main()
 {
-    se::Logger logger;
     try
     {
-        App app{logger};
+        App app;
         app.run();
     }
     catch (const std::exception &e)
     {
-        logger.log(se::LogLevel::Error, "App", "%s", e.what());
+        se::log::error("App", "%s", e.what());
         return EXIT_FAILURE;
     }
 

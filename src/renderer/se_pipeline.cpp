@@ -1,4 +1,5 @@
 #include "engine/renderer/se_pipeline.hpp"
+#include "engine/core/se_logger.hpp"
 #include "engine/core/se_vertex.hpp"
 #include "engine/vulkan/se_device.hpp"
 
@@ -271,7 +272,7 @@ namespace se
         const std::string &fragFilepath,
         const PipelineConfigInfo &configInfo)
     {
-        seDevice.log(LogLevel::Debug, "Pipeline", "creating: %s | bindings: %zu | attribs: %zu | topology: %d",
+        log::debug("Pipeline", "creating: %s | bindings: %zu | attribs: %zu | topology: %d",
             vertFilepath.c_str(),
             configInfo.bindingDescriptions.size(),
             configInfo.attributeDescriptions.size(),

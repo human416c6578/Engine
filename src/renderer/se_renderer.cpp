@@ -1,4 +1,5 @@
 #include "engine/renderer/se_renderer.hpp"
+#include "engine/core/se_logger.hpp"
 #include "engine/renderer/se_swap_chain.hpp"
 #include <GLFW/glfw3.h>
 #include "engine/vulkan/se_device.hpp"
@@ -43,7 +44,7 @@ namespace se
             extent = seWindow.getExtent();
             glfwWaitEvents();
         }
-        seDevice.log(LogLevel::Info, "Renderer", "recreateSwapChain extent=%ux%u", extent.width, extent.height);
+        log::info("Renderer", "recreateSwapChain extent=%ux%u", extent.width, extent.height);
         checkVkResult(vkDeviceWaitIdle(seDevice.device()), "vkDeviceWaitIdle(swapchain recreation)");
 
         if (seSwapChain == nullptr)

@@ -1,4 +1,5 @@
 #include "engine/renderer/se_pbr.hpp"
+#include "engine/core/se_logger.hpp"
 #include "engine/renderer/se_mesh.hpp"
 #include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_cubemap.hpp"
@@ -404,7 +405,7 @@ namespace se
         const size_t count = std::min(lights.size(), capacity);
 
         if (lights.size() > capacity) {
-            seDevice.log(LogLevel::Warning, "PBR", "Too many lights: %zu (max %zu), extra lights ignored",
+            log::warn("PBR", "Too many lights: %zu (max %zu), extra lights ignored",
                         lights.size(), capacity);
         }
 

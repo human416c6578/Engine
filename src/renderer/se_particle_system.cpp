@@ -1,4 +1,5 @@
 #include "engine/renderer/se_particle_system.hpp"
+#include "engine/core/se_logger.hpp"
 #include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_pipeline.hpp"
 #include "engine/scene/se_particle_emitter_component.hpp"
@@ -190,7 +191,7 @@ namespace se
                 emitters[i].active  = 1;
                 emitterSlotFree[i]  = false;
 
-                seDevice.log(LogLevel::Debug, "Particles", "Added emitter %u", i);
+                log::debug("Particles", "Added emitter %u", i);
 
                 return i;
             }

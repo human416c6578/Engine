@@ -2,20 +2,16 @@
 
 #include <string_view>
 
-namespace se
+namespace se::log
 {
-    enum class LogLevel { Debug, Info, Warning, Error };
+    enum class Level { Debug, Info, Warning, Error };
 
-    // Borrowed by systems; the composition root keeps the sink alive through teardown.
-    class Logger
-    {
-    public:
-        Logger() = default;
-        Logger(const Logger&) = delete;
-        Logger& operator=(const Logger&) = delete;
-        Logger(Logger&&) = delete;
-        Logger& operator=(Logger&&) = delete;
+    // App only: call once, before constructing systems or starting worker/driver work.
+    // Afterwards configuration is read-only. Before init and through shutdown, stderr is valid.
+    void initialize(Level minimumLevel) noexcept;
 
-        void log(LogLevel level, std::string_view component, const char* format, ...) const noexcept;
-    };
+    void debug(std::string_view component, const char* format, ...) noexcept;
+    void info(std::string_view component, const char* format, ...) noexcept;
+    void warn(std::string_view component, const char* format, ...) noexcept;
+    void error(std::string_view component, const char* format, ...) noexcept;
 }

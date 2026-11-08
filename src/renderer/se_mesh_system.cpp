@@ -1,5 +1,6 @@
 ﻿#include "engine/renderer/se_mesh_system.hpp"
 #include "engine/renderer/se_pbr_material.hpp"
+#include "engine/core/se_logger.hpp"
 #include "engine/renderer/se_material_system.hpp"
 #include "engine/renderer/se_mesh.hpp"
 #include "engine/renderer/se_submesh.hpp"
@@ -38,7 +39,7 @@ namespace se
 
 		if (!pScene || pScene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !pScene->mRootNode)
 		{
-			seDevice.log(LogLevel::Error, "Assimp", "%s", Importer.GetErrorString());
+			log::error("Assimp", "%s", Importer.GetErrorString());
 			return nullptr;
 		}
 

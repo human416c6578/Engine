@@ -1,4 +1,5 @@
 #include "engine/renderer/se_hdr_to_cubemap.h"
+#include "engine/core/se_logger.hpp"
 #include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_renderer.hpp"
 #include "engine/renderer/se_submesh.hpp"
@@ -576,7 +577,7 @@ namespace se
 			throw std::runtime_error("Failed to save image!");
 		}
 
-		seDevice.log(LogLevel::Info, "Cubemap", "Image saved to %s", filename.c_str());
+		log::info("Cubemap", "Image saved to %s", filename.c_str());
 	}
 	*/
 

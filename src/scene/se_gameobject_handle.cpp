@@ -1,4 +1,5 @@
 #include "engine/scene/se_gameobject_handle.hpp"
+#include "engine/core/se_logger.hpp"
 #include "engine/scene/se_scene.hpp"
 
 namespace se {
@@ -8,9 +9,9 @@ namespace se {
         return nullptr;
     }
 
-    void GameObjectHandle::destroy(Logger& logger) const {
+    void GameObjectHandle::destroy() const {
         if (!scene) {
-            logger.log(LogLevel::Warning, "GameObjectHandle", "Tried to destroy object, but scene is null!");
+            log::warn("GameObjectHandle", "Tried to destroy object, but scene is null!");
             return;
         }
         scene->destroyGameObject(id);

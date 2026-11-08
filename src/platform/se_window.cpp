@@ -1,4 +1,5 @@
 #include "engine/platform/se_window.hpp"
+#include "engine/core/se_logger.hpp"
 #include "engine/vulkan/se_vk_result.hpp"
 
 #define GLFW_INCLUDE_VULKAN
@@ -62,6 +63,9 @@ namespace se
 
     void SEWindow::initWindow()
     {
+        glfwSetErrorCallback([](int code, const char* message) {
+            log::error("GLFW", "[%d] %s", code, message);
+        });
         if (glfwInit() != GLFW_TRUE)
         {
             throw std::runtime_error("glfwInit failed");

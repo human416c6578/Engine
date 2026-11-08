@@ -20,8 +20,8 @@ using json = nlohmann::json;
 
 se::SceneManager::SceneManager(ResourceManager &resources, SEPostProcess &postProcess,
                                ParticleSystem &particleSystem, SEInputSystem &input,
-                               ScriptManager& scripts, Logger& log)
-    : logger{log}, resourceManager{resources}, postProcess{postProcess},
+                               ScriptManager& scripts)
+    : resourceManager{resources}, postProcess{postProcess},
       particleSystem{particleSystem}, inputSystem{input}, scriptManager{scripts} {}
 
 se::SceneManager::~SceneManager() = default;
@@ -34,7 +34,7 @@ void se::SceneManager::destroyAllScenes()
 
 se::Scene& se::SceneManager::createScene(const std::string& name)
 {
-  auto scene = std::make_unique<Scene>(name, logger);
+  auto scene = std::make_unique<Scene>(name);
   Scene& ref = *scene;
   scenes[name] = std::move(scene);
   return ref;

@@ -2,7 +2,6 @@
 #include <stdexcept>
 
 namespace se {
-    class Logger;
     class Scene;
     class SEGameObject;
 
@@ -15,7 +14,7 @@ namespace se {
         GameObjectHandle(int id, Scene* scene) : id(id), scene(scene) {}
 
         SEGameObject* get() const;
-        void destroy(Logger& logger) const;
+        void destroy() const;
 
         SEGameObject& operator*() const {
             auto ptr = get();

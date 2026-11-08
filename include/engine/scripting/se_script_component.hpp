@@ -5,7 +5,6 @@
 
 namespace se {
 
-    class Logger;
     class SEGameObject;
     class Scene;
     class ResourceManager;
@@ -16,7 +15,6 @@ namespace se {
         Scene &scene;
         ResourceManager &resources;
         SEInputSystem &input;
-        Logger& logger;
     };
 
     class ScriptComponent {
