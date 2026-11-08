@@ -51,18 +51,6 @@ namespace se
         }
         descriptorSets.clear();
 
-        for (Buffer& buffer : lightBuffers)
-        {
-            if (buffer.mapped != nullptr && buffer.memory != VK_NULL_HANDLE)
-                vkUnmapMemory(seDevice.device(), buffer.memory);
-            buffer.mapped = nullptr;
-            if (buffer.buffer != VK_NULL_HANDLE)
-                vkDestroyBuffer(seDevice.device(), buffer.buffer, nullptr);
-            buffer.buffer = VK_NULL_HANDLE;
-            if (buffer.memory != VK_NULL_HANDLE)
-                vkFreeMemory(seDevice.device(), buffer.memory, nullptr);
-            buffer.memory = VK_NULL_HANDLE;
-        }
         lightBuffers.clear();
 
         if (pipelineLayout != VK_NULL_HANDLE)
@@ -247,10 +235,11 @@ namespace se
         VkDeviceSize bufferSize = sizeof(se::LightUBO);
 
         size_t framesInFlight = MAX_FRAMES_IN_FLIGHT;
-        lightBuffers.resize(framesInFlight);
+        lightBuffers.reserve(framesInFlight);
 
         for (size_t i = 0; i < framesInFlight; i++)
         {
+            lightBuffers.emplace_back(seDevice);
             seDevice.createBuffer(
                 bufferSize,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,

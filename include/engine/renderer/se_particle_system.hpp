@@ -4,6 +4,7 @@
 #include "engine/renderer/se_pipeline.hpp"
 #include <memory>
 #include <vector>
+#include <utility>
 #include <glm/glm.hpp>
 
 namespace se
@@ -103,9 +104,51 @@ namespace se
 
     struct ParticleBuffer
     {
-        VkBuffer       buffer = VK_NULL_HANDLE;
-        VkDeviceMemory memory = VK_NULL_HANDLE;
-        void*          mapped = nullptr;
+        explicit ParticleBuffer(SEDevice& owner) noexcept : device{&owner} {}
+        ~ParticleBuffer() noexcept { reset(); }
+
+        ParticleBuffer(const ParticleBuffer&) = delete;
+        ParticleBuffer& operator=(const ParticleBuffer&) = delete;
+        ParticleBuffer(ParticleBuffer&& other) noexcept
+            : device{std::exchange(other.device, nullptr)},
+              buffer{std::exchange(other.buffer, VK_NULL_HANDLE)},
+              memory{std::exchange(other.memory, VK_NULL_HANDLE)},
+              mapped{std::exchange(other.mapped, nullptr)}
+        {
+        }
+        ParticleBuffer& operator=(ParticleBuffer&& other) noexcept
+        {
+            if (this != &other)
+            {
+                reset();
+                device = std::exchange(other.device, nullptr);
+                buffer = std::exchange(other.buffer, VK_NULL_HANDLE);
+                memory = std::exchange(other.memory, VK_NULL_HANDLE);
+                mapped = std::exchange(other.mapped, nullptr);
+            }
+            return *this;
+        }
+
+        void reset() noexcept
+        {
+            if (device != nullptr && device->device() != VK_NULL_HANDLE)
+            {
+                if (mapped != nullptr && memory != VK_NULL_HANDLE)
+                    vkUnmapMemory(device->device(), memory);
+                if (buffer != VK_NULL_HANDLE)
+                    vkDestroyBuffer(device->device(), buffer, nullptr);
+                if (memory != VK_NULL_HANDLE)
+                    vkFreeMemory(device->device(), memory, nullptr);
+            }
+            buffer = VK_NULL_HANDLE;
+            memory = VK_NULL_HANDLE;
+            mapped = nullptr;
+        }
+
+        SEDevice* device{nullptr};
+        VkBuffer buffer{VK_NULL_HANDLE};
+        VkDeviceMemory memory{VK_NULL_HANDLE};
+        void* mapped{nullptr};
     };
 
     class ParticleSystem

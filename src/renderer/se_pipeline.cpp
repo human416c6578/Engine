@@ -7,6 +7,8 @@
 #include <stdexcept>
 #include "engine/vulkan/se_vk_result.hpp"
 
+#include <utility>
+
 namespace se
 {
     SEPipeline::SEPipeline(
@@ -44,6 +46,16 @@ namespace se
             destroyOwnedHandles();
             throw;
         }
+    }
+
+    SEPipeline::SEPipeline(SEPipeline&& other) noexcept
+        : seDevice{other.seDevice},
+          graphicsPipeline{std::exchange(other.graphicsPipeline, VK_NULL_HANDLE)},
+          computePipeline{std::exchange(other.computePipeline, VK_NULL_HANDLE)},
+          vertShaderModule{std::exchange(other.vertShaderModule, VK_NULL_HANDLE)},
+          fragShaderModule{std::exchange(other.fragShaderModule, VK_NULL_HANDLE)},
+          compShaderModule{std::exchange(other.compShaderModule, VK_NULL_HANDLE)}
+    {
     }
 
     SEPipeline::~SEPipeline()

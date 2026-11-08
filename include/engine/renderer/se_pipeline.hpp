@@ -52,7 +52,7 @@ namespace se
 
 		SEPipeline(const SEPipeline &) = delete;
         SEPipeline &operator=(const SEPipeline &) = delete;
-        SEPipeline(SEPipeline&&) = delete;
+        SEPipeline(SEPipeline&& other) noexcept;
         SEPipeline& operator=(SEPipeline&&) = delete;
 
         void bind(VkCommandBuffer commandBuffer);

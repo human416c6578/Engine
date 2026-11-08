@@ -113,8 +113,8 @@ namespace se
 
         SEGameObject(const SEGameObject &) = delete;
         SEGameObject &operator=(const SEGameObject &) = delete;
-        SEGameObject(SEGameObject &&) = default;
-        SEGameObject &operator=(SEGameObject &&) = default;
+        SEGameObject(SEGameObject &&) = delete;
+        SEGameObject &operator=(SEGameObject &&) = delete;
 
         id_t getId() { return id; }
         const std::string& getName() const { return name; }

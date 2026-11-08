@@ -16,6 +16,11 @@ namespace se {
     public:
         Scene(const std::string& name) : name(name) {}
 
+        Scene(const Scene&) = delete;
+        Scene& operator=(const Scene&) = delete;
+        Scene(Scene&&) = delete;
+        Scene& operator=(Scene&&) = delete;
+
         GameObjectHandle createGameObject(const std::string& name) {
             auto obj = std::make_unique<SEGameObject>(nextGameObjectId++, name);
             const int id = static_cast<int>(obj->id);

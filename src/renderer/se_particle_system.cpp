@@ -9,6 +9,8 @@
 #include <cassert>
 #include <cstring>
 #include <stdexcept>
+#include <type_traits>
+#include <utility>
 
 namespace se
 {
@@ -30,21 +32,36 @@ namespace se
         struct ScopedStagingBuffer
         {
             explicit ScopedStagingBuffer(SEDevice& owner) : device{owner} {}
-            ~ScopedStagingBuffer()
+            ~ScopedStagingBuffer() noexcept { reset(); }
+
+            ScopedStagingBuffer(const ScopedStagingBuffer&) = delete;
+            ScopedStagingBuffer& operator=(const ScopedStagingBuffer&) = delete;
+            ScopedStagingBuffer(ScopedStagingBuffer&& other) noexcept
+                : device{other.device},
+                  buffer{std::exchange(other.buffer, VK_NULL_HANDLE)},
+                  memory{std::exchange(other.memory, VK_NULL_HANDLE)}
+            {
+            }
+            ScopedStagingBuffer& operator=(ScopedStagingBuffer&&) = delete;
+
+            void reset() noexcept
             {
                 if (buffer != VK_NULL_HANDLE)
-                    vkDestroyBuffer(device.device(), buffer, nullptr);
+                    vkDestroyBuffer(device.device(), std::exchange(buffer, VK_NULL_HANDLE), nullptr);
                 if (memory != VK_NULL_HANDLE)
-                    vkFreeMemory(device.device(), memory, nullptr);
+                    vkFreeMemory(device.device(), std::exchange(memory, VK_NULL_HANDLE), nullptr);
             }
 
             SEDevice& device;
             VkBuffer buffer{VK_NULL_HANDLE};
             VkDeviceMemory memory{VK_NULL_HANDLE};
         };
+        static_assert(!std::is_copy_constructible_v<ScopedStagingBuffer>);
+        static_assert(std::is_nothrow_move_constructible_v<ScopedStagingBuffer>);
+        static_assert(!std::is_move_assignable_v<ScopedStagingBuffer>);
     }
     ParticleSystem::ParticleSystem(SEDevice& device, VkRenderPass renderPass)
-        : seDevice{ device }
+        : seDevice{ device }, particleSSBO{device}
     {
         try
         {
@@ -113,22 +130,10 @@ namespace se
             vkDestroyDescriptorSetLayout(seDevice.device(), graphicsDescriptorSetLayout, nullptr);
         graphicsDescriptorSetLayout = VK_NULL_HANDLE;
 
-        auto destroyBuffer = [&](ParticleBuffer& buffer)
-        {
-            if (buffer.mapped != nullptr && buffer.memory != VK_NULL_HANDLE)
-                vkUnmapMemory(seDevice.device(), buffer.memory);
-            buffer.mapped = nullptr;
-            if (buffer.buffer != VK_NULL_HANDLE)
-                vkDestroyBuffer(seDevice.device(), buffer.buffer, nullptr);
-            buffer.buffer = VK_NULL_HANDLE;
-            if (buffer.memory != VK_NULL_HANDLE)
-                vkFreeMemory(seDevice.device(), buffer.memory, nullptr);
-            buffer.memory = VK_NULL_HANDLE;
-        };
-        destroyBuffer(particleSSBO);
-        for (ParticleBuffer& buffer : emitterSSBOs) destroyBuffer(buffer);
-        for (ParticleBuffer& buffer : forceSSBOs) destroyBuffer(buffer);
-        for (ParticleBuffer& buffer : frameUBOs) destroyBuffer(buffer);
+        particleSSBO.reset();
+        emitterSSBOs.clear();
+        forceSSBOs.clear();
+        frameUBOs.clear();
     }
 
     EmitterHandle ParticleSystem::addEmitter(const Emitter& emitter)
@@ -502,10 +507,11 @@ namespace se
     {
         VkDeviceSize bufferSize = sizeof(Emitter) * MAX_EMITTERS;
         size_t frames = MAX_FRAMES_IN_FLIGHT;
-        emitterSSBOs.resize(frames);
+        emitterSSBOs.reserve(frames);
 
         for (size_t i = 0; i < frames; i++)
         {
+            emitterSSBOs.emplace_back(seDevice);
             seDevice.createBuffer(bufferSize,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -521,10 +527,11 @@ namespace se
     {
         VkDeviceSize bufferSize = sizeof(Force) * MAX_FORCES;
         size_t frames = MAX_FRAMES_IN_FLIGHT;
-        forceSSBOs.resize(frames);
+        forceSSBOs.reserve(frames);
 
         for (size_t i = 0; i < frames; i++)
         {
+            forceSSBOs.emplace_back(seDevice);
             seDevice.createBuffer(bufferSize,
                 VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -540,10 +547,11 @@ namespace se
     {
         VkDeviceSize bufferSize = sizeof(ParticleFrameUBO);
         size_t frames = MAX_FRAMES_IN_FLIGHT;
-        frameUBOs.resize(frames);
+        frameUBOs.reserve(frames);
 
         for (size_t i = 0; i < frames; i++)
         {
+            frameUBOs.emplace_back(seDevice);
             seDevice.createBuffer(bufferSize,
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,

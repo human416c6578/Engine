@@ -5,6 +5,8 @@
 #include <cassert>
 #include <cstring>
 #include <unordered_map>
+#include <type_traits>
+#include <utility>
 
 namespace se
 {
@@ -13,18 +15,33 @@ namespace se
     struct ScopedStagingBuffer
     {
       explicit ScopedStagingBuffer(SEDevice& owner) : device{owner} {}
-      ~ScopedStagingBuffer()
+      ~ScopedStagingBuffer() noexcept { reset(); }
+
+      ScopedStagingBuffer(const ScopedStagingBuffer&) = delete;
+      ScopedStagingBuffer& operator=(const ScopedStagingBuffer&) = delete;
+      ScopedStagingBuffer(ScopedStagingBuffer&& other) noexcept
+          : device{other.device},
+            buffer{std::exchange(other.buffer, VK_NULL_HANDLE)},
+            memory{std::exchange(other.memory, VK_NULL_HANDLE)}
+      {
+      }
+      ScopedStagingBuffer& operator=(ScopedStagingBuffer&&) = delete;
+
+      void reset() noexcept
       {
         if (buffer != VK_NULL_HANDLE)
-          vkDestroyBuffer(device.device(), buffer, nullptr);
+          vkDestroyBuffer(device.device(), std::exchange(buffer, VK_NULL_HANDLE), nullptr);
         if (memory != VK_NULL_HANDLE)
-          vkFreeMemory(device.device(), memory, nullptr);
+          vkFreeMemory(device.device(), std::exchange(memory, VK_NULL_HANDLE), nullptr);
       }
 
       SEDevice& device;
       VkBuffer buffer{VK_NULL_HANDLE};
       VkDeviceMemory memory{VK_NULL_HANDLE};
     };
+    static_assert(!std::is_copy_constructible_v<ScopedStagingBuffer>);
+    static_assert(std::is_nothrow_move_constructible_v<ScopedStagingBuffer>);
+    static_assert(!std::is_move_assignable_v<ScopedStagingBuffer>);
   }
   SESubMesh::SESubMesh(SEDevice &device, const SESubMesh::Builder &builder) : seDevice{device}
   {

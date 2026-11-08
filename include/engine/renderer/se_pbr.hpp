@@ -10,6 +10,7 @@
 #include <memory>
 #include <vector>
 #include <list>
+#include <utility>
 
 namespace se
 {
@@ -22,6 +23,48 @@ namespace se
     };
 
     struct Buffer {
+        explicit Buffer(SEDevice& owner) noexcept : device{&owner} {}
+        ~Buffer() noexcept { reset(); }
+
+        Buffer(const Buffer&) = delete;
+        Buffer& operator=(const Buffer&) = delete;
+        Buffer(Buffer&& other) noexcept
+            : device{std::exchange(other.device, nullptr)},
+              buffer{std::exchange(other.buffer, VK_NULL_HANDLE)},
+              memory{std::exchange(other.memory, VK_NULL_HANDLE)},
+              mapped{std::exchange(other.mapped, nullptr)}
+        {
+        }
+        Buffer& operator=(Buffer&& other) noexcept
+        {
+            if (this != &other)
+            {
+                reset();
+                device = std::exchange(other.device, nullptr);
+                buffer = std::exchange(other.buffer, VK_NULL_HANDLE);
+                memory = std::exchange(other.memory, VK_NULL_HANDLE);
+                mapped = std::exchange(other.mapped, nullptr);
+            }
+            return *this;
+        }
+
+        void reset() noexcept
+        {
+            if (device != nullptr && device->device() != VK_NULL_HANDLE)
+            {
+                if (mapped != nullptr && memory != VK_NULL_HANDLE)
+                    vkUnmapMemory(device->device(), memory);
+                if (buffer != VK_NULL_HANDLE)
+                    vkDestroyBuffer(device->device(), buffer, nullptr);
+                if (memory != VK_NULL_HANDLE)
+                    vkFreeMemory(device->device(), memory, nullptr);
+            }
+            buffer = VK_NULL_HANDLE;
+            memory = VK_NULL_HANDLE;
+            mapped = nullptr;
+        }
+
+        SEDevice* device{nullptr};
         VkBuffer buffer{VK_NULL_HANDLE};
         VkDeviceMemory memory{VK_NULL_HANDLE};
         void* mapped{nullptr};
