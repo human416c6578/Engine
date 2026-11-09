@@ -11,6 +11,7 @@ namespace se
 {
     class SEDevice;
     class SEMaterial;
+    struct DeferredDisposal;
 
     struct SubMeshBuilder
     {
@@ -50,6 +51,8 @@ namespace se
         void destroyOwnedHandles() noexcept;
 
         SEDevice &seDevice;
+        // Reserved before Vulkan handles; transfer to the device without allocating on release.
+        std::unique_ptr<DeferredDisposal> disposalRecord;
         std::shared_ptr<SEMaterial> seMaterial{};
         VkBuffer vertexBuffer{VK_NULL_HANDLE};
         VkDeviceMemory vertexBufferMemory{VK_NULL_HANDLE};

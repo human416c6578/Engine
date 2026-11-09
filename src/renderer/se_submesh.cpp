@@ -1,5 +1,6 @@
 #include "engine/renderer/se_submesh.hpp"
 #include "engine/vulkan/se_device.hpp"
+#include "engine/vulkan/se_deferred_disposal.hpp"
 #include "engine/renderer/se_pbr_material.hpp"
 #include "engine/vulkan/se_vk_result.hpp"
 
@@ -45,7 +46,8 @@ namespace se
     static_assert(std::is_nothrow_move_constructible_v<ScopedStagingBuffer>);
     static_assert(!std::is_move_assignable_v<ScopedStagingBuffer>);
   }
-  SESubMesh::SESubMesh(SEDevice &device, const SESubMesh::Builder &builder) : seDevice{device}
+  SESubMesh::SESubMesh(SEDevice &device, const SESubMesh::Builder &builder)
+      : seDevice{device}, disposalRecord{device.makeDisposalRecord()}
   {
     try
     {
@@ -59,7 +61,8 @@ namespace se
     }
   }
 
-  SESubMesh::SESubMesh(SEDevice &device, const SESubMesh::Builder &builder, std::shared_ptr<SEMaterial> material) : seDevice{device}, seMaterial{material}
+  SESubMesh::SESubMesh(SEDevice &device, const SESubMesh::Builder &builder, std::shared_ptr<SEMaterial> material)
+      : seDevice{device}, disposalRecord{device.makeDisposalRecord()}, seMaterial{material}
   {
     try
     {
@@ -96,19 +99,25 @@ namespace se
 
   void SESubMesh::destroyOwnedHandles() noexcept
   {
-    if (indexBuffer != VK_NULL_HANDLE)
-      vkDestroyBuffer(seDevice.device(), indexBuffer, nullptr);
-    indexBuffer = VK_NULL_HANDLE;
-    if (indexBufferMemory != VK_NULL_HANDLE)
-      vkFreeMemory(seDevice.device(), indexBufferMemory, nullptr);
-    indexBufferMemory = VK_NULL_HANDLE;
+    if (!disposalRecord) return; // Already transferred, including constructor rollback.
 
-    if (vertexBuffer != VK_NULL_HANDLE)
-      vkDestroyBuffer(seDevice.device(), vertexBuffer, nullptr);
-    vertexBuffer = VK_NULL_HANDLE;
-    if (vertexBufferMemory != VK_NULL_HANDLE)
-      vkFreeMemory(seDevice.device(), vertexBufferMemory, nullptr);
-    vertexBufferMemory = VK_NULL_HANDLE;
+    if (indexBuffer == VK_NULL_HANDLE && indexBufferMemory == VK_NULL_HANDLE &&
+        vertexBuffer == VK_NULL_HANDLE && vertexBufferMemory == VK_NULL_HANDLE)
+    {
+      disposalRecord.reset(); // No Vulkan ownership to enqueue after an early failure.
+    }
+    else
+    {
+      // makeDisposalRecord initializes this alternative; no payload allocation or callbacks.
+      auto& payload = std::get<BufferDisposal>(disposalRecord->payload);
+      payload.allocations[0] = {std::exchange(indexBuffer, VK_NULL_HANDLE),
+          std::exchange(indexBufferMemory, VK_NULL_HANDLE), false};
+      payload.allocations[1] = {std::exchange(vertexBuffer, VK_NULL_HANDLE),
+          std::exchange(vertexBufferMemory, VK_NULL_HANDLE), false};
+      seDevice.retire(std::move(disposalRecord));
+    }
+    vertexCount = 0;
+    indexCount = 0;
     hasIndexBuffer = false;
   }
 
