@@ -17,6 +17,7 @@
 #include "engine/scripting/se_script_manager.hpp"
 #include "engine/platform/se_input_system.hpp"
 #include "engine/core/se_frame_config.hpp"
+#include "engine/core/se_logger.hpp"
 
 #include <imgui/imgui.h>
 #include <imgui/imgui_impl_glfw.h>
@@ -26,6 +27,24 @@
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <cstring>
+#include <exception>
+
+namespace
+{
+    void checkImGuiVulkanResult(VkResult result) noexcept
+    {
+        if (result >= VK_SUCCESS)
+        {
+            return;
+        }
+
+        // Backend temporaries are not exception-safe, and this callback cannot
+        // distinguish creation errors from unknown upload completion. Never unwind.
+        se::log::error("Vulkan", "ImGui Vulkan backend operation failed with VkResult %d; terminating without unwinding",
+            static_cast<int>(result));
+        std::terminate();
+    }
+}
 
 void se::ImGuiManager::renderSceneHierarchy()
 {
@@ -1323,7 +1342,7 @@ se::ImGuiManager::ImGuiManager(SEDevice &seDevice, VkRenderPass renderPass, GLFW
     // at least as large as the engine flight window to avoid reusing an in-use slot.
     initInfo.ImageCount = std::max(swapChainImageCount, static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT));
     initInfo.Allocator = nullptr;
-    initInfo.CheckVkResultFn = nullptr;
+    initInfo.CheckVkResultFn = checkImGuiVulkanResult;
     if (!ImGui_ImplVulkan_Init(&initInfo))
     {
         throw std::runtime_error("ImGui Vulkan backend initialization failed");

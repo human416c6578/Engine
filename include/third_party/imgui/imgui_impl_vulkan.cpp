@@ -648,7 +648,8 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
     // Destroy existing texture (if any)
     if (bd->FontTexture.DescriptorSet)
     {
-        vkQueueWaitIdle(v->Queue);
+        err = vkQueueWaitIdle(v->Queue);
+        check_vk_result(err);
         ImGui_ImplVulkan_DestroyFontsTexture();
     }
 
@@ -659,7 +660,8 @@ bool ImGui_ImplVulkan_CreateFontsTexture()
         info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         info.flags = 0;
         info.queueFamilyIndex = v->QueueFamily;
-        vkCreateCommandPool(v->Device, &info, v->Allocator, &bd->TexCommandPool);
+        err = vkCreateCommandPool(v->Device, &info, v->Allocator, &bd->TexCommandPool);
+        check_vk_result(err);
     }
     if (bd->TexCommandBuffer == VK_NULL_HANDLE)
     {
@@ -1288,7 +1290,8 @@ void ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set)
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
     VkDescriptorPool pool = bd->DescriptorPool ? bd->DescriptorPool : v->DescriptorPool;
-    vkFreeDescriptorSets(v->Device, pool, 1, &descriptor_set);
+    VkResult err = vkFreeDescriptorSets(v->Device, pool, 1, &descriptor_set);
+    check_vk_result(err);
 }
 
 void ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator)
