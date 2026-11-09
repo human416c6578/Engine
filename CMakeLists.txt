@@ -71,7 +71,6 @@ file(GLOB_RECURSE ENGINE_SOURCES CONFIGURE_DEPENDS
 add_executable(EngineApp
     ${ENGINE_SOURCES}
     ${IMGUI_SOURCES}
-    src/renderer/se_postprocess.cpp
 )
 
 if(ENGINE_VALIDATION_MODE_NORMALIZED STREQUAL "ON")
