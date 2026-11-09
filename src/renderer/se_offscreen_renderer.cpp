@@ -70,6 +70,7 @@ namespace se
         if (width == newWidth && height == newHeight) return;
 
         checkVkResult(vkDeviceWaitIdle(seDevice.device()), "vkDeviceWaitIdle(offscreen resize)");
+        seDevice.drainAllDisposalsAfterIdle();
         destroyOwnedHandles();
 
         width = newWidth;
@@ -87,6 +88,7 @@ namespace se
         if (colorFormat == format) return;
 
         checkVkResult(vkDeviceWaitIdle(seDevice.device()), "vkDeviceWaitIdle(offscreen format change)");
+        seDevice.drainAllDisposalsAfterIdle();
         destroyOwnedHandles();
         colorFormat = format;
 

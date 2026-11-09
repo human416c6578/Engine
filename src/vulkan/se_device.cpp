@@ -1,4 +1,5 @@
 #include "engine/vulkan/se_device.hpp"
+#include "engine/vulkan/se_deferred_disposal.hpp"
 #include "engine/core/se_logger.hpp"
 #include "engine/vulkan/se_vk_result.hpp"
 #include "engine/platform/se_window.hpp"
@@ -8,6 +9,8 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <exception>
+#include <utility>
 #include <iostream>
 #include <set>
 #include <stdexcept>
@@ -102,6 +105,184 @@ namespace se
                 static_cast<int>(operation.size()), operation.data(), static_cast<int>(result));
     }
 
+    SEDevice::DisposalList::DisposalList() noexcept = default;
+    SEDevice::DisposalList::~DisposalList() noexcept = default;
+
+    void SEDevice::requireDisposal(bool condition, const char* operation) const noexcept
+    {
+        if (std::this_thread::get_id() != disposalThread || !condition)
+        {
+            log::error("GpuDisposal", "Invalid disposal lifecycle/thread: %s", operation);
+            std::terminate(); // Never guess completion or throw from cleanup.
+        }
+    }
+
+    std::unique_ptr<DeferredDisposal> SEDevice::makeDisposalRecord()
+    {
+        requireDisposal(true, "reserve record");
+        return std::make_unique<DeferredDisposal>();
+    }
+
+    void SEDevice::retire(std::unique_ptr<DeferredDisposal> record) noexcept
+    {
+        requireDisposal(record != nullptr, "retire owning record");
+        if (disposalState == DisposalState::Closed)
+        {
+            for (unsigned pass = 0; pass < 5; ++pass)
+                disposeRecordPass(*record, pass);
+            ++immediateDisposals;
+            return;
+        }
+
+        auto& list = disposalLists[disposalSlot];
+        ++list.enqueued[record->payload.index()];
+        const bool wasEmpty = !list.head;
+        auto* tail = record.get();
+        if (list.tail)
+            list.tail->next = std::move(record);
+        else
+            list.head = std::move(record);
+        list.tail = tail;
+        if (wasEmpty)
+            log::debug("GpuDisposal", "enqueue slot=%u first_kind=%zu", disposalSlot, tail->payload.index());
+    }
+
+    void SEDevice::openDisposals(uint32_t firstSlot) noexcept
+    {
+        requireDisposal(disposalState == DisposalState::Closed && firstSlot < disposalLists.size(),
+            "open scheduler cycle");
+        disposalSlot = firstSlot;
+        disposalState = DisposalState::AwaitingFirstSubmission;
+        log::debug("GpuDisposal", "open first_slot=%u", firstSlot);
+    }
+
+    void SEDevice::beginDisposalFrameAfterFence(uint32_t slot) noexcept
+    {
+        requireDisposal(slot < disposalLists.size() &&
+            (disposalState == DisposalState::Submitted ||
+             disposalState == DisposalState::AwaitingFirstSubmission), "begin after slot fence wait");
+        if (disposalState == DisposalState::AwaitingFirstSubmission)
+        {
+            requireDisposal(slot == disposalSlot, "first scheduler slot");
+            // Its initial signaled fence does not protect pre-frame retirements.
+        }
+        else
+            drainDisposalLists(slot, slot + 1, "slot-fence wait");
+        disposalSlot = slot;
+        disposalState = DisposalState::Recording;
+    }
+
+    void SEDevice::markDisposalFrameSubmitted(uint32_t slot) noexcept
+    {
+        requireDisposal(disposalState == DisposalState::Recording && slot == disposalSlot,
+            "successful frame submit");
+        disposalState = DisposalState::Submitted;
+        // Keep this target between frames: the scheduler's NEXT slot fence is too old.
+    }
+
+    void SEDevice::abandonDisposalRecording() noexcept
+    {
+        requireDisposal(true, "discard recording");
+        if (disposalState == DisposalState::Recording)
+            disposalState = DisposalState::Abandoned;
+    }
+
+    void SEDevice::drainAllDisposalsAfterIdle() noexcept
+    {
+        requireDisposal(disposalState != DisposalState::Recording, "drain after device idle/discard");
+        drainDisposalLists(0, disposalLists.size(), "device-idle wait");
+    }
+
+    void SEDevice::closeDisposalsAfterIdle() noexcept
+    {
+        drainAllDisposalsAfterIdle();
+        if (disposalState != DisposalState::Closed)
+            log::debug("GpuDisposal", "close after device idle/discard");
+        disposalState = DisposalState::Closed;
+    }
+
+    void SEDevice::disposeRecordPass(DeferredDisposal& record, unsigned pass) noexcept
+    {
+        std::visit([&](auto& payload) noexcept
+        {
+            using T = std::decay_t<decltype(payload)>;
+            auto freeSet = [&](VkDescriptorPool pool, VkDescriptorSet& set) noexcept
+            {
+                if (set == VK_NULL_HANDLE) return;
+                requireDisposal(pool != VK_NULL_HANDLE, "descriptor pool lifetime");
+                const auto result = vkFreeDescriptorSets(device_, pool, 1, &set);
+                logResult(result, "vkFreeDescriptorSets(disposal)");
+                requireDisposal(result == VK_SUCCESS, "descriptor disposal result");
+                set = VK_NULL_HANDLE;
+            };
+            if constexpr (std::is_same_v<T, ImageDisposal>)
+            {
+                if (pass == 0) freeSet(payload.pool, payload.set);
+                if (pass == 2)
+                {
+                    if (payload.sampler != VK_NULL_HANDLE)
+                        vkDestroySampler(device_, std::exchange(payload.sampler, VK_NULL_HANDLE), nullptr);
+                    if (payload.view != VK_NULL_HANDLE)
+                        vkDestroyImageView(device_, std::exchange(payload.view, VK_NULL_HANDLE), nullptr);
+                }
+                if (pass == 3 && payload.image != VK_NULL_HANDLE)
+                    vkDestroyImage(device_, std::exchange(payload.image, VK_NULL_HANDLE), nullptr);
+                if (pass == 4 && payload.memory != VK_NULL_HANDLE)
+                    vkFreeMemory(device_, std::exchange(payload.memory, VK_NULL_HANDLE), nullptr);
+            }
+            else
+            {
+                if constexpr (std::is_same_v<T, DescriptorBufferDisposal>)
+                    if (pass == 0)
+                        for (auto& set : payload.sets) freeSet(payload.pool, set);
+                for (auto& allocation : payload.allocations)
+                {
+                    if (pass == 1 && allocation.mapped)
+                    {
+                        requireDisposal(allocation.memory != VK_NULL_HANDLE, "mapped memory ownership");
+                        vkUnmapMemory(device_, allocation.memory);
+                        allocation.mapped = false;
+                    }
+                    if (pass == 2 && allocation.buffer != VK_NULL_HANDLE)
+                        vkDestroyBuffer(device_, std::exchange(allocation.buffer, VK_NULL_HANDLE), nullptr);
+                    if (pass == 4 && allocation.memory != VK_NULL_HANDLE)
+                        vkFreeMemory(device_, std::exchange(allocation.memory, VK_NULL_HANDLE), nullptr);
+                }
+            }
+        }, record.payload);
+    }
+
+    void SEDevice::drainDisposalLists(std::size_t first, std::size_t end, const char* completion) noexcept
+    {
+        // Global passes, not per-payload cleanup: descriptor packets precede images
+        // and allocations in OTHER packets, including across all slots on idle.
+        for (unsigned pass = 0; pass < 5; ++pass)
+            for (auto i = first; i < end; ++i)
+                for (auto* record = disposalLists[i].head.get(); record; record = record->next.get())
+                    disposeRecordPass(*record, pass);
+        for (auto i = first; i < end; ++i)
+        {
+            auto& list = disposalLists[i];
+            if (!list.head) continue;
+            while (list.head)
+            {
+                ++list.disposed[list.head->payload.index()];
+                auto record = std::move(list.head);
+                list.head = std::move(record->next);
+            }
+            list.tail = nullptr;
+            log::debug("GpuDisposal",
+                "drain slot=%zu after=%s enqueued=%llu/%llu/%llu disposed=%llu/%llu/%llu",
+                i, completion,
+                static_cast<unsigned long long>(list.enqueued[0]),
+                static_cast<unsigned long long>(list.enqueued[1]),
+                static_cast<unsigned long long>(list.enqueued[2]),
+                static_cast<unsigned long long>(list.disposed[0]),
+                static_cast<unsigned long long>(list.disposed[1]),
+                static_cast<unsigned long long>(list.disposed[2]));
+        }
+    }
+
     SEDevice::~SEDevice()
     {
         destroyOwnedHandles();
@@ -113,6 +294,21 @@ namespace se
         {
             const VkResult idleResult = vkDeviceWaitIdle(device_);
             logResult(idleResult, "vkDeviceWaitIdle(SEDevice teardown)");
+            requireDisposal(idleResult == VK_SUCCESS, "device teardown completion");
+            closeDisposalsAfterIdle();
+            for (std::size_t i = 0; i < disposalLists.size(); ++i)
+            {
+                const auto& list = disposalLists[i];
+                log::debug("GpuDisposal", "shutdown slot=%zu enqueued=%llu/%llu/%llu disposed=%llu/%llu/%llu",
+                    i,
+                    static_cast<unsigned long long>(list.enqueued[0]),
+                    static_cast<unsigned long long>(list.enqueued[1]),
+                    static_cast<unsigned long long>(list.enqueued[2]),
+                    static_cast<unsigned long long>(list.disposed[0]),
+                    static_cast<unsigned long long>(list.disposed[1]),
+                    static_cast<unsigned long long>(list.disposed[2]));
+            }
+            log::debug("GpuDisposal", "shutdown immediate=%llu", static_cast<unsigned long long>(immediateDisposals));
 
             if (descriptorPool != VK_NULL_HANDLE)
             {
@@ -644,8 +840,19 @@ namespace se
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffer;
 
-        checkVkResult(vkQueueSubmit(graphicsQueue_, 1, &submitInfo, VK_NULL_HANDLE), "vkQueueSubmit(single-time)");
-        checkVkResult(vkQueueWaitIdle(graphicsQueue_), "vkQueueWaitIdle(single-time)");
+        const auto submitResult = vkQueueSubmit(graphicsQueue_, 1, &submitInfo, VK_NULL_HANDLE);
+        const auto waitResult = submitResult == VK_SUCCESS ? vkQueueWaitIdle(graphicsQueue_) : submitResult;
+        if (submitResult != VK_SUCCESS || waitResult != VK_SUCCESS)
+        {
+            // Staging guards unwind immediately. Establish completion first, even
+            // after a failed/possibly partial submit; otherwise fail closed.
+            const auto idleResult = vkDeviceWaitIdle(device_);
+            logResult(idleResult, "vkDeviceWaitIdle(single-time failure)");
+            requireDisposal(idleResult == VK_SUCCESS, "single-time failure completion");
+            vkFreeCommandBuffers(device_, commandPool, 1, &commandBuffer);
+            checkVkResult(submitResult, "vkQueueSubmit(single-time)");
+            checkVkResult(waitResult, "vkQueueWaitIdle(single-time)");
+        }
 
         vkFreeCommandBuffers(device_, commandPool, 1, &commandBuffer);
     }

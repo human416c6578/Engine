@@ -10,6 +10,7 @@
 #include <array>
 #include <cstdio>
 #include <cassert>
+#include <exception>
 #include <stdexcept>
 
 namespace se
@@ -46,6 +47,7 @@ namespace se
         }
         log::info("Renderer", "recreateSwapChain extent=%ux%u", extent.width, extent.height);
         checkVkResult(vkDeviceWaitIdle(seDevice.device()), "vkDeviceWaitIdle(swapchain recreation)");
+        seDevice.closeDisposalsAfterIdle();
 
         if (seSwapChain == nullptr)
         {
@@ -61,6 +63,7 @@ namespace se
                 throw std::runtime_error("Swap chain image(or depth) format has changed!");
             }
         }
+        seDevice.openDisposals(static_cast<uint32_t>(seSwapChain->getCurrentFrame()));
     }
 
     void SERenderer::createCommandBuffers()
@@ -92,8 +95,32 @@ namespace se
         commandBuffers.clear();
     }
 
+    void SERenderer::stopFrameSubmission() noexcept
+    {
+        frameSubmissionStopped = true; // Permanently forbid resubmitting an abandoned recording.
+    }
+
+    void SERenderer::discardFrameRecordingAfterIdle() noexcept
+    {
+        if (!frameSubmissionStopped)
+        {
+            log::error("Renderer", "Discard requires stopped submission and device idle");
+            std::terminate();
+        }
+        if (activeFrame.commandBuffer != VK_NULL_HANDLE)
+        {
+            const auto result = vkResetCommandBuffer(activeFrame.commandBuffer, 0);
+            seDevice.logResult(result, "vkResetCommandBuffer(shutdown discard)");
+            if (result != VK_SUCCESS) std::terminate();
+        }
+        activeFrame = {};
+        isFrameStarted = false;
+        seDevice.abandonDisposalRecording();
+    }
+
     std::optional<FrameContext> SERenderer::beginFrame()
     {
+        if (frameSubmissionStopped) throw std::logic_error("Frame submission stopped");
         assert(!isFrameStarted && "Can't call beginFrame while already in progress");
 
         uint32_t imageIndex = 0;
@@ -109,18 +136,21 @@ namespace se
 
         const auto frameIndex = static_cast<uint32_t>(seSwapChain->getCurrentFrame());
         const auto commandBuffer = commandBuffers[frameIndex];
+        seDevice.beginDisposalFrameAfterFence(frameIndex);
+        // Retain even on begin failure so shutdown can reset/discard this buffer.
+        activeFrame = FrameContext{ frameIndex, imageIndex, commandBuffer };
+        isFrameStarted = true;
 
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         checkVkResult(vkBeginCommandBuffer(commandBuffer, &beginInfo), "vkBeginCommandBuffer(renderer)");
 
-        activeFrame = FrameContext{ frameIndex, imageIndex, commandBuffer };
-        isFrameStarted = true;
         return activeFrame;
     }
 
     void SERenderer::endFrame(const FrameContext& frame)
     {
+        if (frameSubmissionStopped) throw std::logic_error("Frame submission stopped");
         assert(isFrameStarted && "Can't call endFrame while frame is not in progress");
         assert(frame.frameIndex == activeFrame.frameIndex);
         assert(frame.swapchainImageIndex == activeFrame.swapchainImageIndex);

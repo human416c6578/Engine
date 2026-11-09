@@ -47,6 +47,9 @@ namespace se
 
     std::optional<FrameContext> beginFrame();
     void endFrame(const FrameContext& frame);
+    void stopFrameSubmission() noexcept;
+    // Successful device idle required; clears abandoned command references before drain.
+    void discardFrameRecordingAfterIdle() noexcept;
     void beginSwapChainRenderPass(const FrameContext& frame);
     void endSwapChainRenderPass(const FrameContext& frame);
 
@@ -63,5 +66,6 @@ namespace se
 
     FrameContext activeFrame{};
     bool isFrameStarted{ false };
+    bool frameSubmissionStopped{ false };
   };
 }

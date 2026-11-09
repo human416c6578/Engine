@@ -30,6 +30,20 @@
 #include "engine/scripting/StressTest.hpp"
 #include "engine/scripting/se_script_manager.hpp"
 
+namespace
+{
+    void closeFrameDisposals(se::SEDevice& device, se::SERenderer& renderer, const char* operation) noexcept
+    {
+        renderer.stopFrameSubmission();
+        const auto result = vkDeviceWaitIdle(device.device());
+        device.logResult(result, operation);
+        // Unknown completion cannot permit ordinary GPU-owner unwinding.
+        if (result != VK_SUCCESS) std::terminate();
+        renderer.discardFrameRecordingAfterIdle();
+        device.closeDisposalsAfterIdle();
+    }
+}
+
 App::StartupTag App::initializeLogging()
 {
     se::log::initialize(se::log::Level::Debug);
@@ -40,6 +54,8 @@ App::App() : App{initializeLogging()} {}
 
 App::App(StartupTag)
 {
+    try
+    {
     seCubemap = std::make_unique<se::SECubemap>(seDevice, seRenderer, "assets/hdr/snowy_forest_4k.hdr");
     PBR = std::make_unique<se::PBR>(seDevice, seRenderer.getOffscreenRenderer()->getRenderPass(), *seCubemap);
     ParticleSystem = std::make_unique<se::ParticleSystem>(seDevice, seRenderer.getOffscreenRenderer()->getRenderPass());
@@ -76,15 +92,19 @@ App::App(StartupTag)
         seDevice, seRenderer.getSwapChainRenderPass(), *seWindow.getGLFWwindow(),
         seRenderer.getSwapChainImageCount(), *ResourceManager, *sceneManager,
         *PostProcess, *ParticleSystem, inputSystem, *scriptManager);
+    }
+    catch (...)
+    {
+        // Body catch runs before member unwinding (a constructor function-try-block would not).
+        closeFrameDisposals(seDevice, seRenderer, "vkDeviceWaitIdle(App construction failure)");
+        throw;
+    }
 }
 
 App::~App()
 {
     if (seDevice.device() != VK_NULL_HANDLE)
-    {
-        const VkResult idleResult = vkDeviceWaitIdle(seDevice.device());
-        seDevice.logResult(idleResult, "vkDeviceWaitIdle(App teardown)");
-    }
+        closeFrameDisposals(seDevice, seRenderer, "vkDeviceWaitIdle(App teardown)");
     if (sceneManager)
         sceneManager->destroyAllScenes();
 }
@@ -217,5 +237,5 @@ void App::mainLoop()
         ++fps;
     }
 
-    se::checkVkResult(vkDeviceWaitIdle(seDevice.device()), "vkDeviceWaitIdle(main loop shutdown)");
+    closeFrameDisposals(seDevice, seRenderer, "vkDeviceWaitIdle(main loop shutdown)");
 }

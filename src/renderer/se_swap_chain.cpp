@@ -156,6 +156,7 @@ namespace se
 
     checkVkResult(vkResetFences(device.device(), 1, &inFlightFences[currentFrame]), "vkResetFences(frame)");
     checkVkResult(vkQueueSubmit(device.graphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]), "vkQueueSubmit");
+    device.markDisposalFrameSubmitted(static_cast<uint32_t>(currentFrame));
 
     VkPresentInfoKHR presentInfo = {};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

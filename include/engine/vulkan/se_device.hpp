@@ -5,9 +5,12 @@
 
 #include <vulkan/vulkan.h>
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <optional>
+#include <thread>
 #include <vector>
 
 #define GLM_FORCE_RADIANS
@@ -41,6 +44,7 @@ struct UniformBufferObject
 namespace se
 {
     class SEWindow;
+    struct DeferredDisposal;
 
     struct SwapChainSupportDetails
     {
@@ -62,6 +66,20 @@ namespace se
         SEDevice &operator=(SEDevice &&) = delete;
 
         void logResult(VkResult result, std::string_view operation) const noexcept;
+
+        // Main-thread only. Reserve before acquiring handles; retire never allocates.
+        std::unique_ptr<DeferredDisposal> makeDisposalRecord();
+        void retire(std::unique_ptr<DeferredDisposal> record) noexcept;
+
+        // Scheduler supplies slots; SESwapChain alone owns/advances fences and indices.
+        void openDisposals(uint32_t firstSlot) noexcept;
+        void beginDisposalFrameAfterFence(uint32_t slot) noexcept;
+        void markDisposalFrameSubmitted(uint32_t slot) noexcept;
+        // Call only after permanently discarding the unsubmitted recording.
+        void abandonDisposalRecording() noexcept;
+        // Successful device idle AND no recording that can later be submitted required.
+        void drainAllDisposalsAfterIdle() noexcept;
+        void closeDisposalsAfterIdle() noexcept;
 
         VkCommandPool getCommandPool() { return commandPool; }
         VkDescriptorPool getDescriptorPool() { return descriptorPool; }
@@ -105,6 +123,26 @@ namespace se
         VkPhysicalDeviceProperties properties{};
 
     private:
+        enum class DisposalState { Closed, AwaitingFirstSubmission, Recording, Submitted, Abandoned };
+        struct DisposalList
+        {
+            DisposalList() noexcept;
+            ~DisposalList() noexcept;
+
+            std::unique_ptr<DeferredDisposal> head{};
+            DeferredDisposal* tail{nullptr}; // Borrow into head's chain.
+            std::array<uint64_t, 3> enqueued{};
+            std::array<uint64_t, 3> disposed{};
+        };
+        const std::thread::id disposalThread{std::this_thread::get_id()};
+        std::array<DisposalList, MAX_FRAMES_IN_FLIGHT> disposalLists{};
+        DisposalState disposalState{DisposalState::Closed};
+        uint32_t disposalSlot{0}; // Copied scheduler context, never independently advanced.
+        uint64_t immediateDisposals{0};
+
+        void requireDisposal(bool condition, const char* operation) const noexcept;
+        void drainDisposalLists(std::size_t first, std::size_t end, const char* completion) noexcept;
+        void disposeRecordPass(DeferredDisposal& record, unsigned pass) noexcept;
 
         VkInstance instance = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
