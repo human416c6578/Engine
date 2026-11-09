@@ -17,6 +17,7 @@ namespace se
 {
     class SEDevice;
     class SETexture;
+    struct DeferredDisposal;
 
 	struct SimplePushConstantData
 	{
@@ -258,6 +259,7 @@ namespace se
 
 
 		SEDevice &seDevice;
+		std::unique_ptr<DeferredDisposal> disposalRecord;
 		VkPipeline pipeline{VK_NULL_HANDLE}; // borrowed from MaterialSystem
 		VkPipelineLayout pipelineLayout{VK_NULL_HANDLE}; // borrowed from PBR
 		VkDescriptorSetLayout descriptorSetLayout{VK_NULL_HANDLE}; // borrowed from MaterialSystem

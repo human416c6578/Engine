@@ -1,5 +1,6 @@
 #include "engine/renderer/se_pbr_material.hpp"
 #include "engine/vulkan/se_device.hpp"
+#include "engine/vulkan/se_deferred_disposal.hpp"
 #include "engine/renderer/se_texture.hpp"
 #include "engine/core/se_camera.hpp"
 #include "engine/core/se_frame_config.hpp"
@@ -17,6 +18,7 @@
 #include <array>
 #include <cassert>
 #include <stdexcept>
+#include <utility>
 
 namespace se
 {
@@ -37,11 +39,13 @@ namespace se
 		std::optional<std::shared_ptr<SETexture>> roughnessTexture,
 		std::optional<std::shared_ptr<SETexture>> aoTexture,
         std::optional<std::shared_ptr<SETexture>> heightTexture)
-		: Resource(guid, name), seDevice{ device }, pipelineLayout{ pipelineLayout }, pipeline{ pipeline },
+		: Resource(guid, name), seDevice{ device }, disposalRecord{device.makeDisposalRecord()},
+		pipelineLayout{ pipelineLayout }, pipeline{ pipeline },
 		descriptorSetLayout {descSetLayout}, dummyTexture{ dummyTexture }, diffuseTexture{diffuseTexture},
 		  normalTexture{normalTexture}, metallicTexture{metallicTexture},
 		  roughnessTexture{roughnessTexture}, aoTexture{aoTexture}, heightTexture{heightTexture}
 	{
+		disposalRecord->payload.emplace<DescriptorBufferDisposal>();
         flags.color = { 1.0f, 1.0f, 1.0f }; // Default color
 		flags.hasDiffuseMap = diffuseTexture.has_value();
 		flags.hasNormalMap = normalTexture.has_value();
@@ -74,34 +78,31 @@ namespace se
 
 	void SEMaterial::destroyOwnedHandles() noexcept
 	{
-		for (VkDescriptorSet &descriptorSet : descriptorSets)
+		if (!disposalRecord) return; // Already transferred, including constructor rollback.
+
+		auto& payload = std::get<DescriptorBufferDisposal>(disposalRecord->payload);
+		payload.pool = seDevice.getDescriptorPool(); // Borrowed; never retire the pool here.
+		assert(descriptorSets.size() <= payload.sets.size());
+		bool ownsHandles = false;
+		for (size_t i = 0; i < descriptorSets.size(); ++i)
 		{
-			if (descriptorSet != VK_NULL_HANDLE)
-			{
-				seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &descriptorSet),
-					"vkFreeDescriptorSets(SEMaterial)");
-				descriptorSet = VK_NULL_HANDLE;
-			}
+			payload.sets[i] = std::exchange(descriptorSets[i], VK_NULL_HANDLE);
+			ownsHandles |= payload.sets[i] != VK_NULL_HANDLE;
 		}
 		descriptorSets.clear();
 		for (size_t i = 0; i < matBuffers.size(); ++i)
 		{
-			if (matBuffersMapped[i] != nullptr && matBufferMemories[i] != VK_NULL_HANDLE)
-			{
-				vkUnmapMemory(seDevice.device(), matBufferMemories[i]);
-				matBuffersMapped[i] = nullptr;
-			}
-			if (matBuffers[i] != VK_NULL_HANDLE)
-			{
-				vkDestroyBuffer(seDevice.device(), matBuffers[i], nullptr);
-				matBuffers[i] = VK_NULL_HANDLE;
-			}
-			if (matBufferMemories[i] != VK_NULL_HANDLE)
-			{
-				vkFreeMemory(seDevice.device(), matBufferMemories[i], nullptr);
-				matBufferMemories[i] = VK_NULL_HANDLE;
-			}
+			// Only owned flags allocations; camera buffers and pipeline/layouts are borrowed.
+			auto& allocation = payload.allocations[i];
+			allocation = {std::exchange(matBuffers[i], VK_NULL_HANDLE),
+				std::exchange(matBufferMemories[i], VK_NULL_HANDLE), matBuffersMapped[i] != nullptr};
+			matBuffersMapped[i] = nullptr;
+			ownsHandles |= allocation.buffer != VK_NULL_HANDLE || allocation.memory != VK_NULL_HANDLE;
 		}
+		if (ownsHandles)
+			seDevice.retire(std::move(disposalRecord));
+		else
+			disposalRecord.reset(); // Early failure acquired no Vulkan ownership.
 	}
 
 	void SEMaterial::createUniformBuffer()

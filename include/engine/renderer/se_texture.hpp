@@ -10,6 +10,7 @@
 namespace se
 {
     class SEDevice;
+    struct DeferredDisposal;
 	class SETexture : public Resource
 	{
 	public:
@@ -30,6 +31,7 @@ namespace se
 
 	private:
 		SEDevice &seDevice;
+		std::unique_ptr<DeferredDisposal> disposalRecord;
 		std::string path;
 
 		uint32_t mipLevels{0};

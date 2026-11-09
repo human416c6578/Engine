@@ -1,5 +1,6 @@
 #include "engine/renderer/se_texture.hpp"
 #include "engine/vulkan/se_device.hpp"
+#include "engine/vulkan/se_deferred_disposal.hpp"
 #include "engine/vulkan/se_vk_result.hpp"
 
 #include <cmath>
@@ -13,8 +14,9 @@
 namespace se
 {
     SETexture::SETexture(SEDevice& device, const std::string guid, const std::string name, ImagePixels pixels, int width, int height)
-		: seDevice{ device }, Resource(guid, name)
+		: seDevice{ device }, Resource(guid, name), disposalRecord{device.makeDisposalRecord()}
     {
+        disposalRecord->payload.emplace<ImageDisposal>();
         try
         {
             createTextureImage(std::move(pixels), width, height);
@@ -36,32 +38,23 @@ namespace se
 
     void SETexture::destroyOwnedHandles() noexcept
     {
-        if (textureDescriptorSet != VK_NULL_HANDLE)
-        {
-            seDevice.logResult(vkFreeDescriptorSets(seDevice.device(), seDevice.getDescriptorPool(), 1, &textureDescriptorSet),
-                "vkFreeDescriptorSets(SETexture)");
-            textureDescriptorSet = VK_NULL_HANDLE;
-        }
-        if (textureSampler != VK_NULL_HANDLE)
-        {
-            vkDestroySampler(seDevice.device(), textureSampler, nullptr);
-            textureSampler = VK_NULL_HANDLE;
-        }
-        if (textureImageView != VK_NULL_HANDLE)
-        {
-            vkDestroyImageView(seDevice.device(), textureImageView, nullptr);
-            textureImageView = VK_NULL_HANDLE;
-        }
-        if (textureImage != VK_NULL_HANDLE)
-        {
-            vkDestroyImage(seDevice.device(), textureImage, nullptr);
-            textureImage = VK_NULL_HANDLE;
-        }
-        if (textureImageMemory != VK_NULL_HANDLE)
-        {
-            vkFreeMemory(seDevice.device(), textureImageMemory, nullptr);
-            textureImageMemory = VK_NULL_HANDLE;
-        }
+        if (!disposalRecord) return; // Already transferred, including constructor rollback.
+
+        auto& payload = std::get<ImageDisposal>(disposalRecord->payload);
+        payload.pool = seDevice.getDescriptorPool(); // Borrow; device keeps it alive through drain.
+        payload.set = std::exchange(textureDescriptorSet, VK_NULL_HANDLE);
+        payload.sampler = std::exchange(textureSampler, VK_NULL_HANDLE);
+        payload.view = std::exchange(textureImageView, VK_NULL_HANDLE);
+        payload.image = std::exchange(textureImage, VK_NULL_HANDLE);
+        payload.memory = std::exchange(textureImageMemory, VK_NULL_HANDLE);
+        textureImageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        mipLevels = 0;
+
+        if (payload.set != VK_NULL_HANDLE || payload.sampler != VK_NULL_HANDLE ||
+            payload.view != VK_NULL_HANDLE || payload.image != VK_NULL_HANDLE || payload.memory != VK_NULL_HANDLE)
+            seDevice.retire(std::move(disposalRecord));
+        else
+            disposalRecord.reset(); // Early failure acquired no Vulkan ownership.
     }
 
     void SETexture::createTextureImage(ImagePixels pixels, int width, int height)
