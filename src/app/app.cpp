@@ -27,7 +27,7 @@
 #include "engine/scripting/ExampleScript.hpp"
 #include "engine/scripting/TestScript.hpp"
 #include "engine/scripting/Snake.hpp"
-#include "engine/scripting/StressTest.hpp"
+#include "engine/scripting/TestPhysics.hpp"
 #include "engine/scripting/se_script_manager.hpp"
 
 namespace
@@ -73,7 +73,7 @@ App::App(StartupTag)
     scriptManager->registerScript<se::ExampleScript>("ExampleScript");
     scriptManager->registerScript<se::TestScript>("TestScript");
     scriptManager->registerScript<se::SnakeScript>("SnakeScript");
-    scriptManager->registerScript<se::StressScript>("StressScript");
+    scriptManager->registerScript<se::TestPhysics>("TestPhysics");
 
     sceneManager = std::make_unique<se::SceneManager>(
         *ResourceManager, *PostProcess, *ParticleSystem, inputSystem, *scriptManager);
@@ -91,7 +91,7 @@ App::App(StartupTag)
     imguiManager = std::make_unique<se::ImGuiManager>(
         seDevice, seRenderer.getSwapChainRenderPass(), *seWindow.getGLFWwindow(),
         seRenderer.getSwapChainImageCount(), *ResourceManager, *sceneManager,
-        *PostProcess, *ParticleSystem, inputSystem, *scriptManager);
+        *PostProcess, *ParticleSystem, inputSystem, *scriptManager, performance);
     }
     catch (...)
     {
@@ -119,6 +119,11 @@ void App::mainLoop()
     float totalTime = 0.f;
     int fps = 0;
 
+    constexpr float fixedDt = 1.0f / 60.0f;
+    float physicsAccumulator = 0.0f;
+    const se::Scene* measuredScene = nullptr;
+    se::SEGameObject::id_t measuredCreationCount = 0;
+
     // Opt-in smoke path for checking swapchain recreation after real window resizes.
     const bool resizeTestEnabled = std::getenv("ENGINE_PHASE2_TEST_RESIZE") != nullptr;
     const auto resizeTestStart = std::chrono::steady_clock::now();
@@ -131,6 +136,7 @@ void App::mainLoop()
     while (!seWindow.shouldClose())
     {
         glfwPollEvents();
+        inputSystem.update();
 
         if (resizeTestEnabled)
         {
@@ -184,6 +190,29 @@ void App::mainLoop()
         auto& gameObjects = scene->getGameObjects();
         scene->onUpdate(frameTime, *ResourceManager, inputSystem);
 
+        const auto colliderCount = scene->getColliderCount();
+        const auto dynamicBodyCount = scene->getDynamicBodyCount();
+        const auto creationCount = scene->getObjectCreationCount();
+        const auto& previousStats = performance.getStats();
+        if (scene != measuredScene || creationCount != measuredCreationCount ||
+            colliderCount != previousStats.colliderCount || dynamicBodyCount != previousStats.dynamicBodyCount)
+        {
+            performance.reset();
+            measuredScene = scene;
+            measuredCreationCount = creationCount;
+        }
+        performance.beginFrame(frameTime, colliderCount, dynamicBodyCount);
+
+        physicsAccumulator += std::min(frameTime, 0.25f);
+        while(physicsAccumulator >= fixedDt)
+        {
+            const auto physicsStart = std::chrono::steady_clock::now();
+            scene->onFixedUpdate(fixedDt);
+            performance.recordPhysicsStep(std::chrono::duration<double, std::milli>(
+                std::chrono::steady_clock::now() - physicsStart).count());
+            physicsAccumulator -= fixedDt;
+        }
+        
         if (seWindow.wasWindowResized())
         {
             const auto extent = seWindow.getFramebufferExtent();
@@ -193,7 +222,9 @@ void App::mainLoop()
             }
         }
 
+        const auto renderStart = std::chrono::steady_clock::now();
         auto frame = seRenderer.beginFrame();
+        const auto renderBeginEnd = std::chrono::steady_clock::now();
         if (!frame)
         {
             ++fps;
@@ -233,7 +264,17 @@ void App::mainLoop()
         imguiManager->newFrame();
         imguiManager->render(commandBuffer);
         seRenderer.endSwapChainRenderPass(*frame);
+        const auto renderRecordEnd = std::chrono::steady_clock::now();
         seRenderer.endFrame(*frame);
+        const auto renderEnd = std::chrono::steady_clock::now();
+
+        if (sceneManager->getActiveScene() == scene)
+        {
+            performance.recordRenderTimings(
+                std::chrono::duration<double, std::milli>(renderBeginEnd - renderStart).count(),
+                std::chrono::duration<double, std::milli>(renderRecordEnd - renderBeginEnd).count(),
+                std::chrono::duration<double, std::milli>(renderEnd - renderRecordEnd).count());
+        }
         ++fps;
     }
 

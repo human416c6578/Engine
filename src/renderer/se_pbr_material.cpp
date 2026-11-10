@@ -57,8 +57,10 @@ namespace se
 		flags.metallic = metallic;
 		flags.roughness = roughness;
 		flags.ao = ao;
-		
 
+        flags.uvScaleX = 1.0;
+        flags.uvScaleY = 1.0;
+		
 		try
 		{
 			createUniformBuffer();

@@ -4,6 +4,21 @@
 
 namespace se
 {
+    void SEInputSystem::update()
+    {
+        for (int key = GLFW_KEY_SPACE; key <= GLFW_KEY_LAST; ++key)
+        {
+            const bool down = glfwGetKey(m_window, key) == GLFW_PRESS;
+            keysJustPressed[key] = down && !keysDown[key];
+            keysDown[key] = down;
+        }
+    }
+
+    bool SEInputSystem::isKeyJustPressed(int key) const
+    {
+        return key >= GLFW_KEY_SPACE && key <= GLFW_KEY_LAST && keysJustPressed[key];
+    }
+
     bool SEInputSystem::isKeyPressed(int key) const
     {
         return glfwGetKey(m_window, key) == GLFW_PRESS;

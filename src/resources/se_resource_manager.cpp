@@ -133,6 +133,17 @@ namespace se
         return mesh;
     }
 
+    std::shared_ptr<SEMesh> ResourceManager::createCylinder(const std::string& name)
+    {
+        auto mesh = getMesh("CYLINDER");
+        if (!mesh)
+        {
+            mesh = meshSystem.createCylinder("CYLINDER", name);
+            registerResourcePath("CYLINDER", "CYLINDER");
+        }
+        return mesh;
+    }
+
     void ResourceManager::registerResourcePath(const std::string& guid, const std::string& path)
     {
         resourcePaths[guid] = path;

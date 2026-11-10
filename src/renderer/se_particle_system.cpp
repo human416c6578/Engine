@@ -65,6 +65,13 @@ namespace se
         emitter.volume.position = glm::vec4(worldPos, 1.0f);
     }
 
+    void ParticleEmitterComponent::release()
+    {
+        if (isValid()) system->removeEmitter(handle);
+        handle = INVALID_HANDLE;
+        system = nullptr;
+    }
+
     void ParticleEmitterComponent::setActive(bool active)
     {
         if (!isValid()) return;

@@ -44,6 +44,7 @@ namespace se
         std::shared_ptr<SEMesh> createPlane(const std::string& name);
         std::shared_ptr<SEMesh> createCube(const std::string& name);
         std::shared_ptr<SEMesh> createSphere(const std::string& name);
+        std::shared_ptr<SEMesh> createCylinder(const std::string& name);
 
         void registerResourcePath(const std::string& guid, const std::string& path);
         std::string getResourcePath(const std::string& guid) const;

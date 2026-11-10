@@ -4,7 +4,9 @@
 #include "engine/scene/se_scene.hpp"
 #include "engine/renderer/se_mesh.hpp"
 #include "engine/core/se_camera.hpp"
+#include <cmath>
 #include <fstream>
+#include <stdexcept>
 #include <unordered_set>
 #include "engine/platform/se_input_system.hpp"
 #include "engine/resources/se_resource_manager.hpp"
@@ -143,6 +145,34 @@ bool se::SceneManager::saveScene(const std::string &sceneName,
       jgo["light"]["intensity"] = l.intensity;
     }
 
+    // Optional physics components; dimensions are local collider dimensions.
+    if (const auto* collider = go->getCollider()) {
+      auto& jc = jgo["collider"];
+      jc["localOffset"] = {collider->localOffset.x, collider->localOffset.y,
+                           collider->localOffset.z};
+      jc["friction"] = collider->friction;
+      if (const auto* box = std::get_if<BoxShape>(&collider->shape)) {
+        jc["shape"] = "box";
+        jc["halfExtents"] = {box->halfExtents.x, box->halfExtents.y,
+                             box->halfExtents.z};
+      } else if (const auto* sphere = std::get_if<SphereShape>(&collider->shape)) {
+        jc["shape"] = "sphere";
+        jc["radius"] = sphere->radius;
+      } else if (const auto* cylinder = std::get_if<CylinderShape>(&collider->shape)) {
+        jc["shape"] = "cylinder";
+        jc["radius"] = cylinder->radius;
+        jc["halfHeight"] = cylinder->halfHeight;
+      }
+    }
+
+    if (const auto* body = go->getRigidbody()) {
+      auto& jr = jgo["rigidbody"];
+      jr["isStatic"] = body->isStatic;
+      jr["useGravity"] = body->useGravity;
+      jr["mass"] = body->mass;
+      jr["velocity"] = {body->velocity.x, body->velocity.y, body->velocity.z};
+    }
+
     // Script
     if (auto &script = go->getScript()) {
       jgo["script"] = script->getName();
@@ -240,6 +270,7 @@ bool se::SceneManager::saveScene(const std::string &sceneName,
     jmat["roughness"] = mat->getRoughness();
     jmat["ao"] = mat->getAO();
     jmat["heightScale"] = mat->getHeightScale();
+    jmat["uvScale"] = {mat->getUVScale().x, mat->getUVScale().y};
     if (auto tex = mat->getDiffuseTexture())
       jmat["diffuseTexture"] = tex->getGUID();
     if (auto tex = mat->getNormalTexture())
@@ -379,6 +410,8 @@ bool se::SceneManager::loadScene(const std::string &filePath,
         mesh = resourceManager.createCube(name);
       } else if (path == "SPHERE") {
         mesh = resourceManager.createSphere(name);
+      } else if (path == "CYLINDER") {
+        mesh = resourceManager.createCylinder(name);
       } else if (path == "PLANE") {
         mesh = resourceManager.createPlane(name);
       } else if (!path.empty()) {
@@ -415,6 +448,8 @@ bool se::SceneManager::loadScene(const std::string &filePath,
       mat->setAO(jmat["ao"]);
       if (jmat.contains("heightScale"))
         mat->setHeightScale(jmat["heightScale"]);
+      if(jmat.contains("uvScale"))
+        mat->setUVScale({jmat["uvScale"][0],jmat["uvScale"][1]});
       // Set textures by GUID
       if (jmat.contains("diffuseTexture")) {
         std::string texGuid = jmat["diffuseTexture"];
@@ -495,6 +530,69 @@ bool se::SceneManager::loadScene(const std::string &filePath,
       l.color = {color[0], color[1], color[2]};
       l.intensity = jlight["intensity"];
       go.setLight(l);
+    }
+
+    // Load physics before script creation so onCreate can inspect the components.
+    try {
+      const auto readVec3 = [](const json& values) -> glm::vec3 {
+        if (!values.is_array() || values.size() != 3)
+          throw std::invalid_argument("physics vector must contain three numbers");
+        const glm::vec3 result{values.at(0).get<float>(), values.at(1).get<float>(),
+                               values.at(2).get<float>()};
+        if (!std::isfinite(result.x) || !std::isfinite(result.y) || !std::isfinite(result.z))
+          throw std::invalid_argument("physics vector must be finite");
+        return result;
+      };
+
+      if (jgo.contains("collider")) {
+        const auto& jc = jgo.at("collider");
+        SECollider collider{};
+        const auto shape = jc.value("shape", std::string{"box"});
+        if (shape == "box") {
+          BoxShape box{};
+          if (jc.contains("halfExtents")) box.halfExtents = readVec3(jc.at("halfExtents"));
+          if (box.halfExtents.x <= 0.0f || box.halfExtents.y <= 0.0f || box.halfExtents.z <= 0.0f)
+            throw std::invalid_argument("box half-extents must be positive");
+          collider.shape = box;
+        } else if (shape == "sphere") {
+          SphereShape sphere{};
+          sphere.radius = jc.value("radius", sphere.radius);
+          if (!std::isfinite(sphere.radius) || sphere.radius <= 0.0f)
+            throw std::invalid_argument("sphere radius must be finite and positive");
+          collider.shape = sphere;
+        } else if (shape == "cylinder") {
+          CylinderShape cylinder{};
+          cylinder.radius = jc.value("radius", cylinder.radius);
+          cylinder.halfHeight = jc.value("halfHeight", cylinder.halfHeight);
+          if (!std::isfinite(cylinder.radius) || cylinder.radius <= 0.0f ||
+              !std::isfinite(cylinder.halfHeight) || cylinder.halfHeight <= 0.0f)
+            throw std::invalid_argument("cylinder radius and half-height must be finite and positive");
+          collider.shape = cylinder;
+        } else {
+          throw std::invalid_argument("unknown collider shape");
+        }
+        if (jc.contains("localOffset")) collider.localOffset = readVec3(jc.at("localOffset"));
+        collider.friction = jc.value("friction", collider.friction);
+        if (!std::isfinite(collider.friction) || collider.friction < 0.0f)
+          throw std::invalid_argument("friction must be finite and nonnegative");
+        go.setCollider(collider);
+      }
+
+      if (jgo.contains("rigidbody")) {
+        const auto& jr = jgo.at("rigidbody");
+        SERigidbody body{};
+        body.isStatic = jr.value("isStatic", body.isStatic);
+        body.useGravity = jr.value("useGravity", body.useGravity);
+        body.mass = jr.value("mass", body.mass);
+        if (!std::isfinite(body.mass) || body.mass <= 0.0f)
+          throw std::invalid_argument("rigidbody mass must be finite and positive");
+        if (jr.contains("velocity")) body.velocity = readVec3(jr.at("velocity"));
+        go.setRigidbody(body);
+      }
+    } catch (const std::exception& error) {
+      log::error("Scene", "Invalid physics component on '%s': %s",
+                 go.getName().c_str(), error.what());
+      return false;
     }
 
     // Script

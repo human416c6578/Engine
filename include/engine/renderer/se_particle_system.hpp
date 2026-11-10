@@ -59,7 +59,7 @@ namespace se
     {
         // Identity
         uint32_t  id          = 0;
-        uint32_t  active      = 1;
+        uint32_t  active      = 0;
         float     padding[2]  = {};
 
         SpawnVolume volume{};

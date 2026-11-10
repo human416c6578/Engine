@@ -35,6 +35,7 @@ namespace se
 		std::shared_ptr<se::SEMesh> createPlane(const std::string& guid, const std::string& name);
 		std::shared_ptr<se::SEMesh> createCube(const std::string& guid, const std::string& name);
 		std::shared_ptr<se::SEMesh> createSphere(const std::string& guid, const std::string& name);
+		std::shared_ptr<se::SEMesh> createCylinder(const std::string& guid, const std::string& name);
 
 	private:
 

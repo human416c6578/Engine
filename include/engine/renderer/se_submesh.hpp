@@ -1,6 +1,6 @@
 #pragma once
 
-#include "engine/core/se_vertex.hpp" // Builder stores Vertex values.
+#include "engine/renderer/se_vertex.hpp" // Builder stores Vertex values.
 #include <vulkan/vulkan.h> // Vulkan handles and command types are part of this interface.
 
 #include <cstdint>

@@ -25,8 +25,8 @@ layout(set = 1, binding = 1) uniform FLAGS {
 
     float ao; // 4 bytes
     float heightScale; // 4 bytes
-    float idk1;
-    float idk2;
+    float uvScaleX;
+    float uvScaleY;
 } flags;
 
 layout(set = 1, binding = 2) uniform sampler2D albedoMap;
@@ -205,7 +205,7 @@ vec2 ParallaxMapping(vec2 texCoords, vec3 viewDir)
 
 void main()
 {
-    vec2 texCoords = TexCoords;
+    vec2 texCoords = TexCoords * vec2(flags.uvScaleX, flags.uvScaleY);
 
     if (flags.hasHeightMap != 0)
     {
@@ -213,7 +213,7 @@ void main()
         vec3 viewDir = normalize(ubo.camPos - WorldPos);
         vec3 viewDirTangent = normalize(transpose(TBN) * viewDir);
 
-        texCoords = ParallaxMapping(TexCoords, viewDirTangent);
+        texCoords = ParallaxMapping(texCoords, viewDirTangent);
     }
 
     vec3 albedo = flags.color.xyz;

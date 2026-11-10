@@ -1,6 +1,6 @@
 #include "engine/renderer/se_pipeline.hpp"
 #include "engine/core/se_logger.hpp"
-#include "engine/core/se_vertex.hpp"
+#include "engine/renderer/se_vertex.hpp"
 #include "engine/vulkan/se_device.hpp"
 
 #include <fstream>

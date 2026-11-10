@@ -45,8 +45,8 @@ namespace se
 			alignas(4) float ao;
 			alignas(4) float heightScale;
 
-			alignas(4) float idk1;
-			alignas(4) float idk2;
+			alignas(4) float uvScaleX;
+			alignas(4) float uvScaleY;
 
 			// Padding to make the structure size a multiple of 16 bytes (4 padding bytes)
 			//alignas(4) int padding; // 4 bytes padding
@@ -135,6 +135,11 @@ namespace se
 		float getHeightScale() const
 		{
 			return flags.heightScale;
+		}
+		
+		glm::vec2 getUVScale() const
+		{
+			return glm::vec2(flags.uvScaleX, flags.uvScaleY);
 		}
 
 		std::shared_ptr<SETexture> getDiffuseTexture() const
@@ -236,6 +241,13 @@ namespace se
 		void setHeightScale(float heightScale)
 		{
 			flags.heightScale = heightScale;
+			std::fill(needUpdate.begin(), needUpdate.end(), true);
+		}
+
+		void setUVScale(glm::vec2 uvScale)
+		{
+			flags.uvScaleX = uvScale.x;
+			flags.uvScaleY = uvScale.y;
 			std::fill(needUpdate.begin(), needUpdate.end(), true);
 		}
 

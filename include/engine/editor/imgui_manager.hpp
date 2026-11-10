@@ -13,6 +13,7 @@ struct GLFWwindow;
 namespace se
 {
     class SEDevice;
+    class PerformanceMonitor;
     class ResourceManager;
     class SceneManager;
     class SEPostProcess;
@@ -31,7 +32,7 @@ namespace se
         ImGuiManager(SEDevice& device, VkRenderPass renderPass, GLFWwindow& window,
             uint32_t swapChainImageCount, ResourceManager& resources,
             SceneManager& scenes, SEPostProcess& postProcess,
-            ParticleSystem& particles, SEInputSystem& input, ScriptManager& scripts);
+            ParticleSystem& particles, SEInputSystem& input, ScriptManager& scripts, const PerformanceMonitor& performance);
         ~ImGuiManager();
 
         ImGuiManager(const ImGuiManager&) = delete;
@@ -49,6 +50,7 @@ namespace se
         void renderAssetContextMenu();
         void renderAssetViewer();
         void renderPropertiesPanel();
+        void renderPerformancePanel();
         void renderGameObjectProperties();
         void renderTransformComponent(std::unique_ptr<SEGameObject>& gameObject);
         void renderMeshComponent(std::unique_ptr<SEGameObject>& gameObject);
@@ -56,6 +58,8 @@ namespace se
         void renderLightComponent(std::unique_ptr<SEGameObject>& gameObject);
         void renderScriptComponent(std::unique_ptr<SEGameObject>& gameObject);
         void renderParticleEmitterComponent(std::unique_ptr<SEGameObject>& gameObject);
+        void renderColliderComponent(std::unique_ptr<SEGameObject>& gameObject);
+        void renderRigidbodyComponent(std::unique_ptr<SEGameObject>& gameObject);
         void renderMeshProperties();
         void renderMaterialProperties();
         void renderTextureProperties();
@@ -77,6 +81,7 @@ namespace se
         ParticleSystem& particleSystem;
         SEInputSystem& inputSystem;
         ScriptManager& scriptManager;
+        const PerformanceMonitor& performance;
         bool contextCreated{false};
         bool glfwBackendInitialized{false};
         bool vulkanBackendInitialized{false};

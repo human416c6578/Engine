@@ -2,6 +2,8 @@
 
 #include "engine/scene/se_particle_emitter_component.hpp" // Stored by value in SEGameObject.
 #include "engine/scripting/se_script_component.hpp" // Inline script lifecycle methods need the complete base type.
+#include "engine/physics/se_collider.hpp"
+#include "engine/physics/se_rigidbody.hpp"
 
 #include <glm/glm.hpp>
 
@@ -9,6 +11,7 @@
 #include <string>
 #include <type_traits>
 #include <utility>
+#include <optional>
 
 namespace se
 {
@@ -21,13 +24,6 @@ namespace se
         Directional = 2,
         Spot = 3
     };
-
-
-    //struct alignas(16) Light {
-    //    glm::vec4 position;     // xyz: position, w: int type
-    //    glm::vec4 color;        // xyz: color, w: intensify
-    //    glm::vec4 direction;    // xyz: direction, w: spotAngle
-    //};
 
     struct alignas(16) Light {
         glm::vec3 position;
@@ -140,10 +136,59 @@ namespace se
         const TransformComponent& getTransform() const { return transform; }
         TransformComponent& getTransform() { return transform; }
 
-
         void setTransform(const TransformComponent newTransform)
         {
             transform = newTransform;
+        }
+
+        SECollider* getCollider() noexcept
+        {
+            return collider ? &*collider : nullptr;
+        }
+
+        const SECollider* getCollider() const noexcept
+        {
+            return collider ? &*collider : nullptr;
+        }
+
+        bool hasCollider() const noexcept
+        {
+            return collider.has_value();
+        }
+
+        void setCollider(const SECollider& value)
+        {
+            collider = value;
+        }
+
+        void removeCollider() noexcept
+        {
+            collider.reset();
+        }
+
+        SERigidbody* getRigidbody() noexcept
+        {
+            return rigidbody ? &*rigidbody : nullptr;
+        }
+
+        const SERigidbody* getRigidbody() const noexcept
+        {
+            return rigidbody ? &*rigidbody : nullptr;
+        }
+
+        bool hasRigidbody() const noexcept
+        {
+            return rigidbody.has_value();
+        }
+
+        void setRigidbody(const SERigidbody& value)
+        {
+            rigidbody = value;
+        }
+
+        void removeRigidbody() noexcept
+        {
+            rigidbody.reset();
         }
 
         const Light& getLight() const { return light; }
@@ -171,7 +216,7 @@ namespace se
 			return script;
 		}
 
-	 const ParticleEmitterComponent& getParticleEmitter() const { return particleEmitter; }
+	    const ParticleEmitterComponent& getParticleEmitter() const { return particleEmitter; }
         ParticleEmitterComponent& getParticleEmitter() { return particleEmitter; }
         void setParticleEmitter(const ParticleEmitterComponent& comp) { particleEmitter = comp; }
         bool hasParticleEmitter() const { return particleEmitter.isValid(); }
@@ -189,5 +234,9 @@ namespace se
 
         std::unique_ptr<ScriptComponent> script{nullptr};
         ParticleEmitterComponent particleEmitter{};
+
+        std::optional<SECollider> collider;
+        std::optional<SERigidbody> rigidbody;
+
     };
 }

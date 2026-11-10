@@ -29,13 +29,11 @@ layout(binding = 2) uniform PostProcessSettings
 
 float linearizeDepth(float depth)
 {
-	float near = 0.01;
-	float far  = 1000.0;
+    const float nearPlane = 0.1;
+    const float farPlane = 100.0;
 
-	float z = depth * 2.0 - 1.0;
-
-	return (2.0 * near * far) /
-		   (far + near - z * (far - near));
+    return (nearPlane * farPlane) /
+        (farPlane - depth * (farPlane - nearPlane));
 }
 
 float hash(vec2 p)
@@ -56,18 +54,72 @@ vec3 tonemapACES(vec3 x)
 
 float computeFogFactor(float depthLinear)
 {
-    float dist = max(depthLinear - pp.fogStart, 0.0);
-    float fog = 1.0 - exp(-dist * pp.fogIntensity);
-    return clamp(fog, 0.0, 1.0);
+    float range = max(pp.fogEnd - pp.fogStart, 0.0001);
+    float distanceInFog = clamp(depthLinear - pp.fogStart, 0.0, range);
+    float density = max(pp.fogIntensity, 0.0);
+    // Fade smoothly across the authored range; intensity controls its strength.
+    float rangeFade = smoothstep(0.0, range, distanceInFog);
+    return rangeFade * (1.0 - exp(-distanceInFog * density));
+}
+
+float fetchDepth(vec2 uv)
+{
+    ivec2 size = textureSize(depthTex, 0);
+    ivec2 pixel = clamp(ivec2(uv * vec2(size)), ivec2(0), size - ivec2(1));
+    return texelFetch(depthTex, pixel, 0).r;
+}
+
+// Reconstruct bilinear color using only texels on the same side of the
+// sky/geometry boundary. Checking just the sample center still lets the
+// hardware's linear color filter pull in opposite-side neighbors.
+vec3 sampleSurfaceColor(vec2 uv, bool isSky, vec3 fallbackColor)
+{
+    ivec2 size = textureSize(colorTex, 0);
+    vec2 position = uv * vec2(size) - 0.5;
+    ivec2 base = ivec2(floor(position));
+    vec2 fraction = fract(position);
+    vec3 color = vec3(0.0);
+    float weightSum = 0.0;
+
+    for (int y = 0; y < 2; ++y)
+    {
+        for (int x = 0; x < 2; ++x)
+        {
+            ivec2 pixel = clamp(base + ivec2(x, y), ivec2(0), size - ivec2(1));
+            vec2 centerUV = (vec2(pixel) + 0.5) / vec2(size);
+            if ((fetchDepth(centerUV) >= 1.0) != isSky) continue;
+
+            float weight = (x == 0 ? 1.0 - fraction.x : fraction.x)
+                         * (y == 0 ? 1.0 - fraction.y : fraction.y);
+            color += texelFetch(colorTex, pixel, 0).rgb * weight;
+            weightSum += weight;
+        }
+    }
+
+    return weightSum > 0.0 ? color / weightSum : fallbackColor;
 }
 
 void main()
 {
 	vec2 texelSize = 1.0 / textureSize(colorTex, 0);
 
-	vec3 sharpColor = texture(colorTex, inUV).rgb;
+	float depth = fetchDepth(inUV);
+	bool isSky = depth >= 1.0;
+	ivec2 colorSize = textureSize(colorTex, 0);
+	ivec2 colorPixel = clamp(ivec2(inUV * vec2(colorSize)), ivec2(0), colorSize - ivec2(1));
+	vec3 centerColor = texelFetch(colorTex, colorPixel, 0).rgb;
+	vec3 sharpColor = sampleSurfaceColor(inUV, isSky, centerColor);
 
-	float depth = texture(depthTex, inUV).r;
+	// A cubemap has no meaningful scene distance: neither fog nor DOF should
+	// treat its far-plane depth as the distance to background scenery.
+	if (isSky)
+	{
+		if (pp.enableTonemap != 0)
+			sharpColor = tonemapACES(sharpColor) * pp.exposure;
+		outColor = vec4(sharpColor, 1.0);
+		return;
+	}
+
 	float linearDepth = linearizeDepth(depth);
 
 	float coc = abs(linearDepth - pp.focusDistance);
@@ -94,32 +146,22 @@ void main()
 
 			vec2 uv = inUV + offset * texelSize * radius;
 
-			blurColor += texture(colorTex, uv).rgb;
+			// Do not bleed bright geometry into the unfogged background (or vice versa).
+			bool sampleIsSky = fetchDepth(uv) >= 1.0;
+			if (sampleIsSky != isSky) continue;
+
+			blurColor += sampleSurfaceColor(uv, isSky, sharpColor);
 			total += 1.0;
 		}
 	}
 
-	blurColor /= total;
+	blurColor = total > 0.0 ? blurColor / total : sharpColor;
 
 	vec3 finalColor = mix(sharpColor, blurColor, blurAmount);
 
-	if (pp.enableFog != 0)
+	if (pp.enableFog != 0 && !isSky)
 	{
 		float fogFactor = computeFogFactor(linearDepth);
-
-		float skyMask = smoothstep(0.995, 1.0, linearDepth);
-
-		if (pp.enableFog != 0)
-		{
-			float fogFactor = computeFogFactor(linearDepth);
-
-			vec3 fogColor = pp.fogColor;
-
-			finalColor = mix(finalColor, fogColor, fogFactor);
-		}
-
-		vec3 fogColor = pp.fogColor;
-
 		finalColor = mix(finalColor, pp.fogColor, fogFactor);
 	}
 

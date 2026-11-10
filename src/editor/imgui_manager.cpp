@@ -1,4 +1,5 @@
 #include "engine/editor/imgui_manager.hpp"
+#include "engine/core/se_performance.hpp"
 #include "engine/vulkan/se_device.hpp"
 #include "engine/renderer/se_particle_system.hpp"
 #include "engine/renderer/se_pbr.hpp"
@@ -124,6 +125,11 @@ void se::ImGuiManager::renderSceneHierarchy()
             go.setMesh(resourceManager.createSphere("SphereMesh_" + std::to_string(++sphereCount)));
             go.setMaterial(resourceManager.createMaterial("SphereMaterial_" + std::to_string(sphereCount)));
 
+        }
+        if (ImGui::MenuItem("Create Cylinder")) {
+            auto& go = scene->createGameObjectRef("Cylinder");
+            go.setMesh(resourceManager.createCylinder("CylinderMesh"));
+            go.setMaterial(resourceManager.createMaterial("CylinderMaterial_" + std::to_string(go.getId())));
         }
         if (ImGui::MenuItem("Create Light")) {
             auto& go = scene->createGameObjectRef("Light");
@@ -413,6 +419,41 @@ void se::ImGuiManager::renderAssetViewer()
     ImGui::End();
 }
 
+void se::ImGuiManager::renderPerformancePanel()
+{
+    auto* scene = sceneManager.getActiveScene();
+    if (!scene) return;
+    const auto& stats = performance.getStats();
+    const float frameMs = static_cast<float>(stats.frameTimeMs);
+    const float fps = frameMs > 0.0f ? 1000.0f / frameMs : 0.0f;
+    const float physicsMs = static_cast<float>(stats.completedFramePhysicsMs);
+    const float renderMs = static_cast<float>(stats.renderBeginMs + stats.renderRecordMs + stats.renderSubmitPresentMs);
+
+    ImGui::SetNextWindowSize(ImVec2(380.0f, 0.0f), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowBgAlpha(0.9f);
+    if (ImGui::Begin("Performance", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("FPS: %.1f", fps);
+        ImGui::Text("Frame time: %.3f ms", frameMs);
+        ImGui::Separator();
+        ImGui::Text("Physics update: %.3f ms", physicsMs);
+        ImGui::Text("Rendering: %.3f ms", renderMs);
+        ImGui::Indent();
+        ImGui::Text("Begin / fence wait / acquire: %.3f ms", stats.renderBeginMs);
+        ImGui::Text("Recording / uploads / UI: %.3f ms", stats.renderRecordMs);
+        ImGui::Text("Submit / present: %.3f ms", stats.renderSubmitPresentMs);
+        ImGui::Unindent();
+        ImGui::TextDisabled("CPU wall time; rendering includes waits, not GPU timing.");
+        ImGui::Separator();
+        ImGui::Text("Dynamic bodies: %zu", stats.dynamicBodyCount);
+        ImGui::Text("Colliders: %zu", stats.colliderCount);
+        ImGui::Text("Step time: %.3f ms", stats.lastPhysicsStepMs);
+        ImGui::Text("Fixed steps: %zu", stats.physicsStepsThisFrame);
+        ImGui::Text("Measured steps: %llu", static_cast<unsigned long long>(stats.measuredSteps));
+    }
+    ImGui::End();
+}
+
 void se::ImGuiManager::renderPropertiesPanel()
 {
     if (!showProperties) return;
@@ -556,17 +597,10 @@ void se::ImGuiManager::renderGameObjectProperties()
     std::strncpy(gameObjectNameBuffer.data(), gameObject->getName().c_str(), gameObjectNameBuffer.size());
     gameObjectNameBuffer.back() = '\0';
 
-    ImGui::Text("GameObject: %s", gameObject->getName().c_str());
-    ImGui::SameLine();
-
-    if (ImGui::InputText("##Name", gameObjectNameBuffer.data(), gameObjectNameBuffer.size())) {
+    if (ImGui::InputText("Name", gameObjectNameBuffer.data(), gameObjectNameBuffer.size())) {
         gameObject->setName(gameObjectNameBuffer.data());
     }
 
-    std::string name = gameObject->getName().empty() ?
-        ("GameObject_" + std::to_string(selectedGameObjectIndex)) : gameObject->getName();
-
-    ImGui::Text("GameObject: %s", name.c_str());
     ImGui::Separator();
 
     renderTransformComponent(gameObject);
@@ -575,6 +609,85 @@ void se::ImGuiManager::renderGameObjectProperties()
     renderLightComponent(gameObject);
     renderScriptComponent(gameObject);
     renderParticleEmitterComponent(gameObject);
+    renderColliderComponent(gameObject);
+    renderRigidbodyComponent(gameObject);
+}
+
+void se::ImGuiManager::renderColliderComponent(std::unique_ptr<se::SEGameObject>& gameObject)
+{
+    if (!ImGui::CollapsingHeader("Collider", ImGuiTreeNodeFlags_DefaultOpen)) return;
+    ImGui::PushID("ColliderComponent");
+
+    if (auto* collider = gameObject->getCollider())
+    {
+        int shapeIndex = static_cast<int>(collider->shape.index());
+        if (ImGui::Combo("Shape", &shapeIndex, "Box\0Sphere\0Cylinderthe \0"))
+        {
+            if (shapeIndex == 0) collider->shape = BoxShape{};
+            else if (shapeIndex == 1) collider->shape = SphereShape{};
+            else collider->shape = CylinderShape{};
+        }
+
+        if (auto* box = std::get_if<BoxShape>(&collider->shape))
+        {
+            if (ImGui::DragFloat3("Half Extents", &box->halfExtents.x, 0.05f, 0.001f, 1000.0f))
+                box->halfExtents = glm::max(box->halfExtents, glm::vec3{0.001f});
+        }
+        else if (auto* sphere = std::get_if<SphereShape>(&collider->shape))
+        {
+            if (ImGui::DragFloat("Radius", &sphere->radius, 0.05f, 0.001f, 1000.0f))
+                sphere->radius = std::max(sphere->radius, 0.001f);
+        }
+
+        if (auto* cylinder = std::get_if<CylinderShape>(&collider->shape))
+        {
+            if (ImGui::DragFloat("Radius", &cylinder->radius, 0.05f, 0.001f, 1000.0f))
+                cylinder->radius = std::max(cylinder->radius, 0.001f);
+            if (ImGui::DragFloat("Half Height", &cylinder->halfHeight, 0.05f, 0.001f, 1000.0f))
+                cylinder->halfHeight = std::max(cylinder->halfHeight, 0.001f);
+            ImGui::TextWrapped("Y-axis cylinder using an enclosing box for collision; curved-surface contacts are approximate.");
+        }
+
+        ImGui::DragFloat3("Local Offset", &collider->localOffset.x, 0.05f);
+        if (ImGui::DragFloat("Friction", &collider->friction, 0.01f, 0.0f, 2.0f))
+            collider->friction = std::max(collider->friction, 0.0f);
+        ImGui::TextWrapped("Sphere and AABB collision response with friction. Rotation and transform scale are not applied to colliders; set dimensions explicitly.");
+
+        if (ImGui::Button("Remove Collider")) gameObject->removeCollider();
+    }
+    else if (ImGui::Button("Add Collider"))
+    {
+        gameObject->setCollider(SECollider{});
+    }
+
+    ImGui::PopID();
+}
+
+void se::ImGuiManager::renderRigidbodyComponent(std::unique_ptr<se::SEGameObject>& gameObject)
+{
+    if (!ImGui::CollapsingHeader("Rigidbody", ImGuiTreeNodeFlags_DefaultOpen)) return;
+    ImGui::PushID("RigidbodyComponent");
+
+    if (auto* body = gameObject->getRigidbody())
+    {
+        ImGui::Checkbox("Static", &body->isStatic);
+        ImGui::Checkbox("Use Gravity", &body->useGravity);
+        if (ImGui::DragFloat("Mass", &body->mass, 0.1f, 0.001f, 100000.0f))
+            body->mass = std::max(body->mass, 0.001f);
+        ImGui::DragFloat3("Velocity", &body->velocity.x, 0.1f);
+        if (ImGui::Button("Reset Velocity")) body->velocity = glm::vec3{0.0f};
+
+        if (!gameObject->getCollider())
+            ImGui::TextWrapped("Add a collider too: the current scene physics update only processes objects with colliders.");
+
+        if (ImGui::Button("Remove Rigidbody")) gameObject->removeRigidbody();
+    }
+    else if (ImGui::Button("Add Rigidbody"))
+    {
+        gameObject->setRigidbody(SERigidbody{});
+    }
+
+    ImGui::PopID();
 }
 
 void se::ImGuiManager::renderTransformComponent(std::unique_ptr<se::SEGameObject>& gameObject)
@@ -923,7 +1036,8 @@ void se::ImGuiManager::renderMaterialEditor(std::shared_ptr<se::SEMaterial> mate
     float roughness = material->getRoughness();
     float ao = material->getAO();
     float heightScale = material->getHeightScale();
-
+    glm::vec2 uvTiling = material->getUVScale();
+    
     // Color picker
     if (ImGui::ColorEdit3("Color", &color.x, ImGuiColorEditFlags_Float))
     {
@@ -953,6 +1067,11 @@ void se::ImGuiManager::renderMaterialEditor(std::shared_ptr<se::SEMaterial> mate
     if (ImGui::SliderFloat("Height Scale", &heightScale, 0.0f, 0.1f))
     {
         material->setHeightScale(heightScale);
+    }
+
+    if(ImGui::DragFloat2("UV Tiling", &uvTiling.x, 0.05f, 0.01f, 100.0f))
+    {
+        material->setUVScale(uvTiling);
     }
 
     ImGui::Separator();
@@ -1309,9 +1428,9 @@ void se::ImGuiManager::renderScriptSelector(
 se::ImGuiManager::ImGuiManager(SEDevice &seDevice, VkRenderPass renderPass, GLFWwindow &window,
     uint32_t swapChainImageCount, ResourceManager &resources, SceneManager &scenes,
     SEPostProcess &postProcess, ParticleSystem &particles, SEInputSystem &input,
-    ScriptManager& scripts)
+    ScriptManager& scripts, const PerformanceMonitor& performance)
     : resourceManager{resources}, sceneManager{scenes}, postprocess{postProcess},
-      particleSystem{particles}, inputSystem{input}, scriptManager{scripts}
+      particleSystem{particles}, inputSystem{input}, scriptManager{scripts}, performance{performance}
 {
     // Create ImGui context
     IMGUI_CHECKVERSION();
@@ -1376,6 +1495,7 @@ void se::ImGuiManager::render(VkCommandBuffer commandBuffer)
     renderAssetBrowser();
     renderAssetViewer();
     renderPropertiesPanel();
+    renderPerformancePanel();
 
     // Render ImGui
     ImGui::Render();

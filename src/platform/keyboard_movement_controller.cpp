@@ -14,25 +14,14 @@ namespace se
     void KeyboardMovementController::moveInPlaneXZ(
         SEInputSystem &input, float dt, TransformComponent& transform)
     {
-        glm::vec3 rotate{ 0 };
         double posX, posY;
-        double diffX, diffY;
-        /*
-        if (glfwGetKey(window, keys.lookRight) == GLFW_PRESS)
-          rotate.y += 1.f;
-        if (glfwGetKey(window, keys.lookLeft) == GLFW_PRESS)
-          rotate.y -= 1.f;
-        if (glfwGetKey(window, keys.lookUp) == GLFW_PRESS)
-          rotate.x += 1.f;
-        if (glfwGetKey(window, keys.lookDown) == GLFW_PRESS)
-          rotate.x -= 1.f;
-        */
-
         ImGuiIO& io = ImGui::GetIO();
 
-        if (!io.WantCaptureMouse && input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_1)) {
+        if (!captured && !io.WantCaptureMouse && input.isMouseButtonPressed(GLFW_MOUSE_BUTTON_1)) {
             input.setCursorCaptured(true);
             captured = true;
+            // Cursor capture may change coordinates. Start a fresh baseline.
+            input.getMousePosition(oldX, oldY);
         }
 
         if (input.isKeyPressed(GLFW_KEY_ESCAPE))
@@ -45,27 +34,11 @@ namespace se
             return;
         }
 
-        input.getMousePosition(posY, posX);
-        if (oldX == 0.f || oldY == 0.f)
-        {
-            oldX -= posX;
-            oldY = posY;
-        }
-        diffX = std::abs(posX - oldX);
-        diffY = std::abs(posY - oldY);
-
-        if (diffX < 50.f && diffY < 50.f)
-        {
-            rotate.x -= posX - oldX;
-            rotate.y += posY - oldY;
-        }
-
-
-        // Handle rotation
-        if (glm::dot(rotate, rotate) > std::numeric_limits<float>::epsilon())
-        {
-            transform.rotation += lookSpeed * dt * rotate;
-        }
+        input.getMousePosition(posX, posY);
+        // Mouse displacement already spans the frame interval. Multiplying by
+        // dt again would increase sensitivity at low FPS. Preserve axis signs.
+        transform.rotation.x -= lookSpeed * static_cast<float>(posY - oldY);
+        transform.rotation.y += lookSpeed * static_cast<float>(posX - oldX);
 
         // Limit pitch values between about +/- 90 degrees
         transform.rotation.x = glm::clamp(

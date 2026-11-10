@@ -350,6 +350,64 @@ namespace se
         return sphereMesh;
     }
 
+    std::shared_ptr<se::SEMesh> MeshSystem::createCylinder(const std::string& guid, const std::string& name)
+    {
+        se::SESubMesh::Builder builder{};
+        constexpr uint32_t segments = 32;
+        constexpr float radius = 0.5f;
+        constexpr float halfHeight = 0.5f;
+
+        // Duplicate the seam so U can wrap from 1 back to 0. Side normals
+        // are radial; cap vertices are separate to preserve the sharp rims.
+        for (uint32_t i = 0; i <= segments; ++i)
+        {
+            const float u = static_cast<float>(i) / segments;
+            const float angle = i == segments ? 0.0f : u * glm::two_pi<float>();
+            const float x = std::cos(angle);
+            const float z = std::sin(angle);
+            const glm::vec3 normal{x, 0.0f, z};
+            builder.vertices.push_back({{radius * x, -halfHeight, radius * z}, normal, {u, 0.0f}});
+            builder.vertices.push_back({{radius * x,  halfHeight, radius * z}, normal, {u, 1.0f}});
+        }
+        for (uint32_t i = 0; i < segments; ++i)
+        {
+            const uint32_t bottom = 2 * i;
+            builder.indices.insert(builder.indices.end(),
+                {bottom, bottom + 1, bottom + 2,
+                 bottom + 1, bottom + 3, bottom + 2});
+        }
+
+        for (int cap = 0; cap < 2; ++cap)
+        {
+            const float sign = cap == 0 ? -1.0f : 1.0f;
+            const float y = sign * halfHeight;
+            const glm::vec3 normal{0.0f, sign, 0.0f};
+            const uint32_t center = static_cast<uint32_t>(builder.vertices.size());
+            builder.vertices.push_back({{0.0f, y, 0.0f}, normal, {0.5f, 0.5f}});
+            const uint32_t ring = center + 1;
+            for (uint32_t i = 0; i <= segments; ++i)
+            {
+                const float angle = i == segments ? 0.0f :
+                    static_cast<float>(i) / segments * glm::two_pi<float>();
+                const float x = std::cos(angle);
+                const float z = std::sin(angle);
+                builder.vertices.push_back({{radius * x, y, radius * z}, normal,
+                                            {0.5f + 0.5f * x, 0.5f + 0.5f * z}});
+            }
+            for (uint32_t i = 0; i < segments; ++i)
+            {
+                if (cap == 0)
+                    builder.indices.insert(builder.indices.end(), {center, ring + i, ring + i + 1});
+                else
+                    builder.indices.insert(builder.indices.end(), {center, ring + i + 1, ring + i});
+            }
+        }
+
+        auto mesh = std::make_shared<se::SEMesh>(seDevice, builder, guid, name);
+        meshes[guid] = mesh;
+        return mesh;
+    }
+
     std::string MeshSystem::GetBaseDir(const std::string& path)
     {
         return std::filesystem::path(path).parent_path().string();

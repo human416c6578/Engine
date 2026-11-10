@@ -14,6 +14,7 @@ namespace se {
         void onUpdate(float dt, ScriptContext &context) override {
             if (owner) {
                 auto& transform = owner->getTransform();
+                auto rigidbody = owner->getRigidbody();
 
                 if (context.input.isKeyPressed(GLFW_KEY_LEFT))
                 {
@@ -31,11 +32,12 @@ namespace se {
                 {
                     transform.translation.z += dt * speed;
                 }
-
-                if (context.input.isKeyPressed(GLFW_KEY_F) && !created)
+                if (context.input.isKeyPressed(GLFW_KEY_LEFT_CONTROL))
                 {
-                    context.scene.createGameObject("Test");
-                    created = true;
+                    if(rigidbody == nullptr) return;
+                    if(rigidbody->velocity.y > 0.01f || rigidbody->velocity.y < -0.01f)
+                        return;
+                    rigidbody->velocity.y = -speed / 3.0f;
                 }
             }
         }

@@ -28,7 +28,7 @@ namespace se
 
         KeyMappings keys{};
         float moveSpeed{1.5f};
-        float lookSpeed{3.f};
+        float lookSpeed{0.01f};
         double oldX{0.f};
         double oldY{0.f};
         bool captured{false};

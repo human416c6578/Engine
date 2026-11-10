@@ -5,6 +5,8 @@
 #include "engine/vulkan/se_device.hpp" // SEDevice is an App member stored by value.
 #include "engine/renderer/se_renderer.hpp" // SERenderer is an App member stored by value.
 
+#include "engine/core/se_performance.hpp"
+
 #include <memory>
 
 namespace se
@@ -20,6 +22,7 @@ namespace se
     class SceneManager;
     class ImGuiManager;
     class ScriptManager;
+    class SEPhysics;
 }
 
 class App
@@ -44,6 +47,7 @@ private:
     se::SEInputSystem inputSystem{*seWindow.getGLFWwindow()};
     se::SEDevice seDevice{seWindow};
     se::SERenderer seRenderer{seWindow, seDevice};
+    se::PerformanceMonitor performance;
     std::unique_ptr<se::SECubemap> seCubemap;
 
     std::unique_ptr<se::PBR> PBR;

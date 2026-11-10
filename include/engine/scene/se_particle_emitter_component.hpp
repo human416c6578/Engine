@@ -20,6 +20,7 @@ namespace se
 
         void syncTransform(const glm::vec3& worldPos);
         void setActive(bool active);
+        void release(); // Remove the borrowed system's emitter before scene deletion.
 
         void syncTransform(const glm::vec3& worldPos, const glm::vec3& offset)
         {

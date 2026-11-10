@@ -21,6 +21,8 @@ build/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
+.vscode/
+.pi/
 # Uncomment if you have tasks that create the project's static files in wwwroot
 #wwwroot/
 
@@ -364,19 +366,16 @@ Architecture Guide.md
 Restructure To-Do.md
 *.md
 
-# Restructure source of truth, evidence, and project-local workflow (exact paths only).
-!/Architecture Guide.md
-!/Restructure To-Do.md
-!/AGENTS.md
-!/VALIDATION_BASELINE.md
-!/docs/ARCHITECTURE_REVIEW.md
-!/docs/RESTRUCTURE_WORKFLOW.md
-!/.pi/skills/engine-restructure/SKILL.md
-!/.pi/prompts/next-item.md
-!/.pi/prompts/phase-gate.md
-!/.pi/prompts/park-bug.md
-!/.pi/prompts/coupling-report.md
-!/.pi/prompts/phase-kickoff.md
+/.clang-format
+
+# Local project instructions and documentation.
+/AGENTS.md
+/Architecture Guide.md
+/Restructure To-Do.md
+/VALIDATION_BASELINE.md
+/VALIDATION_BASELINE.MD
+/docs/
+
 
 *.pdf
 assets/*
