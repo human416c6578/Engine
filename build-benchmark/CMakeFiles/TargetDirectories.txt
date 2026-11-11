@@ -1,4 +1,0 @@
-/home/mrshark45/data/Workspace/programing/cpp/EngineRework/build-benchmark/CMakeFiles/EngineApp.dir
-/home/mrshark45/data/Workspace/programing/cpp/EngineRework/build-benchmark/CMakeFiles/Shaders.dir
-/home/mrshark45/data/Workspace/programing/cpp/EngineRework/build-benchmark/CMakeFiles/edit_cache.dir
-/home/mrshark45/data/Workspace/programing/cpp/EngineRework/build-benchmark/CMakeFiles/rebuild_cache.dir

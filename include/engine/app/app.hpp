@@ -39,10 +39,6 @@ public:
     void run() { mainLoop(); }
 
 private:
-    struct StartupTag {};
-    static StartupTag initializeLogging();
-    explicit App(StartupTag);
-
     se::SEWindow seWindow{800, 600, "Vulkan"};
     se::SEInputSystem inputSystem{*seWindow.getGLFWwindow()};
     se::SEDevice seDevice{seWindow};

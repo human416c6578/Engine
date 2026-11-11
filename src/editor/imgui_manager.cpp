@@ -442,8 +442,6 @@ void se::ImGuiManager::renderPerformancePanel()
         ImGui::Text("Begin / fence wait / acquire: %.3f ms", stats.renderBeginMs);
         ImGui::Text("Recording / uploads / UI: %.3f ms", stats.renderRecordMs);
         ImGui::Text("Submit / present: %.3f ms", stats.renderSubmitPresentMs);
-        ImGui::Unindent();
-        ImGui::TextDisabled("CPU wall time; rendering includes waits, not GPU timing.");
         ImGui::Separator();
         ImGui::Text("Dynamic bodies: %zu", stats.dynamicBodyCount);
         ImGui::Text("Colliders: %zu", stats.colliderCount);

@@ -1,22 +1,15 @@
 cmake_minimum_required(VERSION 3.20)
 project(Engine)
 
-# Validation is enabled in every build configuration by default. Set
-# ENGINE_VALIDATION_MODE=OFF to disable it explicitly.
-set(ENGINE_VALIDATION_MODE "ON" CACHE STRING
-    "Vulkan validation layers: ON or OFF (default ON in every configuration)")
-set_property(CACHE ENGINE_VALIDATION_MODE PROPERTY STRINGS ON OFF)
+# AUTO disables validation in Release and enables it in other configurations.
+# Set ENGINE_VALIDATION_MODE=ON or OFF to override that behavior explicitly.
+set(ENGINE_VALIDATION_MODE "AUTO" CACHE STRING
+    "Vulkan validation layers: AUTO (OFF in Release), ON, or OFF")
+set_property(CACHE ENGINE_VALIDATION_MODE PROPERTY STRINGS AUTO ON OFF)
 string(TOUPPER "${ENGINE_VALIDATION_MODE}" ENGINE_VALIDATION_MODE_NORMALIZED)
-if(ENGINE_VALIDATION_MODE_NORMALIZED STREQUAL "AUTO")
-    # Migrate the previous Debug-only AUTO behavior to the new all-config default.
-    set(ENGINE_VALIDATION_MODE "ON" CACHE STRING
-        "Vulkan validation layers: ON or OFF (default ON in every configuration)" FORCE)
-    set(ENGINE_VALIDATION_MODE_NORMALIZED "ON")
-    message(STATUS "Migrated ENGINE_VALIDATION_MODE=AUTO to ON for all configurations")
-endif()
-if(NOT ENGINE_VALIDATION_MODE_NORMALIZED MATCHES "^(ON|OFF)$")
+if(NOT ENGINE_VALIDATION_MODE_NORMALIZED MATCHES "^(AUTO|ON|OFF)$")
     message(FATAL_ERROR
-        "ENGINE_VALIDATION_MODE must be ON or OFF; got: ${ENGINE_VALIDATION_MODE}")
+        "ENGINE_VALIDATION_MODE must be AUTO, ON, or OFF; got: ${ENGINE_VALIDATION_MODE}")
 endif()
 
 # Remove the old configure-time BOOL option. It persisted as ON after switching
@@ -73,7 +66,10 @@ add_executable(EngineApp
     ${IMGUI_SOURCES}
 )
 
-if(ENGINE_VALIDATION_MODE_NORMALIZED STREQUAL "ON")
+if(ENGINE_VALIDATION_MODE_NORMALIZED STREQUAL "AUTO")
+    target_compile_definitions(EngineApp PRIVATE
+        ENGINE_ENABLE_VALIDATION=$<IF:$<CONFIG:Release>,0,1>)
+elseif(ENGINE_VALIDATION_MODE_NORMALIZED STREQUAL "ON")
     target_compile_definitions(EngineApp PRIVATE ENGINE_ENABLE_VALIDATION=1)
 else()
     target_compile_definitions(EngineApp PRIVATE ENGINE_ENABLE_VALIDATION=0)

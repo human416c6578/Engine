@@ -8,6 +8,7 @@ int main()
 {
     try
     {
+        se::log::initialize(se::log::Level::Debug);
         App app;
         app.run();
     }

@@ -37,22 +37,14 @@ namespace
         renderer.stopFrameSubmission();
         const auto result = vkDeviceWaitIdle(device.device());
         device.logResult(result, operation);
-        // Unknown completion cannot permit ordinary GPU-owner unwinding.
+
         if (result != VK_SUCCESS) std::terminate();
         renderer.discardFrameRecordingAfterIdle();
         device.closeDisposalsAfterIdle();
     }
 }
 
-App::StartupTag App::initializeLogging()
-{
-    se::log::initialize(se::log::Level::Debug);
-    return {};
-}
-
-App::App() : App{initializeLogging()} {}
-
-App::App(StartupTag)
+App::App()
 {
     try
     {
@@ -80,14 +72,6 @@ App::App(StartupTag)
     sceneManager->createScene("MainScene");
     sceneManager->setActiveScene("MainScene");
 
-    // Opt-in fixed safety-net scene; reuse the editor's existing saved-scene loader.
-    if (std::getenv("ENGINE_PHASE0_TEST_SCENE") != nullptr)
-    {
-        if (!sceneManager->loadScene("assets/scenes/phase0_test.json", "Phase0Test"))
-            throw std::runtime_error("Phase 0 test scene load failed");
-        se::log::info("Phase0Test", "Loaded assets/scenes/phase0_test.json");
-    }
-
     imguiManager = std::make_unique<se::ImGuiManager>(
         seDevice, seRenderer.getSwapChainRenderPass(), *seWindow.getGLFWwindow(),
         seRenderer.getSwapChainImageCount(), *ResourceManager, *sceneManager,
@@ -95,7 +79,6 @@ App::App(StartupTag)
     }
     catch (...)
     {
-        // Body catch runs before member unwinding (a constructor function-try-block would not).
         closeFrameDisposals(seDevice, seRenderer, "vkDeviceWaitIdle(App construction failure)");
         throw;
     }
@@ -124,12 +107,6 @@ void App::mainLoop()
     const se::Scene* measuredScene = nullptr;
     se::SEGameObject::id_t measuredCreationCount = 0;
 
-    // Opt-in smoke path for checking swapchain recreation after real window resizes.
-    const bool resizeTestEnabled = std::getenv("ENGINE_PHASE2_TEST_RESIZE") != nullptr;
-    const auto resizeTestStart = std::chrono::steady_clock::now();
-    bool firstTestResizeIssued = false;
-    bool secondTestResizeIssued = false;
-
     glfwSetInputMode(seWindow.getGLFWwindow(), GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
     se::SEOffscreenRenderer* offscreenRenderer = seRenderer.getOffscreenRenderer();
 
@@ -137,24 +114,6 @@ void App::mainLoop()
     {
         glfwPollEvents();
         inputSystem.update();
-
-        if (resizeTestEnabled)
-        {
-            const auto elapsed = std::chrono::duration<float>(
-                std::chrono::steady_clock::now() - resizeTestStart).count();
-            if (!firstTestResizeIssued && elapsed >= 2.0f)
-            {
-                glfwSetWindowSize(seWindow.getGLFWwindow(), 1024, 768);
-                se::log::info("ResizeTest", "requested glfwSetWindowSize 1024x768");
-                firstTestResizeIssued = true;
-            }
-            if (!secondTestResizeIssued && elapsed >= 4.0f)
-            {
-                glfwSetWindowSize(seWindow.getGLFWwindow(), 1280, 720);
-                se::log::info("ResizeTest", "requested glfwSetWindowSize 1280x720");
-                secondTestResizeIssued = true;
-            }
-        }
 
         if (std::chrono::duration<float, std::chrono::seconds::period>(
                 std::chrono::high_resolution_clock::now() - lastTime).count() > 1.f)

@@ -24,6 +24,12 @@ namespace se {
                 requestTest(context, 2);
             } else if (input.isKeyJustPressed(GLFW_KEY_3)) {
                 requestTest(context, 3);
+            } else if (input.isKeyJustPressed(GLFW_KEY_4)) {
+                requestSpawn(context, Shape::Sphere);
+            } else if (input.isKeyJustPressed(GLFW_KEY_5)) {
+                requestSpawn(context, Shape::Cube);
+            } else if (input.isKeyJustPressed(GLFW_KEY_6)) {
+                requestSpawn(context, Shape::Cylinder);
             } else if (input.isKeyJustPressed(GLFW_KEY_R)) {
                 if (currentTest != 0) requestTest(context, currentTest);
             } else if (input.isKeyJustPressed(GLFW_KEY_K)) {
@@ -61,6 +67,25 @@ namespace se {
             });
         }
 
+        void requestSpawn(ScriptContext &context, Shape shape) {
+            const auto managerId = owner->getId();
+            context.scene.defer([this, context, managerId, shape]() mutable {
+                auto *manager = context.scene.getGameObjectById(static_cast<int>(managerId));
+                if (!manager || manager->getScript().get() != this) return;
+
+                auto mesh = shape == Shape::Sphere ? context.resources.createSphere("Sphere") :
+                            shape == Shape::Cube ? context.resources.createCube("Cube") :
+                            context.resources.createCylinder("Cylinder");
+                auto material = owner->getMaterial();
+                if (!material) material = context.resources.createMaterial("Physics Bodies");
+                if (!mesh || !material) return;
+
+                const glm::vec3 position = owner->getTransform().translation +
+                    glm::vec3{random(-6.0f, 6.0f), -8.0f, random(-6.0f, 6.0f)};
+                spawnObject(context, shape, mesh, material, position);
+            });
+        }
+
         void clearBodies() {
             for (const auto &handle : bodies) {
                 if (auto *object = handle.get()) {
@@ -92,7 +117,12 @@ namespace se {
             for (Shape shape : shapes) {
                 auto mesh = shape == Shape::Sphere ? sphereMesh :
                             shape == Shape::Cube ? cubeMesh : cylinderMesh;
-                spawnObject(context, shape, mesh, material);
+                const std::size_t index = bodies.size();
+                const glm::vec3 position = owner->getTransform().translation + glm::vec3{
+                    (static_cast<int>(index % 20) - 9.5f) * .65f + random(-.04f, .04f),
+                    1.5f - static_cast<int>(index / 400) * .65f + random(-.04f, .04f),
+                    (static_cast<int>((index / 20) % 20) - 9.5f) * .65f + random(-.04f, .04f)};
+                spawnObject(context, shape, mesh, material, position);
             }
             log::info("PhysicsStress", "%d spheres, %d cubes, %d cylinders (%zu total)",
                       spheres, cubes, cylinders, bodies.size());
@@ -100,16 +130,14 @@ namespace se {
 
         void spawnObject(ScriptContext &context, Shape shape,
                          const std::shared_ptr<SEMesh> &mesh,
-                         const std::shared_ptr<SEMaterial> &material) {
+                         const std::shared_ptr<SEMaterial> &material,
+                         const glm::vec3 &position) {
             const std::size_t index = bodies.size();
             auto object = context.scene.createGameObject("PhysicsBody_" + std::to_string(index));
             object->setMesh(mesh);
             object->setMaterial(material);
 
-            object->getTransform().translation = owner->getTransform().translation + glm::vec3{
-                (static_cast<int>(index % 20) - 9.5f) * .65f + random(-.04f, .04f),
-                1.5f - static_cast<int>(index / 400) * .65f + random(-.04f, .04f),
-                (static_cast<int>((index / 20) % 20) - 9.5f) * .65f + random(-.04f, .04f)};
+            object->getTransform().translation = position;
 
             const float radius = random(.13f, .18f);
             const float halfHeight = shape == Shape::Cylinder ? random(.18f, .25f) : radius;

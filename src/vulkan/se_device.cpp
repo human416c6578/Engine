@@ -113,7 +113,7 @@ namespace se
         if (std::this_thread::get_id() != disposalThread || !condition)
         {
             log::error("GpuDisposal", "Invalid disposal lifecycle/thread: %s", operation);
-            std::terminate(); // Never guess completion or throw from cleanup.
+            std::terminate();
         }
     }
 
